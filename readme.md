@@ -6,7 +6,7 @@
 
 * **Jose Garcia** — `josegdotcom`
 * **[Nombre integrante]** — `DaniFantasy`
-* **[Nombre integrante]** — `SergioHdezDC`
+* **Sergio Hernández** — `SergioHdezDC`
 * **Edgardo Jara** — `Fe412Dr`
 
 coloquen sus nombres >:(
