@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Graficos</title>
+    <title>Aplausómetro de modelos</title>
 
     <link rel="icon" type="image/png" href="assets/icons/logo.png">
 
@@ -14,11 +14,110 @@
 
 <body>
 
-    <h1>Especies por cantidad de cajas</h1>
+    <header class="cabecera">
+        <p class="eyebrow">Grupo 11 · Visualización de Información · Entrega 1</p>
+        <h1>¿Quién distingue un gato de un perro?</h1>
+        <p class="mensaje">
+            Cuatro modelos intentaron clasificar 3.000 dibujos hechos a mano de
+            <a href="https://quickdraw.withgoogle.com/data" target="_blank" rel="noopener">Quick, Draw!</a>.
+            La <strong>red neuronal MLP</strong> acierta lo mismo que la SVM (84%) pero entrena
+            <strong>100 veces más rápido</strong>. El clustering no supervisado (HDBSCAN) queda
+            <strong>por debajo del azar</strong>.
+        </p>
 
-    <canvas id="grafico"></canvas>
+        <button id="btn-sonido" class="btn btn-primario" type="button">
+            🔊 Activar sonido
+        </button>
+    </header>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <main>
+
+        <!-- 1. Overview -->
+        <section class="panel" aria-labelledby="titulo-overview">
+            <div class="panel-cabecera">
+                <div>
+                    <h2 id="titulo-overview">1. Precisión vs. tiempo de entrenamiento</h2>
+                    <p class="ayuda">
+                        Haz click en un modelo para que el público lo evalúe con el aplausómetro.
+                        El redoble dura lo que tarda el modelo en entrenar; los aplausos crecen con su precisión.
+                    </p>
+                </div>
+                <button id="btn-competencia" class="btn" type="button">▶ Competencia de aplausos</button>
+            </div>
+
+            <div class="overview">
+                <div id="grafico-dispersion" class="grafico" role="img"
+                    aria-label="Gráfico de dispersión de precisión versus tiempo de entrenamiento de cada modelo"></div>
+
+                <aside class="aplausometro" aria-live="polite">
+                    <h3>Aplausómetro</h3>
+                    <svg viewBox="0 0 220 130" class="medidor" aria-hidden="true">
+                        <path class="medidor-fondo" d="M 20 115 A 90 90 0 0 1 200 115" />
+                        <path id="medidor-arco" class="medidor-arco" d="M 20 115 A 90 90 0 0 1 200 115" />
+                        <line class="medidor-azar" x1="110" y1="18" x2="110" y2="34" />
+                        <text class="medidor-texto" x="110" y="12" text-anchor="middle">azar</text>
+                        <text class="medidor-texto" x="14" y="128" text-anchor="middle">0%</text>
+                        <text class="medidor-texto" x="206" y="128" text-anchor="middle">100%</text>
+                        <g id="medidor-aguja" class="medidor-aguja">
+                            <line x1="110" y1="115" x2="110" y2="36" />
+                            <circle cx="110" cy="115" r="6" />
+                        </g>
+                    </svg>
+                    <p id="aplausometro-modelo" class="aplausometro-modelo">Elige un modelo</p>
+                    <p id="aplausometro-valor" class="aplausometro-valor">—</p>
+                    <p id="aplausometro-estado" class="aplausometro-estado">&nbsp;</p>
+                </aside>
+            </div>
+
+            <details class="tabla-datos">
+                <summary>Ver tabla de datos</summary>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Modelo</th>
+                            <th>Precisión</th>
+                            <th>Entrenamiento (s)</th>
+                            <th>Predicción de 3.000 dibujos (s)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-globales"></tbody>
+                </table>
+            </details>
+        </section>
+
+        <!-- 2. Details on demand -->
+        <section class="panel" aria-labelledby="titulo-detalle">
+            <div class="panel-cabecera">
+                <div>
+                    <h2 id="titulo-detalle">2. Diez dibujos que ningún modelo había visto</h2>
+                    <p class="ayuda">
+                        Cada fila es un modelo. Haz click en una casilla para escuchar el veredicto:
+                        dos aplausos si acierta, una bocina si se equivoca y grillos si no sabe qué es.
+                    </p>
+                </div>
+                <label class="filtro">
+                    <input type="checkbox" id="solo-errores">
+                    Mostrar solo errores
+                </label>
+            </div>
+
+            <div class="grilla-contenedor">
+                <table id="grilla" class="grilla"></table>
+            </div>
+
+            <p class="nota">
+                Nota: en el notebook estas 10 imágenes se evaluaron sin normalizar (0–255 en vez de 0–1),
+                a diferencia de los datos de entrenamiento. Esto afecta sobre todo a la SVM.
+            </p>
+        </section>
+
+    </main>
+
+    <div id="tooltip" class="tooltip" role="tooltip" hidden></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tone@15.0.4/build/Tone.js"></script>
+    <script src="js/aplausometro.js"></script>
     <script src="js/main.js"></script>
 
 </body>

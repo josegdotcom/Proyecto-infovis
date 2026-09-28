@@ -15,18 +15,36 @@ coloquen sus nombres >:(
 
 ## Descripcion
 
-Este proyecto consiste en el desarrollo de una página web orientada a la **visualización interactiva de datos**.
+Visualización interactiva y sonora (Entrega 1 del curso IIC2026) que compara cuatro modelos de machine learning
+en una tarea simple: **distinguir un dibujo de un gato de uno de un perro** (dataset
+[Quick, Draw!](https://github.com/googlecreativelab/quickdraw-dataset) de Google).
 
-La aplicación permite representar información mediante distintos tipos de gráficos, facilitando su exploración y comprensión a través de representaciones visuales.
+**Mensaje:** la red neuronal MLP alcanza la misma precisión que la SVM (84%) entrenando 100 veces más rápido,
+mientras que el clustering no supervisado (HDBSCAN) queda por debajo del azar.
 
-El proyecto está desarrollado como una aplicación web estática, utilizando:
+### Visualización
 
-* **HTML** para la estructura de la página.
-* **CSS** para la presentación y estilos.
-* **JavaScript** para la lógica y generación de los gráficos.
-* **Chart.js** para la visualización de datos.
-* **JSON** como formato de datos utilizado por la aplicación.
-* **GitHub Pages** para publicar la página web.
+1. **Overview:** dispersión de precisión vs. tiempo de entrenamiento (escala logarítmica), con la línea del azar (50%).
+2. **Aplausómetro:** al hacer click en un modelo, el público lo evalúa con sonido.
+3. **Detalle:** grilla con 10 dibujos que ningún modelo vio, con la predicción de cada modelo. Filtro "solo errores".
+
+### Sonificación (aplausómetro)
+
+| Dato | Parámetro sonoro |
+|---|---|
+| Tiempo de entrenamiento | Duración del redoble de tambor antes del veredicto (ritmo) |
+| Precisión sobre el azar | Cantidad de personas aplaudiendo y duración del aplauso (densidad/ritmo) |
+| Precisión | Altura de la nota de la aguja, de Do3 (0%) a Do6 (100%) (tono) |
+| Precisión alta | Se suman silbidos de celebración (timbre) |
+| Precisión bajo el azar | Grillos y trombón triste en vez de aplausos (timbre, icono auditivo) |
+| Predicción individual | Earcons: dos aplausos (acierto), bocina (error), grillos (ruido/sin clase) |
+
+### Tecnologías
+
+* **HTML / CSS / JavaScript** (página estática en GitHub Pages).
+* **Plotly.js** para el gráfico de dispersión.
+* **Tone.js** y Web Audio API para sintetizar los sonidos (no se usan archivos de audio).
+* **Python** (scikit-learn, hdbscan, numpy, pandas) para entrenar los modelos.
 
 ---
 
@@ -40,75 +58,39 @@ La página se encuentra publicada mediante GitHub Pages:
 
 ## Estructura del proyecto
 
-La estructura principal del proyecto es la siguiente:
-
 ```text
 Proyecto-infovis/
-│
 ├── index.html
-├── README.md
-│
-├── css/
-│   └── style.css
-│
+├── css/style.css
 ├── js/
-│   └── main.js
-│
-├── assets/
-│   └── icons/
-│       └── logo.png
-│
+│   ├── main.js            # Carga de datos, gráfico, aplausómetro visual y grilla
+│   └── aplausometro.js    # Motor de sonido (Tone.js)
+├── assets/icons/logo.png
 └── data/
-    └── datos/
-        ├── historico_mesas_operativas_2026-09-08_1002.xlsx
-        └── especies.json
+    ├── prueba_1.ipynb     # Entrenamiento y evaluación de los modelos
+    ├── exportar_web.py    # Exporta los 10 dibujos y sus etiquetas reales a JSON
+    ├── datos/
+    │   ├── gatos_perros_dataset.npz
+    │   └── info-biblio.txt
+    └── resultados/
+        ├── resultados_globales.csv
+        ├── experimento_individual_resultados.csv
+        ├── experimento_individual_imagenes.npz
+        └── dibujos.json
 ```
 
-### `index.html`
-
-Archivo principal de la aplicación. Contiene la estructura HTML de la página y carga los recursos necesarios para su funcionamiento.
-
-### `css/`
-
-Contiene las hojas de estilo utilizadas para definir la apariencia de la página.
-
-### `js/`
-
-Contiene el código JavaScript de la aplicación.
-
-Actualmente, `main.js` se encarga de cargar los datos y generar los gráficos mediante Chart.js.
-
-### `assets/`
-
-Contiene recursos utilizados por la interfaz, como imágenes e iconos.
-
-### `data/`
-
-Contiene los archivos relacionados con los datos utilizados por la aplicación.
-
-El archivo Excel corresponde a la fuente de datos original, mientras que los archivos JSON contienen los datos preparados para ser utilizados directamente por JavaScript.
-
----
-
-## Flujo a seguir
+## Flujo de datos
 
 ```text
-Archivo Excel
-     │
-     ▼
-Preparación de datos
-     │
-     ▼
-especies.json
-     │
-     ▼
-main.js
-     │
-     ▼
-Chart.js
-     │
-     ▼
-Gráfico
+Quick, Draw! (.npy) → prueba_1.ipynb → resultados/*.csv + imagenes.npz
+                                      → exportar_web.py → dibujos.json
+                                      → main.js → Plotly.js + Tone.js
+```
+
+Para regenerar los datos de la web, ejecutar el notebook y luego, desde `data/`:
+
+```bash
+python exportar_web.py
 ```
 
 ---
@@ -179,24 +161,16 @@ main
 
 ## Estado actual
 
-### Implementado
+### V1 implementado
 
-* [x] Estructura inicial del proyecto.
-* [x] Página HTML principal.
-* [x] Integración de Chart.js.
-* [x] Carga de datos mediante JSON.
-* [x] Conversión de datos de especies desde el archivo Excel.
-* [x] Gráfico de barras por especie.
-* [x] Publicación mediante GitHub Pages.
-* [x] Icono de la página mediante `logo.png`.
+* [x] Gráfico de dispersión precisión vs. tiempo de entrenamiento con línea de azar.
+* [x] Aplausómetro visual (medidor) y sonoro.
+* [x] Botón "Competencia de aplausos" que recorre los cuatro modelos.
+* [x] Grilla de 10 dibujos con predicciones, tooltip y filtro de errores.
+* [x] Tabla de datos accesible y modo claro/oscuro.
 
 ### Pendiente
 
-* [ ] Definir las visualizaciones finales.
-* [ ] Incorporar nuevos gráficos.
-* [ ] Implementar interactividad.
-* [ ] Incorporar funcionalidades de audio.
-* [ ] Diseñar la interfaz definitiva.
-* [ ] Incorporar filtros y controles.
-* [ ] Realizar pruebas finales de visualización.
-* [ ] Completar la documentación del proyecto.
+* [ ] Corregir la normalización de las 10 imágenes individuales en el notebook (se evaluaron en 0–255).
+* [ ] Iteraciones V2–V4 según revisiones R1, R2 y R3.
+* [ ] Evaluación con usuarios (thinking aloud).
