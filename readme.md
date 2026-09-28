@@ -5,7 +5,7 @@
 ## Integrantes
 
 * **Jose Garcia** — `josegdotcom`
-* **[Nombre integrante]** — `DaniFantasy`
+* **Daniel Rojas🗣️** — `DaniFantasy`
 * **Sergio Hernández** — `SergioHdezDC`
 * **Edgardo Jara** — `Fe412Dr`
 
@@ -171,6 +171,11 @@ main
 
 ### Pendiente
 
-* [ ] Corregir la normalización de las 10 imágenes individuales en el notebook (se evaluaron en 0–255).
-* [ ] Iteraciones V2–V4 según revisiones R1, R2 y R3.
-* [ ] Evaluación con usuarios (thinking aloud).
+* [ ] Definir las visualizaciones finales.
+* [ ] Incorporar nuevos gráficos.
+* [ ] Implementar interactividad.
+* [ ] Incorporar funcionalidades de audio.
+* [ ] Diseñar la interfaz definitiva.
+* [ ] Incorporar filtros y controles.
+* [ ] Realizar pruebas finales de visualización.
+* [ ] Completar la documentación del proyecto.
