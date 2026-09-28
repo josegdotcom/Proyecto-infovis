@@ -5,7 +5,7 @@
 ## Integrantes
 
 * **Jose Garcia** — `josegdotcom`
-* **[Nombre integrante]** — `DaniFantasy`
+* **Daniel Rojas🗣️** — `DaniFantasy`
 * **Sergio Hernández** — `SergioHdezDC`
 * **Edgardo Jara** — `Fe412Dr`
 
