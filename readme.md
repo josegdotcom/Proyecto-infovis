@@ -9,7 +9,6 @@
 * **Sergio Hernández** — `SergioHdezDC`
 * **Edgardo Jara** — `Fe412Dr`
 
-coloquen sus nombres >:(
 
 ---
 
