@@ -82,8 +82,16 @@ async function cargar(ruta, tipo) {
 }
 
 // ---------------------------------------------------------------
-// 1. Overview: dispersion precision vs. tiempo de entrenamiento
+// 1. Overview: barras horizontales de precisión + velocidad
 // ---------------------------------------------------------------
+
+function etiquetaVelocidad(m) {
+    const pct = porcentaje(m.accuracy);
+    if (m.tiempo_entrenamiento_s > 60) {
+        return `${pct} (${(m.tiempo_entrenamiento_s / 60).toFixed(1)} min)`;
+    }
+    return `${pct} (${m.tiempo_entrenamiento_s.toFixed(1)} s)`;
+}
 
 function dibujarDispersion() {
     const texto = css("--texto-primario");
@@ -92,91 +100,77 @@ function dibujarDispersion() {
     const grilla = css("--grilla");
     const superficie = css("--superficie");
 
-    const trazas = estado.globales.map(m => {
-        const seleccionado = estado.seleccionado === m.modelo;
+    // Ordenar de menor a mayor precisión → el mejor queda arriba en Plotly
+    const ordenados = [...estado.globales].sort((a, b) => a.accuracy - b.accuracy);
 
-        return {
-            type: "scatter",
-            mode: "markers+text",
-            name: MODELOS[m.modelo].corto,
-            x: [m.tiempo_entrenamiento_s],
-            y: [m.accuracy],
-            text: [`${MODELOS[m.modelo].corto}<br>${porcentaje(m.accuracy)}`],
-            // MLP y Random Forest quedan casi superpuestos: etiquetas arriba y abajo
-            textposition: m.modelo === "Random Forest" ? "bottom center" : "top center",
-            textfont: { color: texto, size: 12 },
-            marker: {
-                color: colorModelo(m.modelo),
-                size: seleccionado ? 20 : 14,
-                line: { color: seleccionado ? texto : superficie, width: 2 }
-            },
-            customdata: [[m.modelo, m.tiempo_prediccion_s]],
-            hovertemplate:
-                "<b>%{customdata[0]}</b><br>" +
-                "Precisión: %{y:.1%}<br>" +
-                "Entrenamiento: %{x:.1f} s<br>" +
-                "Predicción de 3.000 dibujos: %{customdata[1]:.3f} s" +
-                "<extra></extra>",
-            cliponaxis: false
-        };
-    });
+    const traza = {
+        type: "bar",
+        orientation: "h",
+        x: ordenados.map(m => m.accuracy),
+        y: ordenados.map(m => MODELOS[m.modelo].corto),
+        text: ordenados.map(etiquetaVelocidad),
+        textposition: "outside",
+        cliponaxis: false,
+        textfont: { color: texto, size: 12, family: "system-ui, -apple-system, 'Segoe UI', sans-serif" },
+        marker: {
+            color: ordenados.map(m => colorModelo(m.modelo)),
+            line: {
+                color: ordenados.map(m => estado.seleccionado === m.modelo ? texto : "rgba(0,0,0,0)"),
+                width: ordenados.map(m => estado.seleccionado === m.modelo ? 3 : 0)
+            }
+        },
+        customdata: ordenados.map(m => [m.modelo, m.tiempo_entrenamiento_s, m.tiempo_prediccion_s]),
+        hovertemplate:
+            "<b>%{customdata[0]}</b><br>" +
+            "Precisión: %{x:.1%}<br>" +
+            "Entrenamiento: %{customdata[1]:.2f} s<br>" +
+            "Predicción de 3.000 dibujos: %{customdata[2]:.3f} s" +
+            "<extra></extra>"
+    };
 
     const layout = {
-        margin: { l: 56, r: 24, t: 16, b: 56 },
+        margin: { l: 160, r: 120, t: 40, b: 56 },
         paper_bgcolor: superficie,
         plot_bgcolor: superficie,
         font: { family: "system-ui, -apple-system, 'Segoe UI', sans-serif", color: secundario },
         showlegend: false,
         hoverlabel: { bgcolor: superficie, bordercolor: grilla, font: { color: texto } },
         xaxis: {
-            title: { text: "Tiempo de entrenamiento (segundos, escala logarítmica)", font: { size: 12 } },
-            type: "log",
-            range: [0, 3],
-            tickvals: [1, 3, 10, 30, 100, 300, 1000],
-            ticktext: ["1", "3", "10", "30", "100", "300", "1.000"],
+            title: { text: "Precisión en 3.000 dibujos de prueba", font: { size: 12 } },
+            range: [0, 1.05],
+            tickformat: ".0%",
+            dtick: 0.25,
             gridcolor: grilla,
             zeroline: false,
             linecolor: css("--eje"),
             tickfont: { color: tenue }
         },
         yaxis: {
-            title: { text: "Precisión en 3.000 dibujos de prueba", font: { size: 12 } },
-            range: [0, 1.05],
-            tickformat: ".0%",
-            dtick: 0.25,
-            gridcolor: grilla,
-            zeroline: true,
-            zerolinecolor: css("--eje"),
-            tickfont: { color: tenue }
+            automargin: true,
+            tickfont: { color: texto, size: 13 },
+            gridcolor: grilla
         },
         shapes: [
             {
                 type: "line",
-                xref: "paper",
-                x0: 0,
-                x1: 1,
-                y0: AZAR,
-                y1: AZAR,
+                xref: "x",
+                yref: "paper",
+                x0: AZAR,
+                x1: AZAR,
+                y0: 0,
+                y1: 1,
                 line: { color: tenue, width: 1.5, dash: "dash" }
             }
         ],
         annotations: [
             {
-                xref: "paper",
-                x: 1,
-                y: AZAR,
-                xanchor: "right",
+                xref: "x",
+                yref: "paper",
+                x: AZAR,
+                y: 1,
+                xanchor: "center",
                 yanchor: "bottom",
-                text: "Azar: 50% (lanzar una moneda)",
-                showarrow: false,
-                font: { color: tenue, size: 11 }
-            },
-            {
-                xref: "paper",
-                x: 0,
-                y: 1.03,
-                xanchor: "left",
-                text: "↖ mejor: preciso y rápido",
+                text: "50% (Azar / Moneda al aire)",
                 showarrow: false,
                 font: { color: tenue, size: 11 }
             }
@@ -187,7 +181,7 @@ function dibujarDispersion() {
 
     const contenedor = document.getElementById("grafico-dispersion");
 
-    Plotly.react(contenedor, trazas, layout, config);
+    Plotly.react(contenedor, [traza], layout, config);
 
     if (!contenedor.dataset.eventos) {
         contenedor.on("plotly_click", async evento => {
