@@ -1,5 +1,0 @@
-test 1:
-
-https://console.cloud.google.com/storage/browser/quickdraw_dataset/full/numpy_bitmap;tab=objects?prefix=&forceOnObjectsSortingFiltering=false
-
-https://github.com/googlecreativelab/quickdraw-dataset?utm_source=chatgpt.com
