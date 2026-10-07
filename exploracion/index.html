@@ -276,7 +276,7 @@
         /* D4: de cada 100 casos */
         .cien-prueba {
             display: grid;
-            grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
+            grid-template-columns: minmax(0, 190px) minmax(0, 1fr);
             gap: 16px 32px;
             padding: 16px 0;
             border-top: 1px solid var(--borde);
@@ -378,82 +378,52 @@
             white-space: nowrap;
         }
 
-        .cien-grilla {
+        .cien-medida {
             display: grid;
-            grid-template-columns: repeat(25, minmax(0, 1fr));
-            gap: 2px;
-            max-width: 650px;
-            color: var(--texto-primario);
-        }
-
-        .cien-grilla > span {
-            aspect-ratio: 1;
-            border-radius: 3px;
-        }
-
-        .cien-grilla .error {
-            display: grid;
-            place-items: center;
-            background: var(--plano);
-            outline: 1.5px solid var(--mal);
-            outline-offset: -1.5px;
-            overflow: hidden;
-        }
-
-        .cien-grilla .error canvas,
-        .cien-grilla .error svg {
-            display: block;
-            width: 100%;
-            height: 100%;
-        }
-
-        .cien-grilla .error b {
-            color: var(--mal);
-            font-size: 0.7rem;
-            line-height: 1;
-        }
-
-        .cien-tiempo {
-            display: grid;
-            grid-template-columns: auto minmax(0, 1fr) auto;
-            align-items: center;
-            gap: 8px;
-            max-width: 650px;
-            margin-top: 6px;
+            grid-template-columns: auto minmax(0, 1fr) 88px;
+            align-items: start;
+            gap: 8px 10px;
+            max-width: 720px;
             font-size: 0.82rem;
             font-variant-numeric: tabular-nums;
+            line-height: 14px;
             color: var(--texto-secundario);
         }
 
+        .cien-medida > :nth-child(3n) {
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .cien-medida strong {
+            font-size: 1.5rem;
+            color: var(--texto-primario);
+        }
+
+        /* La fila de aciertos es la protagonista: barra gruesa y cifra grande */
+        .cien-medida > :nth-child(-n + 3) {
+            line-height: 28px;
+        }
+
+        .cien-medida > .cien-barra:nth-child(2) {
+            height: 28px;
+        }
+
         .cien-barra {
-            height: 6px;
+            height: 14px;
+            border-radius: 4px;
+        }
+
+        .cien-barra.con-pista {
+            background: var(--grilla);
         }
 
         .cien-barra i {
             display: block;
             min-width: 2px;
             height: 100%;
-            border-radius: 0 3px 3px 0;
-        }
-
-        .cien-leyenda {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 6px 8px;
-            margin: 4px 0 0;
-            font-size: 0.82rem;
-            color: var(--texto-secundario);
-        }
-
-        .cien-leyenda .cien-grilla {
-            display: inline-grid;
-            grid-template-columns: repeat(2, 16px);
-        }
-
-        .cien-leyenda .cien-grilla:last-of-type {
-            grid-template-columns: 16px;
-            margin-left: 12px;
+            border-radius: 4px;
+            background: var(--color-modelo);
         }
 
         .muestra {
