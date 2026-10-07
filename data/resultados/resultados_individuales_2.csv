@@ -1,0 +1,11 @@
+indice_original,etiqueta_real,actividad_real,prediccion_MLP,actividad_MLP,correcto_MLP,tiempo_prediccion_MLP_s,prediccion_CNN,actividad_CNN,confianza_CNN,correcto_CNN,tiempo_prediccion_CNN_s
+253,1,Caminando,1,Caminando,True,0.000644300000203657,1,Caminando,0.9999998807907104,True,0.07475460000023304
+262,3,Caminando hacia abajo,3,Caminando hacia abajo,True,0.00037370000063674524,3,Caminando hacia abajo,0.9999998807907104,True,0.08142459999908169
+277,3,Caminando hacia abajo,3,Caminando hacia abajo,True,0.0004386000000522472,3,Caminando hacia abajo,0.9999983310699463,True,0.06548039999870525
+593,3,Caminando hacia abajo,3,Caminando hacia abajo,True,0.00029850000100850593,3,Caminando hacia abajo,0.9999418258666992,True,0.05402370000047085
+1273,6,Acostado,6,Acostado,True,0.00029349999931582715,6,Acostado,0.9999997615814209,True,0.05755700000008801
+1290,1,Caminando,1,Caminando,True,0.0003233999996155035,1,Caminando,0.9999978542327881,True,0.062273400000776746
+1924,6,Acostado,6,Acostado,True,0.00030299999889393803,6,Acostado,1.0,True,0.06078950000119221
+2053,5,Parado,5,Parado,True,0.00028279999969527125,5,Parado,0.9999301433563232,True,0.05439399999886518
+2274,4,Sentado,4,Sentado,True,0.0002950999987660907,4,Sentado,0.5926296710968018,True,0.05480109999916749
+2526,3,Caminando hacia abajo,2,Caminando hacia arriba,False,0.00026199999956588726,2,Caminando hacia arriba,0.9843515157699585,False,0.04938360000051034
