@@ -81,6 +81,21 @@ async function cargar(ruta, tipo) {
     return tipo === "json" ? respuesta.json() : respuesta.text();
 }
 
+// añadido en commit de modelos_audio.js para comparar CNN y MLP con sonido
+async function iniciarComparacionEstereo() {
+    await activarSonido();
+    
+    // Suponiendo que filtramos los datos basados en la nomenclatura del CSV global
+    const modeloCNN = estado.globales.find(m => m.modelo.includes("CNN") || m.modelo.includes("convolucional"));
+    const modeloMLP = estado.globales.find(m => m.modelo.includes("MLP") || m.modelo.includes("densa"));
+    
+    if (modeloCNN && modeloMLP) {
+        ModelosAudio.compararEstereo(modeloCNN, modeloMLP);
+    } else {
+        console.warn("No se encontraron los modelos CNN y MLP en los datos globales para comparar.");
+    }
+}
+
 // ---------------------------------------------------------------
 // 1. Overview: dispersion precision vs. tiempo de entrenamiento
 // ---------------------------------------------------------------
@@ -195,6 +210,16 @@ function dibujarDispersion() {
             await activarSonido();
             evaluarModelo(modelo);
         });
+
+        // Añadido en commit de modelos_audio.js para sonar el modelo al pasar el mouse
+        contenedor.on("plotly_hover", evento => {
+            const punto = evento.points[0];
+            const modeloNombre = punto.customdata[0];
+            const accuracy = punto.y;
+            ModelosAudio.sonarHover(modeloNombre, accuracy);
+        });
+
+
         contenedor.dataset.eventos = "1";
     }
 }
@@ -256,6 +281,7 @@ async function activarSonido() {
     }
 
     await Aplausometro.activar();
+    await ModelosAudio.activar(); // Añadido en commit de modelos_audio.js
 
     const boton = document.getElementById("btn-sonido");
     boton.textContent = "🔊 Sonido activado";
@@ -515,6 +541,7 @@ async function iniciar() {
         estado.dibujos = dibujos;
     } catch (error) {
         console.error("Error:", error);
+        document.getElementById("btn-comparar-estereo").addEventListener("click", iniciarComparacionEstereo);
         document.getElementById("grafico-dispersion").textContent =
             "No se pudieron cargar los datos. Abre la página con un servidor local (python -m http.server).";
         return;
