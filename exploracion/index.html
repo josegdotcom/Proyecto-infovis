@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Galería de gráficos · CNN vs. MLP</title>
+
+    <link rel="icon" type="image/png" href="../assets/icons/logo.png">
+    <link rel="stylesheet" href="../css/style.css">
+
+    <style>
+        /* Colores de los dos modelos actuales. MLP mantiene el verde de la V1. */
+        :root {
+            --modelo-cnn: #2a78d6;
+            --sec-claro: #86b6ef;
+            --sec-oscuro: #1c5cab;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) {
+                --modelo-cnn: #3987e5;
+                --sec-claro: #256abf;
+                --sec-oscuro: #9ec5f4;
+            }
+        }
+
+        :root[data-theme="dark"] {
+            --modelo-cnn: #3987e5;
+            --sec-claro: #256abf;
+            --sec-oscuro: #9ec5f4;
+        }
+
+        .galeria {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .intro {
+            max-width: 72ch;
+            color: var(--texto-secundario);
+        }
+
+        .indice {
+            position: sticky;
+            top: 0;
+            z-index: 5;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px 16px;
+            margin: 0 -16px;
+            padding: 10px 16px;
+            background: var(--plano);
+            border-bottom: 1px solid var(--borde);
+            font-size: 0.9rem;
+        }
+
+        .indice a {
+            color: var(--texto-secundario);
+            text-decoration: none;
+        }
+
+        .indice a:hover {
+            color: var(--texto-primario);
+            text-decoration: underline;
+        }
+
+        .seccion {
+            margin-top: 40px;
+            scroll-margin-top: 56px;
+        }
+
+        .seccion > h2 {
+            font-size: 1.35rem;
+        }
+
+        .seccion > p {
+            max-width: 72ch;
+            margin: 0 0 16px;
+            color: var(--texto-secundario);
+        }
+
+        .tarjetas {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr));
+            gap: 16px;
+        }
+
+        .tarjeta {
+            min-width: 0;
+            padding: 16px;
+            background: var(--superficie);
+            border: 1px solid var(--borde);
+            border-radius: 10px;
+        }
+
+        .tarjeta.ancha {
+            grid-column: 1 / -1;
+        }
+
+        .tarjeta-cabecera {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .codigo {
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            color: var(--texto-tenue);
+        }
+
+        .tipo {
+            color: var(--texto-tenue);
+            font-size: 0.85rem;
+        }
+
+        .etiqueta {
+            margin-left: auto;
+            padding: 1px 8px;
+            border: 1px solid var(--borde);
+            border-radius: 999px;
+            color: var(--texto-secundario);
+            font-size: 0.78rem;
+            white-space: nowrap;
+        }
+
+        .etiqueta.recomendado {
+            border-color: var(--texto-primario);
+            color: var(--texto-primario);
+            font-weight: 600;
+        }
+
+        .tarjeta h3 {
+            margin: 6px 0 2px;
+            font-size: 1.05rem;
+            line-height: 1.3;
+        }
+
+        .tarjeta .sub {
+            margin: 0 0 4px;
+            color: var(--texto-secundario);
+            font-size: 0.88rem;
+        }
+
+        .lienzo {
+            width: 100%;
+        }
+
+        .notas {
+            display: grid;
+            gap: 4px;
+            margin: 8px 0 0;
+            padding: 10px 0 0;
+            border-top: 1px solid var(--borde);
+            font-size: 0.88rem;
+            color: var(--texto-secundario);
+        }
+
+        .notas dt {
+            float: left;
+            margin-right: 6px;
+            font-weight: 600;
+            color: var(--texto-primario);
+        }
+
+        .notas dd {
+            margin: 0;
+        }
+
+        /* Lista corta */
+        .lista-corta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+            gap: 12px;
+            margin: 16px 0 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .lista-corta li {
+            padding: 12px 14px;
+            background: var(--superficie);
+            border: 1px solid var(--borde);
+            border-radius: 10px;
+            font-size: 0.92rem;
+            color: var(--texto-secundario);
+        }
+
+        .lista-corta strong {
+            display: block;
+            color: var(--texto-primario);
+        }
+
+        .lista-corta a {
+            font-weight: 600;
+        }
+
+        /* D1: grilla de casos */
+        .casos {
+            overflow-x: auto;
+            margin-top: 8px;
+        }
+
+        .casos table {
+            border-collapse: separate;
+            border-spacing: 2px;
+            font-size: 0.8rem;
+        }
+
+        .casos caption {
+            padding: 8px 0 4px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--texto-primario);
+        }
+
+        .casos th {
+            padding: 4px 6px;
+            font-weight: 400;
+            color: var(--texto-secundario);
+            text-align: center;
+            vertical-align: bottom;
+            line-height: 1.2;
+        }
+
+        .casos th.modelo {
+            text-align: left;
+            white-space: nowrap;
+            color: var(--texto-primario);
+        }
+
+        .casos canvas,
+        .casos svg {
+            display: block;
+            width: 44px;
+            height: 44px;
+            margin: 0 auto 2px;
+            image-rendering: pixelated;
+            border-radius: 4px;
+            background: var(--plano);
+            color: var(--texto-primario);
+        }
+
+        .casos td {
+            min-width: 58px;
+            padding: 6px 4px;
+            border-radius: 4px;
+            background: var(--plano);
+            text-align: center;
+            color: var(--texto-secundario);
+            line-height: 1.2;
+        }
+
+        .casos td .icono {
+            display: block;
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
+        .casos td.bien .icono {
+            color: var(--bien);
+        }
+
+        .casos td.mal {
+            box-shadow: inset 0 0 0 2px var(--mal);
+            color: var(--texto-primario);
+        }
+
+        .casos td.mal .icono {
+            color: var(--mal);
+        }
+
+        /* D4: de cada 100 casos */
+        .cien-prueba {
+            display: grid;
+            grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
+            gap: 16px 32px;
+            padding: 16px 0;
+            border-top: 1px solid var(--borde);
+        }
+
+        .cien-prueba:first-child {
+            border-top: 0;
+        }
+
+        @media (max-width: 800px) {
+            .cien-prueba {
+                grid-template-columns: minmax(0, 1fr);
+            }
+        }
+
+        .cien-contexto {
+            font-size: 0.88rem;
+            color: var(--texto-secundario);
+        }
+
+        .cien-contexto h4 {
+            margin: 0;
+            font-size: 0.85rem;
+            font-weight: 400;
+            color: var(--texto-tenue);
+        }
+
+        .cien-contexto p {
+            margin: 0 0 8px;
+        }
+
+        .cien-contexto .cien-pregunta {
+            margin-bottom: 4px;
+            font-size: 1.15rem;
+            font-weight: 700;
+            line-height: 1.25;
+            color: var(--texto-primario);
+        }
+
+        .cien-clases {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px 10px;
+            margin: 10px 0;
+            color: var(--texto-primario);
+        }
+
+        .cien-clases span {
+            display: grid;
+            justify-items: center;
+            gap: 2px;
+            font-size: 0.75rem;
+        }
+
+        .cien-clases canvas,
+        .cien-clases svg {
+            width: 36px;
+            height: 36px;
+            border-radius: 4px;
+            background: var(--plano);
+            image-rendering: pixelated;
+        }
+
+        .cien-modelos {
+            display: grid;
+            gap: 20px;
+            align-content: start;
+        }
+
+        .cien-cabecera {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: baseline;
+            gap: 4px 12px;
+            margin-bottom: 6px;
+        }
+
+        .cien-nombre {
+            font-weight: 600;
+            color: var(--texto-primario);
+        }
+
+        .cien-cifra {
+            color: var(--texto-secundario);
+        }
+
+        .cien-cifra strong {
+            font-size: 1.5rem;
+            color: var(--texto-primario);
+        }
+
+        .insignia {
+            padding: 1px 8px;
+            border: 1px solid var(--texto-primario);
+            border-radius: 999px;
+            color: var(--texto-primario);
+            font-size: 0.78rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .cien-grilla {
+            display: grid;
+            grid-template-columns: repeat(25, minmax(0, 1fr));
+            gap: 2px;
+            max-width: 650px;
+            color: var(--texto-primario);
+        }
+
+        .cien-grilla > span {
+            aspect-ratio: 1;
+            border-radius: 3px;
+        }
+
+        .cien-grilla .error {
+            display: grid;
+            place-items: center;
+            background: var(--plano);
+            outline: 1.5px solid var(--mal);
+            outline-offset: -1.5px;
+            overflow: hidden;
+        }
+
+        .cien-grilla .error canvas,
+        .cien-grilla .error svg {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .cien-grilla .error b {
+            color: var(--mal);
+            font-size: 0.7rem;
+            line-height: 1;
+        }
+
+        .cien-tiempo {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            align-items: center;
+            gap: 8px;
+            max-width: 650px;
+            margin-top: 6px;
+            font-size: 0.82rem;
+            font-variant-numeric: tabular-nums;
+            color: var(--texto-secundario);
+        }
+
+        .cien-barra {
+            height: 6px;
+        }
+
+        .cien-barra i {
+            display: block;
+            min-width: 2px;
+            height: 100%;
+            border-radius: 0 3px 3px 0;
+        }
+
+        .cien-leyenda {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px 8px;
+            margin: 4px 0 0;
+            font-size: 0.82rem;
+            color: var(--texto-secundario);
+        }
+
+        .cien-leyenda .cien-grilla {
+            display: inline-grid;
+            grid-template-columns: repeat(2, 16px);
+        }
+
+        .cien-leyenda .cien-grilla:last-of-type {
+            grid-template-columns: 16px;
+            margin-left: 12px;
+        }
+
+        .muestra {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            margin-right: 6px;
+            border-radius: 3px;
+        }
+
+        .tabla-galeria {
+            overflow-x: auto;
+        }
+
+        .tabla-galeria table {
+            border-collapse: collapse;
+            font-size: 0.88rem;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .tabla-galeria th,
+        .tabla-galeria td {
+            padding: 6px 12px;
+            border-bottom: 1px solid var(--borde);
+            text-align: right;
+        }
+
+        .tabla-galeria th:first-child,
+        .tabla-galeria td:first-child,
+        .tabla-galeria th:nth-child(2),
+        .tabla-galeria td:nth-child(2) {
+            text-align: left;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="galeria">
+
+        <header class="cabecera">
+            <p class="eyebrow">Grupo 11 · Visualización de Información · Exploración de diseño</p>
+            <h1>Galería de gráficos: CNN vs. MLP en dos pruebas</h1>
+            <p class="intro">
+                Diecinueve formas de graficar los mismos resultados, para elegir. Cada tarjeta dice qué
+                muestra bien y qué limitación tiene. Los colores son fijos en toda la página:
+                <span class="muestra" style="background:var(--modelo-cnn)"></span><strong>CNN</strong> y
+                <span class="muestra" style="background:var(--modelo-mlp)"></span><strong>MLP</strong>.
+                Pasa el mouse sobre cualquier gráfico para ver los valores exactos.
+            </p>
+
+            <ul class="lista-corta" id="lista-corta"></ul>
+        </header>
+
+        <nav class="indice" id="indice" aria-label="Secciones"></nav>
+
+        <main id="secciones"></main>
+
+        <section class="seccion" id="tabla">
+            <h2>Tabla de datos</h2>
+            <p>Los valores que usan todos los gráficos de resultados generales.</p>
+            <div class="tabla-galeria">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Prueba</th>
+                            <th>Modelo</th>
+                            <th>Accuracy</th>
+                            <th>Precisión</th>
+                            <th>Recall</th>
+                            <th>F1</th>
+                            <th>Entrenamiento (s)</th>
+                            <th>Predicción del test (s)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-cuerpo"></tbody>
+                </table>
+            </div>
+        </section>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
+    <script src="datos.js"></script>
+    <script src="galeria.js"></script>
+
+</body>
+
+</html>
