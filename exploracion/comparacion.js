@@ -120,7 +120,7 @@ function dibujar() {
         return `
             <section class="fila prueba">
                 <div>
-                    <h2>${p.nombre}</h2>
+                    <h3>${p.nombre}</h3>
                     <p class="detalle">${p.detalle}</p>
                     <div class="clases" data-prueba="${i}"></div>
                     <button class="btn escuchar" type="button" data-prueba="${i}">▶ Escuchar</button>
@@ -142,13 +142,12 @@ function dibujar() {
     });
 
     document.getElementById("grafico").innerHTML = `
-        <h1>La MLP entrena más rápido en ambas pruebas</h1>
+        <h2 class="titulo">La MLP entrena más rápido en ambas pruebas</h2>
         <p class="bajada">La CNN solo obtiene más aciertos en dibujos.</p>
         <ul class="leyenda">
             ${MODELOS.map(m => `<li><span class="muestra" style="background:${m.color}"></span>${m.nombre}</li>`).join("")}
         </ul>
         <div class="sonido">
-            <button id="btn-sonido" class="btn btn-primario" type="button">🔊 Activar sonido</button>
             <button id="btn-todo" class="btn escuchar" type="button">▶ Escuchar todo</button>
             <p>Más agudo = más aciertos · pulsos más largos = más entrenamiento · ▶ toca primero los aciertos y después el entrenamiento, siempre CNN (izquierda) y luego MLP (derecha).</p>
         </div>
@@ -182,15 +181,13 @@ function dibujar() {
 
 let sonidoActivo = false;
 
+// El navegador solo deja sonar despues de un gesto, asi que el sonido se activa
+// con el primer click en una barra o en un boton de escuchar
 async function activarSonido() {
     if (!sonidoActivo) {
         await ModelosAudio.activar();
         sonidoActivo = true;
     }
-
-    const boton = document.getElementById("btn-sonido");
-    boton.textContent = "🔊 Sonido activado";
-    boton.disabled = true;
 }
 
 // Solo suena y se resalta una cosa a la vez: lo nuevo corta a lo anterior
@@ -267,14 +264,6 @@ function reproducir(pasos, boton) {
 }
 
 function conectarSonido() {
-    const boton = document.getElementById("btn-sonido");
-
-    boton.addEventListener("click", activarSonido);
-
-    if (sonidoActivo) {
-        activarSonido();
-    }
-
     // Pasar el mouse por una barra la hace sonar (solo si el sonido ya esta activado);
     // el click o Enter ademas activan el sonido, porque el navegador exige un gesto.
     document.querySelectorAll(".pista").forEach(pista => {
