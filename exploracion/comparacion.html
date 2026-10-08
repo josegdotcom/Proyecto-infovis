@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Aciertos y entrenamiento · CNN vs. MLP</title>
+
+    <link rel="icon" type="image/png" href="../assets/icons/logo.png">
+    <link rel="stylesheet" href="../css/style.css">
+
+    <style>
+        /* Colores de los dos modelos actuales. MLP mantiene el verde de la V1. */
+        :root {
+            --modelo-cnn: #2a78d6;
+            --pista: #e8e7e2;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) {
+                --modelo-cnn: #3987e5;
+                --pista: #2c2c2a;
+            }
+        }
+
+        :root[data-theme="dark"] {
+            --modelo-cnn: #3987e5;
+            --pista: #2c2c2a;
+        }
+
+        .pagina {
+            max-width: 860px;
+            margin: 0 auto;
+            padding-top: 32px;
+        }
+
+        .tarjeta {
+            padding: 24px 28px;
+            background: var(--superficie);
+            border: 1px solid var(--borde);
+            border-radius: 12px;
+        }
+
+        .tarjeta h1 {
+            margin: 0 0 4px;
+            font-size: 1.35rem;
+            line-height: 1.25;
+        }
+
+        .bajada {
+            margin: 0 0 8px;
+            color: var(--texto-secundario);
+        }
+
+        .leyenda {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px 40px;
+            margin: 0 0 20px;
+            padding: 0;
+            list-style: none;
+            font-size: 0.82rem;
+            color: var(--texto-primario);
+        }
+
+        .muestra {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            margin-right: 6px;
+            border-radius: 3px;
+        }
+
+        /* Tres columnas: la prueba, los aciertos y el entrenamiento */
+        .fila {
+            display: grid;
+            grid-template-columns: 190px minmax(0, 1fr) minmax(0, 1fr);
+            gap: 12px 48px;
+            align-items: start;
+        }
+
+        .fila.prueba {
+            padding: 20px 0;
+            border-bottom: 1px solid var(--borde);
+        }
+
+        .encabezado {
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            color: var(--texto-primario);
+        }
+
+        /* En pantallas anchas el encabezado va una sola vez, arriba */
+        .medida .encabezado {
+            display: none;
+            margin-bottom: 8px;
+        }
+
+        .prueba h2 {
+            margin: 0;
+            font-size: 1.05rem;
+        }
+
+        .detalle {
+            margin: 0 0 10px;
+            font-size: 0.78rem;
+            color: var(--texto-tenue);
+        }
+
+        /* Imagenes de las clases de la prueba */
+        .clases {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px 10px;
+            color: var(--texto-primario);
+        }
+
+        .clases span {
+            display: grid;
+            justify-items: center;
+            gap: 2px;
+            font-size: 0.72rem;
+        }
+
+        .clases canvas,
+        .clases svg {
+            width: 36px;
+            height: 36px;
+            border-radius: 4px;
+            background: var(--plano);
+            image-rendering: pixelated;
+        }
+
+        .barras {
+            display: grid;
+            grid-template-columns: 40px minmax(0, 1fr) 44px;
+            align-items: center;
+            gap: 14px 10px;
+            margin: 4px 0 0;
+            font-size: 0.82rem;
+            color: var(--texto-secundario);
+        }
+
+        .barras dt,
+        .barras dd {
+            margin: 0;
+        }
+
+        .pista {
+            height: 18px;
+            border-radius: 4px;
+            background: var(--pista);
+        }
+
+        .pista i {
+            display: block;
+            min-width: 2px;
+            height: 100%;
+            border-radius: 4px;
+        }
+
+        .valor {
+            font-size: 1rem;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            color: var(--texto-primario);
+        }
+
+        .nota {
+            margin: 12px 0 0;
+            font-size: 0.75rem;
+            color: var(--texto-tenue);
+        }
+
+        @media (max-width: 700px) {
+            .tarjeta {
+                padding: 16px;
+            }
+
+            .fila {
+                grid-template-columns: minmax(0, 1fr);
+            }
+
+            .fila.encabezados {
+                display: none;
+            }
+
+            .medida .encabezado {
+                display: block;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <main class="pagina">
+        <article class="tarjeta" id="grafico"></article>
+    </main>
+
+    <script src="datos.js"></script>
+    <script src="comparacion.js"></script>
+
+</body>
+
+</html>
