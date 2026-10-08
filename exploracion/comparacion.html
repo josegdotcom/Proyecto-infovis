@@ -57,11 +57,29 @@
             display: flex;
             flex-wrap: wrap;
             gap: 4px 40px;
-            margin: 0 0 20px;
+            margin: 0 0 12px;
             padding: 0;
             list-style: none;
             font-size: 0.82rem;
             color: var(--texto-primario);
+        }
+
+        .sonido {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px 16px;
+            margin: 0 0 20px;
+        }
+
+        .sonido p {
+            margin: 0;
+            font-size: 0.82rem;
+            color: var(--texto-secundario);
+        }
+
+        .prueba .escuchar {
+            margin-top: 12px;
         }
 
         .muestra {
@@ -152,6 +170,18 @@
             height: 18px;
             border-radius: 4px;
             background: var(--pista);
+            cursor: pointer;
+        }
+
+        .pista:focus-visible {
+            outline: 2px solid var(--acento);
+            outline-offset: 2px;
+        }
+
+        /* Lo que esta sonando en este momento */
+        .pista.sonando {
+            outline: 2px solid var(--texto-primario);
+            outline-offset: 2px;
         }
 
         .pista i {
@@ -200,7 +230,9 @@
         <article class="tarjeta" id="grafico"></article>
     </main>
 
+    <script src="https://cdn.jsdelivr.net/npm/tone@15.0.4/build/Tone.js"></script>
     <script src="datos.js"></script>
+    <script src="../js/modelos_audio.js"></script>
     <script src="comparacion.js"></script>
 
 </body>

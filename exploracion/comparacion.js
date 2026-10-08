@@ -1,5 +1,13 @@
 // Grafico de comparacion: aciertos y tiempo de entrenamiento de cada modelo en las dos pruebas.
 // Usa los mismos datos que la galeria (datos.js) pero es una pagina independiente.
+//
+// Sonido (js/modelos_audio.js):
+//   aciertos                -> altura de la nota (mas agudo = mas aciertos)
+//   tiempo de entrenamiento -> duracion de la serie de pulsos
+//   modelo                  -> timbre y lado (CNN a la izquierda, MLP a la derecha)
+// Orden de "Escuchar todo": aciertos en dibujos, entrenamiento en dibujos, aciertos en
+// actividades y entrenamiento en actividades; dentro de cada uno, CNN y luego MLP.
+// Solo suena una cosa a la vez: cada sonido nuevo corta al anterior.
 
 // Color fijo por modelo (por entidad, nunca por ranking)
 const MODELOS = [
@@ -81,14 +89,16 @@ function iconoClase(prueba, clase) {
 }
 
 // Un bloque de barras: una por modelo, con su pista y su valor
-function barras(titulo, filas) {
+function barras(titulo, tipo, prueba, filas) {
     return `
         <div class="medida">
             <div class="encabezado">${titulo}</div>
             <dl class="barras">
                 ${filas.map(f => `
                     <dt>${f.modelo.clave}</dt>
-                    <dd class="pista" title="${f.modelo.clave}: ${f.detalle}"><i style="width:${f.ancho}%;background:${f.modelo.color}"></i></dd>
+                    <dd class="pista" tabindex="0" role="button" title="${f.modelo.clave}: ${f.detalle}"
+                        aria-label="Escuchar ${f.modelo.clave}: ${f.detalle}"
+                        data-tipo="${tipo}" data-prueba="${prueba}" data-modelo="${f.modelo.clave}"><i style="width:${f.ancho}%;background:${f.modelo.color}"></i></dd>
                     <dd class="valor">${f.valor}</dd>
                 `).join("")}
             </dl>
@@ -113,14 +123,15 @@ function dibujar() {
                     <h2>${p.nombre}</h2>
                     <p class="detalle">${p.detalle}</p>
                     <div class="clases" data-prueba="${i}"></div>
+                    <button class="btn escuchar" type="button" data-prueba="${i}">▶ Escuchar</button>
                 </div>
-                ${barras(TITULO_ACIERTOS, resumen.map(r => ({
+                ${barras(TITULO_ACIERTOS, "aciertos", i, resumen.map(r => ({
                     modelo: r.modelo,
                     ancho: r.aciertos / ESCALA_ACIERTOS * 100,
                     valor: r.aciertos,
                     detalle: `${r.aciertos} aciertos de cada 100 casos`
                 })))}
-                ${barras(TITULO_TIEMPO, resumen.map(r => ({
+                ${barras(TITULO_TIEMPO, "tiempo", i, resumen.map(r => ({
                     modelo: r.modelo,
                     ancho: r.tiempo / ESCALA_TIEMPO * 100,
                     valor: decimal(r.tiempo),
@@ -136,6 +147,11 @@ function dibujar() {
         <ul class="leyenda">
             ${MODELOS.map(m => `<li><span class="muestra" style="background:${m.color}"></span>${m.nombre}</li>`).join("")}
         </ul>
+        <div class="sonido">
+            <button id="btn-sonido" class="btn btn-primario" type="button">🔊 Activar sonido</button>
+            <button id="btn-todo" class="btn escuchar" type="button">▶ Escuchar todo</button>
+            <p>Más agudo = más aciertos · pulsos más largos = más entrenamiento · ▶ toca primero los aciertos y después el entrenamiento, siempre CNN (izquierda) y luego MLP (derecha).</p>
+        </div>
         <div class="fila encabezados">
             <span></span>
             <span class="encabezado">${TITULO_ACIERTOS}</span>
@@ -155,6 +171,155 @@ function dibujar() {
             clase.appendChild(document.createTextNode(nombre));
             contenedor.appendChild(clase);
         });
+    });
+
+    conectarSonido();
+}
+
+// ---------------------------------------------------------------
+// Sonido
+// ---------------------------------------------------------------
+
+let sonidoActivo = false;
+
+async function activarSonido() {
+    if (!sonidoActivo) {
+        await ModelosAudio.activar();
+        sonidoActivo = true;
+    }
+
+    const boton = document.getElementById("btn-sonido");
+    boton.textContent = "🔊 Sonido activado";
+    boton.disabled = true;
+}
+
+// Solo suena y se resalta una cosa a la vez: lo nuevo corta a lo anterior
+let resaltados = [];
+let comparandoHasta = 0;
+
+function limpiarResaltado() {
+    resaltados.forEach(clearTimeout);
+    resaltados = [];
+    comparandoHasta = 0;
+
+    document.querySelectorAll(".sonando").forEach(el => el.classList.remove("sonando"));
+    document.querySelectorAll(".escuchar").forEach(boton => { boton.disabled = false; });
+}
+
+// Marca lo que esta sonando, desde `inicio` y durante `duracion` segundos
+function resaltar(elementos, inicio, duracion) {
+    resaltados.push(setTimeout(() => elementos.forEach(el => el.classList.add("sonando")), inicio * 1000));
+    resaltados.push(setTimeout(() => elementos.forEach(el => el.classList.remove("sonando")), (inicio + duracion) * 1000));
+}
+
+function sonarBarra(pista) {
+    const { tipo, prueba, modelo } = pista.dataset;
+    const datos = PRUEBAS[prueba].datos.generales[modelo];
+
+    limpiarResaltado();
+
+    if (tipo === "aciertos") {
+        ModelosAudio.sonarHover(modelo, datos.accuracy);
+        resaltar([pista], 0, 0.4);
+    } else {
+        resaltar([pista], 0, ModelosAudio.sonarEntrenamiento(modelo, datos));
+    }
+}
+
+// Orden en que se escucha una prueba: primero los aciertos (CNN y luego MLP)
+// y despues el entrenamiento (CNN y luego MLP)
+function pasosPrueba(prueba) {
+    const pasos = [];
+
+    [["aciertos", "nota"], ["tiempo", "pulsos"]].forEach(([medida, tipo], k) => {
+        MODELOS.forEach((m, j) => {
+            pasos.push({
+                tipo,
+                modelo: m.clave,
+                datos: PRUEBAS[prueba].datos.generales[m.clave],
+                // Silencio mas largo al cambiar de medida que entre un modelo y el otro
+                pausa: j > 0 ? 0.15 : (k > 0 ? 0.6 : 0),
+                prueba,
+                medida
+            });
+        });
+    });
+
+    return pasos;
+}
+
+// Reproduce los pasos en orden y marca la barra de cada uno mientras suena
+function reproducir(pasos, boton) {
+    limpiarResaltado();
+
+    const tramos = ModelosAudio.reproducirSecuencia(pasos);
+    const total = Math.max(...tramos.map(t => t.inicio + t.duracion));
+
+    tramos.forEach((tramo, k) => {
+        const p = pasos[k];
+        const pista = document.querySelector(`.pista[data-prueba="${p.prueba}"][data-tipo="${p.medida}"][data-modelo="${p.modelo}"]`);
+        resaltar([pista], tramo.inicio, tramo.duracion);
+    });
+
+    boton.disabled = true;
+    comparandoHasta = Date.now() + total * 1000;
+    resaltados.push(setTimeout(limpiarResaltado, total * 1000));
+}
+
+function conectarSonido() {
+    const boton = document.getElementById("btn-sonido");
+
+    boton.addEventListener("click", activarSonido);
+
+    if (sonidoActivo) {
+        activarSonido();
+    }
+
+    // Pasar el mouse por una barra la hace sonar (solo si el sonido ya esta activado);
+    // el click o Enter ademas activan el sonido, porque el navegador exige un gesto.
+    document.querySelectorAll(".pista").forEach(pista => {
+        pista.addEventListener("mouseenter", () => {
+            // Durante una comparacion el mouse no la interrumpe; un click si
+            if (sonidoActivo && Date.now() > comparandoHasta) {
+                sonarBarra(pista);
+            }
+        });
+
+        pista.addEventListener("click", async () => {
+            await activarSonido();
+            sonarBarra(pista);
+        });
+
+        pista.addEventListener("keydown", async evento => {
+            if (evento.key === "Enter" || evento.key === " ") {
+                evento.preventDefault();
+                await activarSonido();
+                sonarBarra(pista);
+            }
+        });
+    });
+
+    // Una prueba: sus aciertos y despues su entrenamiento
+    document.querySelectorAll(".escuchar[data-prueba]").forEach(escuchar => {
+        escuchar.addEventListener("click", async () => {
+            await activarSonido();
+            reproducir(pasosPrueba(Number(escuchar.dataset.prueba)), escuchar);
+        });
+    });
+
+    // Todo el grafico: las pruebas en orden, con un silencio entre una y otra
+    const todo = document.getElementById("btn-todo");
+
+    todo.addEventListener("click", async () => {
+        await activarSonido();
+
+        const pasos = PRUEBAS.flatMap((_, i) => {
+            const prueba = pasosPrueba(i);
+            prueba[0].pausa = i > 0 ? 1 : 0;
+            return prueba;
+        });
+
+        reproducir(pasos, todo);
     });
 }
 
