@@ -977,34 +977,15 @@ function grillaCasos(el) {
     });
 }
 
-// Reparte conteos en `total` casillas enteras (metodo del resto mayor)
-function repartir(conteos, total) {
-    const suma = conteos.reduce((a, b) => a + b, 0);
-    const exactos = conteos.map(c => c / suma * total);
-    const casillas = exactos.map(Math.floor);
-    const orden = exactos.map((e, i) => ({ i, resto: e - Math.floor(e) })).sort((a, b) => b.resto - a.resto);
-    const faltan = total - casillas.reduce((a, b) => a + b, 0);
-
-    for (let k = 0; k < faltan; k++) {
-        casillas[orden[k].i]++;
-    }
-
-    return casillas;
-}
-
-// Contexto de cada prueba: que se pregunta, con que datos y por que gana quien gana
+// Contexto minimo de cada prueba: la pregunta que responde el modelo
 const CONTEXTO = [
     {
-        pregunta: "¿Es un gato o un perro?",
-        datos: "Dibujos hechos a mano de 28 × 28 píxeles (Quick, Draw!). El dato es una imagen.",
-        porque: "La CNN mira grupos de píxeles vecinos, así que aprovecha la forma del dibujo. Probablemente por eso acierta más, pero revisar cada vecindario la hace más lenta.",
+        pregunta: "¿Gato o perro?",
         // Dibujos de ejemplo para cada clase (posicion dentro de los 10 casos individuales)
         ejemplo: [4, 6]
     },
     {
-        pregunta: "¿Qué está haciendo la persona?",
-        datos: "561 números ya resumidos del acelerómetro y el giroscopio de un celular. El dato es una fila de una tabla.",
-        porque: "Aquí las variables vecinas no forman una figura, así que la ventaja de la CNN desaparece: el MLP acierta más y además es más rápido."
+        pregunta: "¿Qué hace la persona?"
     }
 ];
 
@@ -1030,21 +1011,12 @@ function cadaCien(el) {
 
     PRUEBAS.forEach((p, i) => {
         const contexto = CONTEXTO[i];
-        // Por modelo: cuantas de 100 casillas son aciertos y cuantas errores de cada clase
-        const resumen = MODELOS.map(m => {
-            const matriz = p.matrices[m.clave];
-            const errores = matriz.map((fila, c) => fila.reduce((a, b) => a + b, 0) - fila[c]);
 
-            // Los aciertos son la accuracy redondeada; los errores se reparten entre las clases
-            const aciertos = Math.round(p.generales[m.clave].accuracy * 100);
-
-            return {
-                modelo: m,
-                aciertos,
-                errores: repartir(errores, 100 - aciertos),
-                tiempo: p.generales[m.clave].tiempo_entrenamiento_s
-            };
-        });
+        const resumen = MODELOS.map(m => ({
+            modelo: m,
+            aciertos: Math.round(p.generales[m.clave].accuracy * 100),
+            tiempo: p.generales[m.clave].tiempo_entrenamiento_s
+        }));
 
         const masAciertos = Math.max(...resumen.map(r => r.aciertos));
         const menosAciertos = Math.min(...resumen.map(r => r.aciertos));
@@ -1057,9 +1029,7 @@ function cadaCien(el) {
             <div class="cien-contexto">
                 <h4>${p.nombre}</h4>
                 <p class="cien-pregunta">${contexto.pregunta}</p>
-                <p>${contexto.datos}</p>
                 <div class="cien-clases"></div>
-                <p class="cien-porque">${contexto.porque}</p>
             </div>
             <div class="cien-modelos"></div>
         `;
@@ -1078,60 +1048,32 @@ function cadaCien(el) {
                 insignias.push(`★ ${masAciertos - menosAciertos} aciertos más`);
             }
             if (r.tiempo === masRapido) {
-                insignias.push(`⚡︎ Entrena ${veces(masLento / masRapido)} más rápido`);
+                insignias.push(`⚡\uFE0E Entrena ${veces(masLento / masRapido)} más rápido`);
             }
 
             const fila = document.createElement("div");
             fila.className = "cien-modelo";
+            fila.style.setProperty("--color-modelo", color(r.modelo));
             fila.innerHTML = `
                 <div class="cien-cabecera">
                     <span class="cien-nombre"><span class="muestra" style="background:${color(r.modelo)}"></span>${r.modelo.nombre}</span>
-                    <span class="cien-cifra"><strong>${r.aciertos}</strong> de cada 100</span>
                     ${insignias.map(t => `<span class="insignia">${t}</span>`).join("")}
                 </div>
-                <div class="cien-grilla" role="img" aria-label="${r.modelo.clave}: ${r.aciertos} aciertos y ${100 - r.aciertos} errores de cada 100 casos"></div>
-                <div class="cien-tiempo">
+                <div class="cien-medida">
+                    <span>Aciertos</span>
+                    <span class="cien-barra con-pista"><i style="width:${r.aciertos}%"></i></span>
+                    <span><strong>${r.aciertos}</strong> de 100</span>
                     <span>Entrenar</span>
-                    <span class="cien-barra"><i style="width:${r.tiempo / maxTiempo * 100}%;background:${color(r.modelo)}"></i></span>
+                    <span class="cien-barra"><i style="width:${r.tiempo / maxTiempo * 100}%"></i></span>
                     <span>${tiempo(r.tiempo)}</span>
                 </div>
             `;
-
-            const grilla = fila.querySelector(".cien-grilla");
-
-            for (let k = 0; k < r.aciertos; k++) {
-                const casilla = document.createElement("span");
-                casilla.className = "acierto";
-                casilla.style.background = color(r.modelo);
-                grilla.appendChild(casilla);
-            }
-
-            // Los errores van al final, con la figura de lo que el caso era en realidad
-            r.errores.forEach((cantidad, c) => {
-                for (let k = 0; k < cantidad; k++) {
-                    const casilla = document.createElement("span");
-                    casilla.className = "error";
-                    casilla.title = `${r.modelo.clave} se equivoca: era ${p.clases[c]}`;
-                    casilla.appendChild(iconoClase(p, i, c));
-                    grilla.appendChild(casilla);
-                }
-            });
 
             bloque.querySelector(".cien-modelos").appendChild(fila);
         });
 
         el.appendChild(bloque);
     });
-
-    const leyenda = document.createElement("p");
-    leyenda.className = "cien-leyenda";
-    leyenda.innerHTML = `
-        <span class="cien-grilla"><span class="acierto" style="background:var(--modelo-cnn)"></span><span class="acierto" style="background:var(--modelo-mlp)"></span></span>
-        Acierto, en el color del modelo
-        <span class="cien-grilla"><span class="error"><b>✗</b></span></span>
-        Error: la figura muestra lo que el caso era en realidad
-    `;
-    el.appendChild(leyenda);
 }
 
 function confianza(el) {
@@ -1471,11 +1413,11 @@ const SECCIONES = [
                 dibujar: grillaCasos, html: true
             },
             {
-                codigo: "D4", tipo: "De cada 100 casos", veredicto: "Recomendado", ancha: true,
+                codigo: "D4", tipo: "Aciertos y tiempo por prueba", veredicto: "Recomendado", ancha: true,
                 titulo: "La CNN gana donde hay una imagen, pero nunca es la más rápida",
-                sub: "Cada cuadro es 1 de cada 100 casos del test. Los errores quedan al final de la grilla: mientras más larga la cola roja, peor.",
-                bien: "Responde a la retroalimentación en una sola vista: el color es el modelo, cada prueba trae su contexto y el contraste se ve dos veces (el ganador cambia entre pruebas, y en la Prueba 1 el que más acierta es el más lento). «88 de cada 100» lo entiende cualquier audiencia, y la figura de cada error dice en qué falla cada modelo.",
-                limite: "Redondea a casos enteros (82,5% se ve como 82). Los cuadros de acierto son todos iguales: solo los errores dicen de qué clase eran. La explicación de por qué gana cada modelo es una interpretación nuestra, no algo que midan los datos.",
+                sub: "Aciertos de cada 100 casos y tiempo de entrenamiento de cada modelo, en las dos pruebas.",
+                bien: "Responde a la retroalimentación en una sola vista: el color es el modelo, cada prueba muestra su pregunta y sus clases, y el contraste se ve dos veces (el ganador cambia entre pruebas, y en la Prueba 1 el que más acierta es el más lento). Solo dos barras por modelo, así que se lee en pocos segundos.",
+                limite: "Las barras de aciertos parten en 0, así que 88 contra 82 se ven casi iguales: la diferencia la cargan la cifra y la insignia, no el largo. Redondea a casos enteros. No explica por qué gana cada modelo: eso tendría que ir en el texto de la página.",
                 dibujar: cadaCien, html: true
             },
             {
