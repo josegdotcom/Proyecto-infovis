@@ -120,10 +120,12 @@ function dibujar() {
         return `
             <section class="fila prueba">
                 <div>
-                    <h3>${p.nombre}</h3>
+                    <div class="nombre-prueba">
+                        <h3>${p.nombre}</h3>
+                        <button class="btn escuchar" type="button" data-prueba="${i}">▶ Escuchar</button>
+                    </div>
                     <p class="detalle">${p.detalle}</p>
                     <div class="clases" data-prueba="${i}"></div>
-                    <button class="btn escuchar" type="button" data-prueba="${i}">▶ Escuchar</button>
                 </div>
                 ${barras(TITULO_ACIERTOS, "aciertos", i, resumen.map(r => ({
                     modelo: r.modelo,
@@ -142,22 +144,17 @@ function dibujar() {
     });
 
     document.getElementById("grafico").innerHTML = `
-        <h2 class="titulo">La MLP entrena más rápido en ambas pruebas</h2>
-        <p class="bajada">La CNN solo obtiene más aciertos en dibujos.</p>
+        <div class="titular">
+            <div>
+                <h2 class="titulo">La MLP entrena más rápido en ambas pruebas</h2>
+                <p class="bajada">La CNN solo obtiene más aciertos en dibujos.</p>
+            </div>
+            <button id="btn-todo" class="btn escuchar" type="button">▶ Escuchar todo</button>
+        </div>
         <ul class="leyenda">
             ${MODELOS.map(m => `<li><span class="muestra" style="background:${m.color}"></span>${m.nombre}</li>`).join("")}
         </ul>
-        <div class="sonido">
-            <button id="btn-todo" class="btn escuchar" type="button">▶ Escuchar todo</button>
-            <p>Más agudo = más aciertos · pulsos más largos = más entrenamiento · ▶ toca primero los aciertos y después el entrenamiento, siempre CNN (izquierda) y luego MLP (derecha).</p>
-        </div>
-        <div class="fila encabezados">
-            <span></span>
-            <span class="encabezado">${TITULO_ACIERTOS}</span>
-            <span class="encabezado">${TITULO_TIEMPO}</span>
-        </div>
         ${filas.join("")}
-        <p class="nota">Escalas constantes: aciertos de 0 a ${ESCALA_ACIERTOS} · entrenamiento de 0 a ${ESCALA_TIEMPO} segundos</p>
     `;
 
     // Las imagenes de las clases de cada prueba van bajo su nombre

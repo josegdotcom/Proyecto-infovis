@@ -450,34 +450,66 @@ h3 {
     }
 }
 
-/*HOLAAA*/
-.tarjetas-contenedor {
-  display: flex;
-  gap: 15px;
-  justify-content: center; 
+/* Tarjetas de los modelos: imagen, nombre y texto, con el mismo marco que el grafico */
+
+.modelos-info {
+    margin-top: 12px;
 }
 
-.tarjeta-item p {
-  width: 50%; 
-  text-align: center; 
-  margin-top: auto; 
-  margin-bottom: 0;
-  font-size: 14px;
-  transform: translateX(180px);
+.modelos-info > h2 {
+    margin: 0 0 8px;
+    font-size: calc(1.35rem + 3px);
+    line-height: 1.25;
+}
 
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-  font-size: 15px; /* Ajusta el tamaño si lo necesitas */
-  color: var(--texto-primario);
+.tarjetas-contenedor {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+    gap: 16px;
+}
+
+.tarjeta-item.tarjeta {
+    padding: 14px 24px 16px;
 }
 
 .tarjeta-item img {
-  width: 100%;
-  height: 180px; 
-  object-fit: contain; 
-  object-position: center; 
+    display: block;
+    width: 100%;
+    height: 116px;
+    object-fit: contain;
+    object-position: center;
+}
+
+.tarjeta-item h3 {
+    margin: 8px 0 2px;
+    font-size: calc(1.05rem + 3px);
 }
 
 .tarjeta-item p {
-  margin-top: 8px;
-  font-size: 14px;
+    max-width: 60ch;
+    margin: 0;
+    font-size: calc(0.95rem + 3px);
+    color: var(--texto-secundario);
+}
+
+/* Pagina principal: margenes ajustados para que cabecera, grafico y modelos quepan en una vista */
+
+body.principal {
+    padding-bottom: 16px;
+}
+
+body.principal #grafico {
+    padding: 18px 28px 8px;
+}
+
+/* Cabecera de la pagina principal: textos centrados y parrafo a casi todo el ancho */
+
+.cabecera.centrada {
+    padding: 20px 0 16px;
+    text-align: center;
+}
+
+.cabecera.centrada .mensaje {
+    max-width: 110ch;
+    margin: 0 auto;
 }
