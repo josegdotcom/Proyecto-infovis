@@ -1,67 +1,61 @@
-/* Grafico de comparacion CNN vs. MLP (index.html y exploracion/comparacion.html) */
-
-/* Colores de los dos modelos actuales. MLP mantiene el verde de la V1. */
-:root {
-    --modelo-cnn: #2a78d6;
-    --pista: #e8e7e2;
-}
-
-@media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-        --modelo-cnn: #3987e5;
-        --pista: #2c2c2a;
-    }
-}
-
-:root[data-theme="dark"] {
-    --modelo-cnn: #3987e5;
-    --pista: #2c2c2a;
-}
-
-.pagina {
-    max-width: 860px;
-    margin: 0 auto;
-    padding-top: 32px;
-}
+/* Grafico de comparacion CNN vs. MLP (index.html y exploracion/comparacion.html).
+   Los colores vienen de la paleta de la pagina principal, en style.css. */
 
 .tarjeta {
-    /* Texto 1px mas grande que el de la cabecera de la pagina */
-    font-size: calc(1rem + 3px);
-    padding: 24px 28px;
+    padding: 20px 28px 8px;
     background: var(--superficie);
     border: 1px solid var(--borde);
     border-radius: 12px;
+    font-size: calc(1rem + 3px);
 }
 
-.tarjeta .titulo {
-    margin: 0 0 4px;
-    font-size: calc(1.35rem + 3px);
-    line-height: 1.25;
-}
-
-.bajada {
-    margin: 0 0 8px;
-    color: var(--texto-secundario);
-}
-
-/* Titulo a la izquierda y el boton de escuchar todo a su costado */
-.titular {
+/* Leyenda a la izquierda y el control general de sonido a la derecha */
+.barra-superior {
     display: flex;
     flex-wrap: wrap;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: 8px 24px;
+    padding-bottom: 16px;
 }
 
 .leyenda {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px 40px;
-    margin: 0 0 12px;
+    gap: 4px 32px;
+    margin: 0;
     padding: 0;
     list-style: none;
-    font-size: calc(0.82rem + 3px);
+    font-size: calc(0.85rem + 3px);
     color: var(--texto-primario);
+}
+
+.muestra {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    margin-right: 8px;
+    border-radius: 3px;
+}
+
+/* Controles de sonido: discretos, para que no compitan con las cifras */
+.escuchar {
+    padding: 4px 14px;
+    font-size: calc(0.82rem + 3px);
+    color: var(--texto-secundario);
+}
+
+/* Tres columnas: la prueba, los aciertos y el entrenamiento */
+.fila {
+    display: grid;
+    grid-template-columns: 340px minmax(0, 1fr) minmax(0, 1fr);
+    gap: 16px 48px;
+    align-items: start;
+}
+
+.fila.prueba {
+    padding: 18px 0;
+    border-top: 1px solid var(--borde);
 }
 
 /* Nombre de la prueba y su boton de escuchar, en la misma linea */
@@ -69,57 +63,18 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    height: 28px;
-}
-
-.nombre-prueba .escuchar {
-    padding: 2px 12px;
-    font-size: calc(0.85rem + 3px);
-}
-
-.muestra {
-    display: inline-block;
-    width: 10px;
-    height: 10px;
-    margin-right: 6px;
-    border-radius: 3px;
-}
-
-/* Tres columnas: la prueba, los aciertos y el entrenamiento */
-.fila {
-    display: grid;
-    grid-template-columns: 350px minmax(0, 1fr) minmax(0, 1fr);
-    gap: 12px 40px;
-    align-items: start;
-}
-
-.fila.prueba {
-    padding: 14px 0;
-    border-top: 1px solid var(--borde);
-}
-
-.encabezado {
-    font-size: calc(0.75rem + 3px);
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    color: var(--texto-primario);
-}
-
-/* El encabezado de cada columna va en la fila de su prueba, a la misma altura que el nombre */
-.medida .encabezado {
-    margin-bottom: 6px;
-    line-height: 28px;
+    min-height: 32px;
 }
 
 .prueba h3 {
     margin: 0;
-    font-size: calc(1.05rem + 3px);
-    line-height: 28px;
+    font-size: calc(1.1rem + 3px);
+    color: var(--texto-primario);
 }
 
 .detalle {
-    margin: 0 0 6px;
-    font-size: calc(0.78rem + 3px);
+    margin: 0 0 8px;
+    font-size: calc(0.8rem + 3px);
     color: var(--texto-tenue);
 }
 
@@ -127,15 +82,15 @@
 .clases {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px 8px;
-    color: var(--texto-primario);
+    gap: 6px 10px;
+    color: var(--texto-secundario);
 }
 
 .clases span {
     display: grid;
     justify-items: center;
     gap: 2px;
-    font-size: calc(0.72rem + 3px);
+    font-size: calc(0.7rem + 3px);
 }
 
 .clases canvas,
@@ -144,17 +99,37 @@
     height: 36px;
     border-radius: 4px;
     background: var(--plano);
+    color: var(--texto-primario);
     image-rendering: pixelated;
 }
 
+/* Encabezado de cada medida: que se mide, en que unidad y hacia donde es mejor */
+.encabezado {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0 10px;
+    min-height: 32px;
+    margin-bottom: 4px;
+    font-size: calc(0.85rem + 3px);
+    font-weight: 700;
+    line-height: 32px;
+    color: var(--texto-primario);
+}
+
+.encabezado span {
+    font-size: calc(0.75rem + 3px);
+    font-weight: 400;
+    color: var(--texto-tenue);
+}
+
+/* Una barra por modelo: nombre, barra sobre su pista y la cifra */
 .barras {
     display: grid;
-    grid-template-columns: 40px minmax(0, 1fr) 44px;
+    grid-template-columns: 44px minmax(0, 1fr) 88px;
     align-items: center;
-    gap: 14px 10px;
-    margin: 4px 0 0;
-    font-size: calc(0.82rem + 3px);
-    color: var(--texto-secundario);
+    gap: 12px 12px;
+    margin: 0;
 }
 
 .barras dt,
@@ -162,15 +137,20 @@
     margin: 0;
 }
 
+.barras dt {
+    font-size: calc(0.82rem + 3px);
+    font-weight: 700;
+}
+
 .pista {
-    height: 18px;
+    height: 20px;
     border-radius: 4px;
     background: var(--pista);
     cursor: pointer;
 }
 
 .pista:focus-visible {
-    outline: 2px solid var(--acento);
+    outline: 2px solid var(--texto-primario);
     outline-offset: 2px;
 }
 
@@ -187,20 +167,51 @@
     border-radius: 4px;
 }
 
+/* La cifra es lo mas visible de la fila; la mejor de cada par va mas oscura y gruesa */
 .valor {
-    font-size: calc(1rem + 3px);
-    font-weight: 700;
+    font-size: calc(1.3rem + 3px);
+    font-weight: 400;
     font-variant-numeric: tabular-nums;
+    line-height: 1;
+    white-space: nowrap;
+    color: var(--texto-secundario);
+}
+
+.valor.mejor {
+    font-weight: 700;
     color: var(--texto-primario);
 }
 
-@media (max-width: 860px) {
+.valor small {
+    margin-left: 3px;
+    font-size: calc(0.75rem + 3px);
+    font-weight: 400;
+    color: var(--texto-tenue);
+}
+
+/* Tablet: la prueba arriba y las dos medidas lado a lado */
+@media (max-width: 1000px) {
+    .fila {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 12px 32px;
+    }
+
+    .fila > :first-child {
+        grid-column: 1 / -1;
+    }
+}
+
+/* Telefono: todo en una columna */
+@media (max-width: 600px) {
     .tarjeta {
-        padding: 16px;
+        padding: 16px 16px 4px;
     }
 
     .fila {
         grid-template-columns: minmax(0, 1fr);
     }
 
+    .barras {
+        grid-template-columns: 44px minmax(0, 1fr) 80px;
+    }
 }

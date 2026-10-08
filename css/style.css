@@ -450,66 +450,180 @@ h3 {
     }
 }
 
-/* Tarjetas de los modelos: imagen, nombre y texto, con el mismo marco que el grafico */
+/* ===============================================================
+   Pagina principal (html.principal)
+   =============================================================== */
 
-.modelos-info {
-    margin-top: 12px;
+/* Paleta de texto con tres niveles y un color por modelo. Todos los textos
+   cumplen WCAG AA (4,5:1) sobre el fondo y sobre la tarjeta, en los dos modos. */
+
+:root.principal {
+    --texto-primario: #1F2937;      /* titulos y resultados principales */
+    --texto-secundario: #374151;    /* subtitulos y explicaciones */
+    --texto-tenue: #596579;         /* etiquetas y textos secundarios */
+    --modelo-cnn: #2368B4;
+    --modelo-mlp: #087A58;
+    --texto-cnn: #2368B4;
+    --texto-mlp: #087A58;
+    --pista: #E5E7EB;
+    --borde: rgba(31, 41, 55, 0.14);
 }
 
-.modelos-info > h2 {
-    margin: 0 0 8px;
-    font-size: calc(1.35rem + 3px);
-    line-height: 1.25;
+@media (prefers-color-scheme: dark) {
+    :root.principal:not([data-theme="light"]) {
+        --texto-primario: #F3F4F6;
+        --texto-secundario: #D1D5DB;
+        --texto-tenue: #A3AAB6;
+        --modelo-cnn: #3987e5;
+        --modelo-mlp: #199e70;
+        --texto-cnn: #7DB1F0;
+        --texto-mlp: #4FCB9D;
+        --pista: #2c2c2a;
+        --borde: rgba(255, 255, 255, 0.14);
+    }
 }
 
-.tarjetas-contenedor {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
-    gap: 16px;
+:root.principal[data-theme="dark"] {
+    --texto-primario: #F3F4F6;
+    --texto-secundario: #D1D5DB;
+    --texto-tenue: #A3AAB6;
+    --modelo-cnn: #3987e5;
+    --modelo-mlp: #199e70;
+    --texto-cnn: #7DB1F0;
+    --texto-mlp: #4FCB9D;
+    --pista: #2c2c2a;
+    --borde: rgba(255, 255, 255, 0.14);
 }
 
-.tarjeta-item.tarjeta {
-    padding: 14px 24px 16px;
+.principal body {
+    padding-bottom: 20px;
 }
 
-.tarjeta-item img {
-    display: block;
-    width: 100%;
-    height: 116px;
-    object-fit: contain;
-    object-position: center;
+.principal .cabecera,
+.principal main,
+.principal .fuentes {
+    max-width: 1180px;
 }
 
-.tarjeta-item h3 {
-    margin: 8px 0 2px;
-    font-size: calc(1.05rem + 3px);
+/* El azul queda reservado para la CNN: los enlaces van en el color del texto */
+.principal a {
+    color: inherit;
+    text-decoration-color: var(--texto-tenue);
+    text-underline-offset: 2px;
 }
 
-.tarjeta-item p {
-    max-width: 60ch;
-    margin: 0;
-    font-size: calc(0.95rem + 3px);
-    color: var(--texto-secundario);
-}
-
-/* Pagina principal: margenes ajustados para que cabecera, grafico y modelos quepan en una vista */
-
-body.principal {
-    padding-bottom: 16px;
-}
-
-body.principal #grafico {
-    padding: 18px 28px 8px;
-}
-
-/* Cabecera de la pagina principal: textos centrados y parrafo a casi todo el ancho */
+/* Cabecera: la conclusion como titulo y su contexto debajo, centrados */
 
 .cabecera.centrada {
-    padding: 20px 0 16px;
+    padding: 24px 0 20px;
     text-align: center;
+}
+
+.principal .eyebrow {
+    color: var(--texto-tenue);
+}
+
+.principal h1 {
+    margin: 4px 0 8px;
+    color: var(--texto-primario);
 }
 
 .cabecera.centrada .mensaje {
     max-width: 110ch;
     margin: 0 auto;
+    font-size: 1.15rem;
+    color: var(--texto-secundario);
+}
+
+/* Seccion secundaria: que es cada modelo. Sin tarjetas, para no competir con el grafico */
+
+.modelos-info {
+    margin-top: 28px;
+}
+
+.modelos-info > h2 {
+    margin: 0 0 12px;
+    font-size: calc(1.1rem + 3px);
+    line-height: 1.25;
+    color: var(--texto-primario);
+}
+
+.modelos-lista {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+    gap: 20px 48px;
+}
+
+/* Diagrama a la izquierda y texto a la derecha */
+.modelo-item {
+    display: grid;
+    grid-template-columns: 170px minmax(0, 1fr);
+    align-items: center;
+    gap: 20px;
+}
+
+.modelo-item h3 {
+    margin: 0 0 4px;
+    font-size: calc(1rem + 3px);
+    color: var(--texto-primario);
+}
+
+.modelo-item p {
+    margin: 0;
+    font-size: calc(0.9rem + 3px);
+    color: var(--texto-secundario);
+}
+
+.diagrama {
+    display: block;
+    width: 100%;
+    height: auto;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.dg-conexion {
+    stroke: var(--texto-tenue);
+    stroke-width: 1;
+    opacity: 0.7;
+}
+
+.dg-mlp {
+    fill: var(--modelo-mlp);
+}
+
+.dg-cnn {
+    fill: var(--modelo-cnn);
+}
+
+.dg-cnn-suave {
+    fill: var(--modelo-cnn);
+    fill-opacity: 0.22;
+    stroke: var(--modelo-cnn);
+    stroke-width: 1.5;
+}
+
+.dg-cnn-guia {
+    stroke: var(--modelo-cnn);
+    stroke-width: 1;
+    stroke-dasharray: 3 3;
+}
+
+.fuentes {
+    margin: 24px auto 0;
+    font-size: 0.9rem;
+    text-align: center;
+    color: var(--texto-tenue);
+}
+
+@media (max-width: 600px) {
+    .modelo-item {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 8px;
+    }
+
+    .diagrama {
+        max-width: 240px;
+    }
 }

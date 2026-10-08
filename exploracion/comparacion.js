@@ -11,8 +11,8 @@
 
 // Color fijo por modelo (por entidad, nunca por ranking)
 const MODELOS = [
-    { clave: "CNN", nombre: "CNN (convolucional)", color: "var(--modelo-cnn)" },
-    { clave: "MLP", nombre: "MLP (red densa)", color: "var(--modelo-mlp)" }
+    { clave: "CNN", nombre: "CNN (convolucional)", color: "var(--modelo-cnn)", texto: "var(--texto-cnn)" },
+    { clave: "MLP", nombre: "MLP (red densa)", color: "var(--modelo-mlp)", texto: "var(--texto-mlp)" }
 ];
 
 const PRUEBAS = [
@@ -88,18 +88,19 @@ function iconoClase(prueba, clase) {
     return caja.firstChild;
 }
 
-// Un bloque de barras: una por modelo, con su pista y su valor
-function barras(titulo, tipo, prueba, filas) {
+// Un bloque de barras: una por modelo, con su pista y su cifra.
+// `nota` dice la unidad y hacia donde es mejor; la mejor cifra del par se destaca.
+function barras(titulo, nota, tipo, prueba, filas) {
     return `
         <div class="medida">
-            <div class="encabezado">${titulo}</div>
+            <div class="encabezado">${titulo} <span>${nota}</span></div>
             <dl class="barras">
                 ${filas.map(f => `
-                    <dt>${f.modelo.clave}</dt>
+                    <dt style="color:${f.modelo.texto}">${f.modelo.clave}</dt>
                     <dd class="pista" tabindex="0" role="button" title="${f.modelo.clave}: ${f.detalle}"
-                        aria-label="Escuchar ${f.modelo.clave}: ${f.detalle}"
+                        aria-label="Escuchar ${f.modelo.clave}: ${f.detalle}${f.mejor ? " (el mejor de los dos)" : ""}"
                         data-tipo="${tipo}" data-prueba="${prueba}" data-modelo="${f.modelo.clave}"><i style="width:${f.ancho}%;background:${f.modelo.color}"></i></dd>
-                    <dd class="valor">${f.valor}</dd>
+                    <dd class="valor${f.mejor ? " mejor" : ""}">${f.valor}</dd>
                 `).join("")}
             </dl>
         </div>
@@ -107,15 +108,16 @@ function barras(titulo, tipo, prueba, filas) {
 }
 
 function dibujar() {
-    const TITULO_ACIERTOS = "ACIERTOS / 100";
-    const TITULO_TIEMPO = "ENTRENAMIENTO (s)";
-
     const filas = PRUEBAS.map((p, i) => {
         const resumen = MODELOS.map(m => ({
             modelo: m,
             aciertos: Math.round(p.datos.generales[m.clave].accuracy * 100),
             tiempo: p.datos.generales[m.clave].tiempo_entrenamiento_s
         }));
+
+        // En aciertos gana el mayor; en entrenamiento, el menor
+        const masAciertos = Math.max(...resumen.map(r => r.aciertos));
+        const menosTiempo = Math.min(...resumen.map(r => r.tiempo));
 
         return `
             <section class="fila prueba">
@@ -127,33 +129,32 @@ function dibujar() {
                     <p class="detalle">${p.detalle}</p>
                     <div class="clases" data-prueba="${i}"></div>
                 </div>
-                ${barras(TITULO_ACIERTOS, "aciertos", i, resumen.map(r => ({
+                ${barras("Aciertos", "de cada 100 · más es mejor", "aciertos", i, resumen.map(r => ({
                     modelo: r.modelo,
                     ancho: r.aciertos / ESCALA_ACIERTOS * 100,
                     valor: r.aciertos,
+                    mejor: r.aciertos === masAciertos,
                     detalle: `${r.aciertos} aciertos de cada 100 casos`
                 })))}
-                ${barras(TITULO_TIEMPO, "tiempo", i, resumen.map(r => ({
+                ${barras("Entrenamiento", "segundos · menos es mejor", "tiempo", i, resumen.map(r => ({
                     modelo: r.modelo,
                     ancho: r.tiempo / ESCALA_TIEMPO * 100,
-                    valor: decimal(r.tiempo),
+                    valor: `${decimal(r.tiempo)}<small>s</small>`,
+                    mejor: r.tiempo === menosTiempo,
                     detalle: `${decimal(r.tiempo)} segundos de entrenamiento`
                 })))}
             </section>
         `;
     });
 
+    // El titulo y la bajada van en el HTML de la pagina; aqui solo leyenda, control y filas
     document.getElementById("grafico").innerHTML = `
-        <div class="titular">
-            <div>
-                <h2 class="titulo">La MLP entrena más rápido en ambas pruebas</h2>
-                <p class="bajada">La CNN solo obtiene más aciertos en dibujos.</p>
-            </div>
+        <div class="barra-superior">
+            <ul class="leyenda" aria-label="Colores de los modelos">
+                ${MODELOS.map(m => `<li><span class="muestra" style="background:${m.color}"></span>${m.nombre}</li>`).join("")}
+            </ul>
             <button id="btn-todo" class="btn escuchar" type="button">▶ Escuchar todo</button>
         </div>
-        <ul class="leyenda">
-            ${MODELOS.map(m => `<li><span class="muestra" style="background:${m.color}"></span>${m.nombre}</li>`).join("")}
-        </ul>
         ${filas.join("")}
     `;
 

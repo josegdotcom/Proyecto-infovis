@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="principal">
 
 <head>
     <meta charset="UTF-8">
@@ -8,21 +8,28 @@
     <title>Aciertos y entrenamiento · CNN vs. MLP</title>
 
     <link rel="icon" type="image/png" href="../assets/icons/logo.png">
-    <link rel="stylesheet" href="../css/style.css">
-
-    <link rel="stylesheet" href="../css/comparacion.css?v=7">
+    <link rel="stylesheet" href="../css/style.css?v=11">
+    <link rel="stylesheet" href="../css/comparacion.css?v=8">
 </head>
 
 <body>
 
-    <main class="pagina">
-        <article class="tarjeta" id="grafico"></article>
+    <header class="cabecera centrada">
+        <h1>La MLP entrena más rápido en ambas pruebas</h1>
+        <p class="mensaje">
+            La CNN obtiene más aciertos en dibujos, pero la MLP consigue mejores resultados en actividades.
+        </p>
+    </header>
+
+    <main>
+        <section class="tarjeta" id="grafico"
+            aria-label="Aciertos y tiempo de entrenamiento de la CNN y la MLP en las dos pruebas"></section>
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/tone@15.0.4/build/Tone.js"></script>
     <script src="datos.js"></script>
     <script src="../js/modelos_audio.js"></script>
-    <script src="comparacion.js?v=4"></script>
+    <script src="comparacion.js?v=5"></script>
 
 </body>
 
