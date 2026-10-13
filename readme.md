@@ -61,14 +61,33 @@ La página se encuentra publicada mediante GitHub Pages:
 ```text
 Proyecto-infovis/
 ├── index.html
-├── css/style.css
+├── css/
+│   ├── style.css
+│   └── comparacion.css
+│
 ├── js/
 │   ├── main.js            # Carga de datos, gráfico, aplausómetro visual y grilla
+│   ├── modelos_audio.js   # Sonificación de los modelos (Tone.js)
 │   └── aplausometro.js    # Motor de sonido (Tone.js)
-├── assets/icons/logo.png
+│
+├── assets/icons/
+│   ├── logo.png
+│   └── rotate_phone.svg
+│
+├── exploracion/
+│   ├── comparacion.js
+│   ├── datos.js
+│   ├── galeria.js
+│   ├── comparacion.html
+│   └── index.html
+│
 └── data/
     ├── prueba_1.ipynb     # Entrenamiento y evaluación de los modelos
+    ├── prueba_2.ipynb
+    ├── proceso_1.ipynb
+    ├── proceso_2.ipynb
     ├── exportar_web.py    # Exporta los 10 dibujos y sus etiquetas reales a JSON
+    ├── exportar_galeria.py 
     ├── datos/
     │   ├── gatos_perros_dataset.npz
     │   └── info-biblio.txt

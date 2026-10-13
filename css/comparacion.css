@@ -216,3 +216,83 @@
         grid-template-columns: 44px minmax(0, 1fr) 80px;
     }
 }
+
+.flujo-sensores {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 16px;
+    margin-top: 8px;
+}
+
+/* 1. Teléfono rotando */
+.icono-celular {
+    width: 38px;
+    height: auto;
+    object-fit: contain;
+    /* Usa un filtro para que tome el color primario del texto (incluso en modo oscuro) */
+    filter: brightness(0) saturate(100%) invert(var(--texto-primario-inversion, 0)); 
+    animation: oscilacion 3s ease-in-out infinite;
+}
+
+/* Ajuste sutil para modo oscuro (convierte la imagen negra en blanca) */
+[data-theme="dark"] .icono-celular {
+    filter: brightness(0) saturate(100%) invert(1);
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .icono-celular {
+        filter: brightness(0) saturate(100%) invert(1);
+    }
+}
+
+@keyframes oscilacion {
+    0%, 100% { transform: rotate(0deg); }
+    50% { transform: rotate(-25deg); }
+}
+
+/* 2. Matriz de datos (Planilla 3x3) y flecha */
+.matriz-datos {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.grilla-3x3 {
+    display: grid;
+    grid-template-columns: repeat(3, 8px);
+    gap: 3px;
+    padding: 4px;
+    border: 1px solid var(--borde);
+    border-radius: 6px;
+    background: var(--superficie);
+}
+
+.grilla-3x3 i {
+    display: block;
+    width: 8px;
+    height: 8px;
+    background-color: var(--texto-tenue);
+    border-radius: 1px;
+    opacity: 0.8;
+}
+
+.flecha-apunta {
+    font-size: 1.4rem;
+    font-weight: 300;
+    color: var(--texto-tenue);
+    line-height: 1;
+}
+
+/* 3. Actividades seleccionadas */
+.actividades-reducidas {
+    display: flex;
+    gap: 12px;
+}
+
+.actividades-reducidas span {
+    display: grid;
+    justify-items: center;
+    gap: 2px;
+    font-size: calc(0.7rem + 3px);
+    color: var(--texto-secundario);
+}

@@ -160,14 +160,55 @@ function dibujar() {
 
     // Las imagenes de las clases de cada prueba van bajo su nombre
     document.querySelectorAll(".clases").forEach(contenedor => {
-        const p = PRUEBAS[contenedor.dataset.prueba];
+        const indicePrueba = Number(contenedor.dataset.prueba);
+        const p = PRUEBAS[indicePrueba];
 
-        p.datos.clases.forEach((nombre, c) => {
-            const clase = document.createElement("span");
-            clase.appendChild(iconoClase(p, c));
-            clase.appendChild(document.createTextNode(nombre));
-            contenedor.appendChild(clase);
-        });
+        if (indicePrueba === 1) {
+            // DISEÑO ESPECIAL PARA PRUEBA 2 (Actividades humanas)
+            contenedor.classList.add("flujo-sensores");
+            
+            // Icono celular
+            const imgCelular = document.createElement("img");
+            imgCelular.src = "assets/images/rotate_phone.svg";
+            imgCelular.alt = "Sensores del celular";
+            imgCelular.className = "icono-celular";
+            
+            // Planilla de datos 3x3 y flecha apuntando
+            const matriz = document.createElement("div");
+            matriz.className = "matriz-datos";
+            matriz.innerHTML = `
+                <div class="grilla-3x3">
+                    <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+                </div>
+                <span class="flecha-apunta">→</span>
+            `;
+
+            // Contenedor de las actividades seleccionadas (ej. Camina, Sentado, Acostado)
+            const actividades = document.createElement("div");
+            actividades.className = "actividades-reducidas";
+            
+            // Elegir qué actividades mostrar (índices 0: Camina, 3: Sentado, 5: Acostado)
+            const seleccionadas = [0, 3, 5]; 
+            seleccionadas.forEach(c => {
+                const clase = document.createElement("span");
+                clase.appendChild(iconoClase(p, c));
+                clase.appendChild(document.createTextNode(p.datos.clases[c]));
+                actividades.appendChild(clase);
+            });
+
+            contenedor.appendChild(imgCelular);
+            contenedor.appendChild(matriz);
+            contenedor.appendChild(actividades);
+
+        } else {
+            // DISEÑO NORMAL PARA PRUEBA 1 (Dibujos de Gato y Perro)
+            p.datos.clases.forEach((nombre, c) => {
+                const clase = document.createElement("span");
+                clase.appendChild(iconoClase(p, c));
+                clase.appendChild(document.createTextNode(nombre));
+                contenedor.appendChild(clase);
+            });
+        }
     });
 
     conectarSonido();
