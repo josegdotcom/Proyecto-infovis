@@ -16,46 +16,18 @@ const MODELOS = [
 ];
 
 const PRUEBAS = [
-    // ejemplo: dibujo que representa a cada clase (posicion dentro de los 10 casos individuales)
-    { datos: DATOS.p1, nombre: "Dibujos", detalle: "Gato vs. perro", ejemplo: [4, 6] },
-    { datos: DATOS.p2, nombre: "Actividades", detalle: "Acciones humanas" }
+    // La primera prueba utiliza pictogramas de las clases de imágenes.
+    { datos: DATOS.p1, nombre: "Datos de imágenes", detalle: "Dibujos de perros vs. dibujos de gatos", ejemplo: [4, 6] },
+    { datos: DATOS.p2, nombre: "Datos tabulares", detalle: "Giroscopio del teléfono al hacer una acción" }
 ];
 
 // Escalas constantes en las dos pruebas, para poder compararlas entre si
 const ESCALA_ACIERTOS = 100;
-const ESCALA_TIEMPO = 22;
+const ESCALA_TIEMPO = 24;
+const RUTA_RECURSOS = new URL("../assets/images/", document.currentScript.src);
 
 function decimal(valor, decimales = 1) {
     return valor.toFixed(decimales).replace(".", ",");
-}
-
-function css(variable) {
-    return getComputedStyle(document.documentElement).getPropertyValue(variable).trim();
-}
-
-function hexARgb(hex) {
-    const limpio = hex.replace("#", "");
-    return [0, 2, 4].map(i => parseInt(limpio.slice(i, i + 2), 16));
-}
-
-function pintarDibujo(canvas, pixeles) {
-    canvas.width = 28;
-    canvas.height = 28;
-
-    const c = canvas.getContext("2d");
-    const imagen = c.createImageData(28, 28);
-    const [tr, tg, tb] = hexARgb(css("--texto-primario"));
-    const [fr, fg, fb] = hexARgb(css("--plano"));
-
-    pixeles.forEach((valor, i) => {
-        const a = valor / 255;
-        imagen.data[i * 4] = Math.round(fr + (tr - fr) * a);
-        imagen.data[i * 4 + 1] = Math.round(fg + (tg - fg) * a);
-        imagen.data[i * 4 + 2] = Math.round(fb + (tb - fb) * a);
-        imagen.data[i * 4 + 3] = 255;
-    });
-
-    c.putImageData(imagen, 0, 0);
 }
 
 // Pictogramas de las actividades de la Prueba 2 (lienzo de 28 x 28, igual que los dibujos)
@@ -75,12 +47,13 @@ function figura(clase) {
     return `<svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${FIGURAS[clase]}</svg>`;
 }
 
-// Imagen de una clase: un dibujo de ejemplo si la prueba tiene, o su pictograma
+// Pictogramas ilustrativos; los resultados siguen proviniendo de DATOS.
 function iconoClase(prueba, clase) {
     if (prueba.ejemplo) {
-        const canvas = document.createElement("canvas");
-        pintarDibujo(canvas, prueba.datos.individuales.imagenes[prueba.ejemplo[clase]]);
-        return canvas;
+        const imagen = document.createElement("img");
+        imagen.src = new URL(clase === 0 ? "gato.svg" : "perro.svg", RUTA_RECURSOS);
+        imagen.alt = "";
+        return imagen;
     }
 
     const caja = document.createElement("span");
@@ -92,7 +65,7 @@ function iconoClase(prueba, clase) {
 // `nota` dice la unidad y hacia donde es mejor; la mejor cifra del par se destaca.
 function barras(titulo, nota, tipo, prueba, filas) {
     return `
-        <div class="medida">
+        <div class="medida medida-${tipo}">
             <div class="encabezado">${titulo} <span>${nota}</span></div>
             <dl class="barras">
                 ${filas.map(f => `
@@ -120,19 +93,20 @@ function dibujar() {
         const menosTiempo = Math.min(...resumen.map(r => r.tiempo));
 
         return `
-            <section class="fila prueba">
-                <div>
+            <section class="fila prueba prueba-${i}" aria-labelledby="titulo-prueba-${i}">
+                <div class="contexto-datos">
                     <div class="nombre-prueba">
-                        <h3>${p.nombre}</h3>
-                        <button class="btn escuchar" type="button" data-prueba="${i}">▶ Escuchar</button>
+                        <h3 id="titulo-prueba-${i}">${p.nombre}</h3>
+                        <button class="btn escuchar" type="button" data-prueba="${i}" aria-label="Escuchar ${p.nombre.toLowerCase()}">▶ Escuchar</button>
                     </div>
                     <p class="detalle">${p.detalle}</p>
                     <div class="clases" data-prueba="${i}"></div>
+                    <p class="nota-datos">${i === 0 ? "28 × 28 píxeles" : "tabla con 561 valores por muestra"}</p>
                 </div>
                 ${barras("Aciertos", "de cada 100 · más es mejor", "aciertos", i, resumen.map(r => ({
                     modelo: r.modelo,
                     ancho: r.aciertos / ESCALA_ACIERTOS * 100,
-                    valor: r.aciertos,
+                    valor: `${r.aciertos} %`,
                     mejor: r.aciertos === masAciertos,
                     detalle: `${r.aciertos} aciertos de cada 100 casos`
                 })))}
@@ -150,10 +124,11 @@ function dibujar() {
     // El titulo y la bajada van en el HTML de la pagina; aqui solo leyenda, control y filas
     document.getElementById("grafico").innerHTML = `
         <div class="barra-superior">
+            <button id="btn-todo" class="btn escuchar" type="button">▶ Escuchar todo</button>
             <ul class="leyenda" aria-label="Colores de los modelos">
                 ${MODELOS.map(m => `<li><span class="muestra" style="background:${m.color}"></span>${m.nombre}</li>`).join("")}
             </ul>
-            <button id="btn-todo" class="btn escuchar" type="button">▶ Escuchar todo</button>
+
         </div>
         ${filas.join("")}
     `;
@@ -166,29 +141,34 @@ function dibujar() {
         if (indicePrueba === 1) {
             // DISEÑO ESPECIAL PARA PRUEBA 2 (Actividades humanas)
             contenedor.classList.add("flujo-sensores");
-            
+
             // Icono celular
             const imgCelular = document.createElement("img");
-            imgCelular.src = "assets/images/rotate_phone.svg";
+            imgCelular.src = new URL("rotate_phone.svg", RUTA_RECURSOS);
             imgCelular.alt = "Sensores del celular";
             imgCelular.className = "icono-celular";
-            
-            // Planilla de datos 3x3 y flecha apuntando
+
+            // Lecturas ilustrativas: las 561 características completas se derivan de sensores.
             const matriz = document.createElement("div");
             matriz.className = "matriz-datos";
             matriz.innerHTML = `
-                <div class="grilla-3x3">
-                    <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
-                </div>
-                <span class="flecha-apunta">→</span>
+                <table class="tabla-sensores" aria-label="Ejemplo ilustrativo de lecturas del giroscopio">
+                    <thead><tr><th scope="col">x</th><th scope="col">y</th><th scope="col">z</th><th scope="col">…</th></tr></thead>
+                    <tbody>
+                        <tr><td>0,12</td><td>-0,03</td><td>1,24</td><td>…</td></tr>
+                        <tr><td>0,08</td><td>0,15</td><td>1,10</td><td>…</td></tr>
+                        <tr><td>-0,20</td><td>0,07</td><td>0,98</td><td>…</td></tr>
+                        <tr><td>…</td><td>…</td><td>…</td><td>…</td></tr>
+                    </tbody>
+                </table>
             `;
 
-            // Contenedor de las actividades seleccionadas (ej. Camina, Sentado, Acostado)
+            // Ejemplos de actividades para contextualizar los datos tabulares.
             const actividades = document.createElement("div");
             actividades.className = "actividades-reducidas";
-            
-            // Elegir qué actividades mostrar (índices 0: Camina, 3: Sentado, 5: Acostado)
-            const seleccionadas = [0, 3, 5]; 
+
+            // Cinco ejemplos de las seis clases; Parado sigue incluido en el experimento.
+            const seleccionadas = [0, 1, 2, 3, 5];
             seleccionadas.forEach(c => {
                 const clase = document.createElement("span");
                 clase.appendChild(iconoClase(p, c));
@@ -352,6 +332,3 @@ function conectarSonido() {
 }
 
 dibujar();
-
-// Redibujar si cambia el modo claro/oscuro del sistema (los dibujos usan los colores del tema)
-window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", dibujar);

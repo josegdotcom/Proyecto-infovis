@@ -1,16 +1,16 @@
 <!DOCTYPE html>
-<html lang="es" class="principal">
+<html lang="es" class="principal" data-theme="light">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>CNN vs. MLP · La MLP entrena más rápido</title>
+    <title>CNN vs. MLP · Las redes neuronales no son tan universales</title>
 
     <link rel="icon" type="image/png" href="assets/icons/logo.png">
 
-    <link rel="stylesheet" href="css/style.css?v=11">
-    <link rel="stylesheet" href="css/comparacion.css?v=8">
+    <link rel="stylesheet" href="css/style.css?v=15">
+    <link rel="stylesheet" href="css/comparacion.css?v=12">
 </head>
 
 <body>
@@ -20,17 +20,13 @@
         <p class="eyebrow">Grupo 11 · Visualización de Información · Entrega 1</p>
         <h1>Las redes neuronales no son tan universales</h1>
         <p class="mensaje">
-            La CNN obtiene más aciertos en dibujos, pero la MLP consigue mejores resultados en actividades.
+            Su rendimiento depende del problema: la CNN destaca en dibujos, pero la MLP es más rápida y rinde mejor en actividades.
         </p>
     </header>
 
     <main>
 
-        <!-- 2. Leyenda, comparacion y controles de sonido (los dibuja exploracion/comparacion.js) -->
-        <section class="tarjeta" id="grafico"
-            aria-label="Aciertos y tiempo de entrenamiento de la CNN y la MLP en las dos pruebas"></section>
-
-        <!-- 3. Explicacion tecnica de cada modelo -->
+        <!-- 2. Explicacion de cada modelo antes de comparar los resultados -->
         <section class="modelos-info" aria-labelledby="titulo-modelos">
             <h2 id="titulo-modelos">Los dos modelos</h2>
 
@@ -67,6 +63,10 @@
             </div>
         </section>
 
+        <!-- 3. Comparacion y controles de sonido -->
+        <section class="tarjeta" id="grafico"
+            aria-label="Aciertos y tiempo de entrenamiento de la CNN y la MLP en las dos pruebas"></section>
+
     </main>
 
     <footer class="fuentes">
@@ -79,7 +79,7 @@
     <script src="https://cdn.jsdelivr.net/npm/tone@15.0.4/build/Tone.js"></script>
     <script src="exploracion/datos.js"></script>
     <script src="js/modelos_audio.js"></script>
-    <script src="exploracion/comparacion.js?v=5"></script>
+    <script src="exploracion/comparacion.js?v=6"></script>
 
 </body>
 
