@@ -2,6 +2,7 @@
    Los colores vienen de la paleta de la pagina principal, en style.css. */
 
 .tarjeta {
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
     padding: 20px 28px 8px;
     background: var(--superficie);
     border: 1px solid var(--borde);
