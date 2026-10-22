@@ -30,7 +30,7 @@
   \begin{tabular}{ll}
     \textbf{GitHub Pages:}  & \url{https://josegdotcom.github.io/Proyecto-infovis/} \\[0.3em]
     \textbf{Repositorio:}   & \url{https://github.com/josegdotcom/Proyecto-infovis} \\[0.3em]
-    \textbf{Video:}         & {[SECCION PENDIENTE]} \\
+    \textbf{Video:}         & \href{https://uccl0-my.sharepoint.com/:v:/g/personal/jgarciat4_estudiante_uc_cl/IQC6_PjAfSxZQKsBmOFkGR4mAQrYr17QpSN6-97mWVvDklA?nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJPbmVEcml2ZUZvckJ1c2luZXNzIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXciLCJyZWZlcnJhbFZpZXciOiJNeUZpbGVzTGlua0NvcHkifX0&e=1S2vnb}{Video} \\
   \end{tabular}
 \end{center}
 
@@ -128,18 +128,18 @@ Se descart\'{o} el dataset de mesas operativas electorales y el concepto origina
 % =========================================================
 
 \begin{tabular}{ll}
-  \textbf{Fecha:} & {[SECCION PENDIENTE]} \\
+  \textbf{Fecha:} & {29/09/2026} \\
 \end{tabular}
 
 \medskip
 \noindent\textbf{S\'{i}ntesis de lo discutido:}
 
-{[SECCION PENDIENTE]}
+{No se comprend\'{i}a lo que quer\'{i}amos mostrar}
 
 \medskip
 \noindent\textbf{Decisiones tomadas:}
 
-{[SECCION PENDIENTE]}
+{Se decidió cambiar el gráfico que mostraba los aciertos contra el tiempo de rendimiento por varios gráficos de barras que mostraban la información por separado, además para simplificar se decidió solo utilizar dos modelos de inteligencia artificial y agregar una segunda prueba para agregar contraste}
 
 % =========================================================
 \section{V2 --- primera iteraci\'{o}n de dise\~{n}o}
@@ -208,7 +208,7 @@ El aplaus\'{o}metro de V1 qued\'{o} relegado frente al nuevo enfoque comparativo
 % =========================================================
 
 \begin{tabular}{ll}
-  \textbf{Fecha:} & {[SECCION PENDIENTE]} \\
+  \textbf{Fecha:} & {06/10/2026} \\
 \end{tabular}
 
 \medskip
@@ -286,18 +286,18 @@ usados en pruebas. Se descart\'{o} el aplaus\'{o}metro como forma de interacci\'
 % =========================================================
 
 \begin{tabular}{ll}
-  \textbf{Fecha:} & {[SECCION PENDIENTE]} \\
+  \textbf{Fecha:} & {13/10/2026} \\
 \end{tabular}
 
 \medskip
 \noindent\textbf{S\'{i}ntesis de lo discutido:}
 
-{[SECCION PENDIENTE]}
+{Se discutió sobre la simplicidad de la página y que el sonido no aporta más información de la que se puede ver}
 
 \medskip
 \noindent\textbf{Decisiones tomadas:}
 
-{[SECCION PENDIENTE]}
+{Ninguna, ya que la simplicidad es más adecuada para el público objetivo y el sonido cumplía otra forma de interpretar los resultados}
 
 % =========================================================
 \section{V4 --- la versi\'{o}n final}
@@ -379,43 +379,106 @@ e informativa.
 \section{Evaluaci\'{o}n con usuarios}
 % =========================================================
 
-{[SECCION PENDIENTE]}
+Se realizaron una ronda de evaluaci\'{o}n con la t\'{e}cnica de \textit{thinking aloud}. Se llev\'{o} a cabo entre V1 y V2, cuando la p\'{a}gina mostraba el
+aplaus\'{o}metro y la grilla de dibujos.
 
-\subsection{Ronda 1}
+% ---------------------------------------------------------
+\subsection{Ronda 1 (entre V1 y V2)}
+% ---------------------------------------------------------
 
 \subsubsection{Qui\'{e}n fue el pensador y cu\'{a}ndo}
 
-{[SECCION PENDIENTE]}
+Compa\~{n}ero de otro curso (Ingenier\'{i}a de Software), sin conocimiento previo del proyecto.
+Sesi\'{o}n realizada el 2 de octubre de 2026 sobre la versi\'{o}n V1 (commit \texttt{329aa99}).
 
 \subsubsection{Bit\'{a}cora}
 
-\begin{longtable}{p{2.5cm} p{5cm} p{5cm}}
+\begin{longtable}{p{1.8cm} p{5.5cm} p{5.5cm}}
   \toprule
   \textbf{Tiempo} & \textbf{Cita literal} & \textbf{Acci\'{o}n} \\
   \midrule
   \endhead
-  {[T]} & {[SECCION PENDIENTE]} & {[SECCION PENDIENTE]} \\
+  0:00 & "Quién distingue un gato de un perro?.. ok." & Lee el t\'{i}tulo. \\
+  \midrule
+  0:02 & "Hay varios modelos. Random forest, red neuronal, svm y hdbscan no supervisado? parece que red neuronal es el mejor, ósea es 100 mas complicado de entrenar y hdbscan es pésimo." & y el subtitulo de la cabecera. \\
+  \midrule
+  0:05 & "Y que es esto?" & Hace scroll hasta el aplaus\'{o}metro, pasa el cursor por las barras. \\
+  \midrule
+  1:30 & ``Esto no entiendo qu\'{e} quiere decir, hay como una grilla de dibujos, son gatos y perros?'' & Baja al \'{a}rea de la grilla de dibujos individuales. \\
+  \midrule
+  2:00 & ``S\'{i}, son dibujos. Pero cu\'{a}l acert\'{o} y cu\'{a}l no? No me queda claro d\'{o}nde est\'{a} la comparaci\'{o}n.'' & Intenta hacer click en los dibujos individuales, no pasa nada. \\
+  \midrule
+  2:30 & ``Aplausómetro? Se ve interesante y entretenido, pero que significa que sea 83.9\%.'' & Vuelve al aplaus\'{o}metro, mueve el cursor por la aguja. \\
+  \midrule
+  3:30 & ``Falta algo m\'{a}s, veo que solo hay una prueba y que rayos son estos svm y random forest'' & Hace scroll hasta abajo buscando m\'{a}s contenido. \\
+  \midrule
+  4:00 & ``S\'{i}, no me queda claro cu\'{a}l es mejor o peor.'' & Se detiene, mira la pantalla sin interactuar. \\
   \bottomrule
 \end{longtable}
 
 \subsubsection{Qu\'{e} dijo del sonido}
 
-{[SECCION PENDIENTE]}
+En esta versión del proyecto se tenia un aplausómetro, sonando mas fuerte y con mas aplausos dependiendo del porcentaje de predicciones correctas. Menciono que le parecía entretenido, pero que no se entendía que era lo que se quería transmitir. 
 
 \subsubsection{Heur\'{i}sticas que fallaron}
 
-{[SECCION PENDIENTE]}
+\begin{itemize}
+  \item \textbf{La importancia del dato no est\'{a} clara:} el pensador no identific\'{o}
+        r\'{a}pidamente qu\'{e} significaban los porcentajes del aplaus\'{o}metro ni por qu\'{e}
+        importaban.
+  \item \textbf{Falta contexto (fuente, pregunta):} con solo una prueba visible, el mensaje
+        ``las redes no son universales'' no ten\'{i}a suficiente respaldo; faltaba la segunda
+        prueba como contraste. 
+  \item \textbf{La interacci\'{o}n no es descubrible:} la grilla de dibujos parec\'{i}a
+        interactiva (el pensador intent\'{o} hacer click) pero no lo era, generando frustraci\'{o}n.
+  \item \textbf{Un titulo inadecuado:} El objetivo desde el inicio era mostrar que las inteligencias artificiales no son tan universales, pero el titulo era "¿Quién distingue un gato de un perro?"
+\end{itemize}
 
 \subsubsection{Las tres respuestas de cierre}
 
 \begin{itemize}
-  \item \textbf{Atasco:} {[SECCION PENDIENTE]}
-  \item \textbf{Hip\'{o}tesis equivocada:} {[SECCION PENDIENTE]}
-  \item \textbf{Cambio concreto:} {[SECCION PENDIENTE]}
+  \item \textbf{Atasco:} El pensador se atasc\'{o} m\'{a}s tiempo en la grilla de dibujos
+        individuales (\textasciitilde{}45 segundos), intentando descifrar qu\'{e} significaban
+        y c\'{o}mo interactuar con ellos, sin encontrar una relaci\'{o}n clara con el mensaje
+        central.
+  \item \textbf{Hip\'{o}tesis equivocada:} Supuso que el aplaus\'{o}metro era un elemento
+        interactivo donde uno pod\'{i}a ``votar'' cu\'{a}l modelo era mejor, no un medidor de
+        aciertos. Tambi\'{e}n dijo ``con solo una prueba, la CNN gana en todo'', cuando en
+        realidad la MLP era m\'{a}s r\'{a}pida.
+  \item \textbf{Cambio concreto:} Incorporar una segunda prueba con datos diferentes (tabulares o sonoras)
+        para que el contraste entre modelos sea evidente, y remplazar el gráfico de puntos.
 \end{itemize}
 
 \subsubsection{Efecto en el proceso}
 
-{[SECCION PENDIENTE]}
+Lo aprendido se incorpor\'{o} en la transici\'{o}n V1 $\rightarrow$ V2:
+\begin{itemize}
+  \item Se agreg\'{o} el segundo dataset (Human Activity Recognition) para respaldar el
+        mensaje con dos pruebas contrastantes.
+  \item Se cre\'{o} la galer\'{i}a de exploraci\'{o}n con 19 alternativas de gr\'{a}ficos,
+        buscando el tipo de visualizaci\'{o}n que mejor comunicara la comparaci\'{o}n ---lo que
+        eventualmente llev\'{o} a elegir las barras comparativas en V3.
+  \item El aplaus\'{o}metro qued\'{o} relegado, confirmando que el formato de medidor
+        individual no era efectivo para comparar dos modelos.
+\end{itemize}
+
+\subsubsection{Efecto en el proceso}
+
+Lo aprendido se incorpor\'{o} en la transici\'{o}n V3 $\rightarrow$ V4:
+\begin{itemize}
+  \item En el PR~\#4 (commit \texttt{4794886}) se ampli\'{o} la explicaci\'{o}n del
+        experimento de actividades humanas, se agreg\'{o} el \'{i}cono
+        \texttt{rotate\_phone.svg} para hacer m\'{a}s intuitivo el origen de los datos de
+        sensores, y se revis\'{o} el texto contextual.
+  \item En el PR~\#5 (commit \texttt{f595381}) se simplific\'{o} el CSS, se incorporaron
+        pictogramas SVG de gato y perro para la Prueba 1, y se ajustaron proporciones
+        visuales para que los elementos peque\~{n}os fueran m\'{a}s legibles.
+  \item \textbf{No se incorpor\'{o}:} agregar una leyenda expl\'{i}cita al sonido junto
+        al bot\'{o}n de escuchar. Se decidi\'{o} que la interacci\'{o}n
+        (pasar el cursor para escuchar cada barra individualmente) era suficiente para el
+        descubrimiento progresivo, y que agregar texto explicativo del sonido iba contra el
+        principio de que la sonificaci\'{o}n deber\'{i}a ser auto-explicativa. Sin embargo,
+        esto qued\'{o} como punto pendiente para iteraciones futuras.
+\end{itemize}
 
 \end{document}
