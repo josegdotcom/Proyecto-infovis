@@ -1,4 +1,8 @@
-/* Comparación con escalas comunes: aciertos 0–100 %, entrenamiento 0–24 s. */
+/*
+ * comparacion.css — gráfico de comparación CNN vs. MLP (index.html y
+ * exploracion/comparacion.html). El contenido lo genera exploracion/comparacion.js.
+ * Escalas comunes: aciertos 0–100 %, entrenamiento 0–24 s.
+ */
 .tarjeta { padding: 15px 19px 5px; background: var(--superficie); border: 1px solid var(--borde); border-radius: 14px; }
 .barra-superior { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 24px; padding: 0 6px 12px; }
 .leyenda { display: flex; flex-wrap: wrap; gap: 8px 36px; margin: 0; padding: 0; list-style: none; color: var(--texto-secundario); font-size: 19px; }

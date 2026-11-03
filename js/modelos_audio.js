@@ -1,8 +1,10 @@
 // modelos_audio.js
-// Motor de sonificación comparativa entre CNN y MLP.
+// Motor de sonificación comparativa entre CNN y MLP (usa Tone.js, cargado por la página).
+// Lo usa exploracion/comparacion.js a través del objeto global ModelosAudio.
 //
 // Solo suena una cosa a la vez: cada sonido nuevo corta al anterior.
 
+// Módulo autoejecutable: el estado queda privado y solo se expone la API del final
 const ModelosAudio = (() => {
     let listo = false;
     let cnnSynth = null;
@@ -13,6 +15,8 @@ const ModelosAudio = (() => {
     // Temporizadores de las notas que faltan por sonar, para poder cancelarlas
     let pendientes = [];
 
+    // Crea los sintetizadores y canales. Debe llamarse tras un gesto del usuario
+    // (click o tecla), porque el navegador bloquea el audio hasta entonces.
     async function activar() {
         if (listo) return;
 
@@ -49,12 +53,14 @@ const ModelosAudio = (() => {
     const MIDI_MIN = 60;
     const MIDI_MAX = 84;
 
+    // Convierte una precisión (0 a 1) en un nombre de nota de Tone, p. ej. "E5"
     function calcularNota(accuracy) {
         const t = Math.max(0, Math.min(1, (accuracy - PRECISION_MIN) / (1 - PRECISION_MIN)));
         const midi = Math.round(MIDI_MIN + t * (MIDI_MAX - MIDI_MIN));
         return Tone.Frequency(midi, "midi").toNote();
     }
 
+    // Indica si el nombre del modelo corresponde a la CNN (si no, se trata como MLP)
     function esCNN(modelo) {
         return modelo.toLowerCase().includes("cnn") || modelo.toLowerCase().includes("convolucional");
     }
@@ -75,6 +81,7 @@ const ModelosAudio = (() => {
     // caer en el mismo instante, así que se separan unos milisegundos.
     const ultimoDisparo = new Map();
 
+    // Toca `nota` durante `duracion` lo antes posible respetando esa separación mínima
     function disparar(synth, nota, duracion) {
         const cuando = Math.max(Tone.now(), (ultimoDisparo.get(synth) || 0) + 0.02);
 
@@ -82,6 +89,7 @@ const ModelosAudio = (() => {
         synth.triggerAttackRelease(nota, duracion, cuando);
     }
 
+    // Ejecuta `accion` dentro de `segundos`, guardando el temporizador para poder cancelarlo
     function programar(accion, segundos) {
         pendientes.push(setTimeout(accion, segundos * 1000));
     }
@@ -167,13 +175,6 @@ const ModelosAudio = (() => {
         });
     }
 
-    // Comparación en estéreo del entrenamiento: primero la CNN y, tras una pausa, el MLP
-    function compararEstereo(modeloCNN, modeloMLP) {
-        return reproducirSecuencia([
-            { tipo: "pulsos", modelo: "CNN", datos: modeloCNN },
-            { tipo: "pulsos", modelo: "MLP", datos: modeloMLP, pausa: 0.4 }
-        ]);
-    }
-
-    return { activar, detener, sonarHover, sonarEntrenamiento, reproducirSecuencia, compararEstereo };
+    // API pública del módulo
+    return { activar, detener, sonarHover, sonarEntrenamiento, reproducirSecuencia };
 })();

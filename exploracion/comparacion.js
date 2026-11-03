@@ -15,8 +15,9 @@ const MODELOS = [
     { clave: "MLP", nombre: "MLP (red densa)", color: "var(--modelo-mlp)", texto: "var(--texto-mlp)" }
 ];
 
+// Pruebas a mostrar, en orden. `ejemplo` (solo en la Prueba 1) indica que sus clases
+// se ilustran con los pictogramas de gato y perro en vez de figuras de actividades.
 const PRUEBAS = [
-    // La primera prueba utiliza pictogramas de las clases de imágenes.
     { datos: DATOS.p1, nombre: "Datos de imágenes", detalle: "Dibujos de perros vs. dibujos de gatos", ejemplo: [4, 6] },
     { datos: DATOS.p2, nombre: "Datos tabulares", detalle: "Giroscopio del teléfono al hacer una acción" }
 ];
@@ -26,6 +27,7 @@ const ESCALA_ACIERTOS = 100;
 const ESCALA_TIEMPO = 24;
 const RUTA_RECURSOS = new URL("../assets/images/", document.currentScript.src);
 
+// Formatea un número con coma decimal (estilo español): 21.8 -> "21,8"
 function decimal(valor, decimales = 1) {
     return valor.toFixed(decimales).replace(".", ",");
 }
@@ -43,6 +45,7 @@ const FIGURAS = {
     "Acostado": '<circle cx="6.5" cy="16.5" r="2.4"/><path d="M9 17.5H25M12 17.5L16 14.5"/><path d="M3 21.5H26M4 21.5V25M25 21.5V25" opacity="0.45"/>'
 };
 
+// Devuelve el SVG (como texto) del pictograma de una actividad
 function figura(clase) {
     return `<svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${FIGURAS[clase]}</svg>`;
 }
@@ -80,6 +83,8 @@ function barras(titulo, nota, tipo, prueba, filas) {
     `;
 }
 
+// Construye todo el gráfico dentro de #grafico: barra superior con leyenda y
+// "Escuchar todo", y una fila por prueba con contexto, aciertos y entrenamiento.
 function dibujar() {
     const filas = PRUEBAS.map((p, i) => {
         const resumen = MODELOS.map(m => ({
@@ -213,6 +218,7 @@ async function activarSonido() {
 let resaltados = [];
 let comparandoHasta = 0;
 
+// Detiene los resaltados programados y vuelve a habilitar los botones de escuchar
 function limpiarResaltado() {
     resaltados.forEach(clearTimeout);
     resaltados = [];
@@ -228,6 +234,7 @@ function resaltar(elementos, inicio, duracion) {
     resaltados.push(setTimeout(() => elementos.forEach(el => el.classList.remove("sonando")), (inicio + duracion) * 1000));
 }
 
+// Hace sonar la medida de una barra: una nota (aciertos) o la serie de pulsos (entrenamiento)
 function sonarBarra(pista) {
     const { tipo, prueba, modelo } = pista.dataset;
     const datos = PRUEBAS[prueba].datos.generales[modelo];
@@ -282,6 +289,7 @@ function reproducir(pasos, boton) {
     resaltados.push(setTimeout(limpiarResaltado, total * 1000));
 }
 
+// Asocia los eventos de mouse, teclado y botones con el sonido
 function conectarSonido() {
     // Pasar el mouse por una barra la hace sonar (solo si el sonido ya esta activado);
     // el click o Enter ademas activan el sonido, porque el navegador exige un gesto.

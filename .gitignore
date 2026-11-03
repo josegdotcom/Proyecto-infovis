@@ -1,0 +1,10 @@
+# Archivos compilados de Python
+__pycache__/
+*.pyc
+
+# Puntos de control de Jupyter
+.ipynb_checkpoints/
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db

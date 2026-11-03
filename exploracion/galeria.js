@@ -1,6 +1,7 @@
 // Galeria de alternativas de graficos para las dos pruebas (CNN vs. MLP).
 // Cada entrada de GRAFICOS es una tarjeta: su texto y la funcion que la dibuja.
 
+// Datos generados por data/exportar_galeria.py (exploracion/datos.js)
 const PRUEBAS = [DATOS.p1, DATOS.p2];
 const CORTO = ["Prueba 1", "Prueba 2"];
 
@@ -17,29 +18,35 @@ const METRICAS = [
     { clave: "f1_score", nombre: "F1" }
 ];
 
+// Opciones comunes de Plotly: sin barra de herramientas y adaptable al ancho
 const CONFIG = { displayModeBar: false, responsive: true };
 
 // ---------------------------------------------------------------
 // Utilidades
 // ---------------------------------------------------------------
 
+// Lee el valor de una variable CSS del :root (respeta modo claro/oscuro)
 function css(variable) {
     return getComputedStyle(document.documentElement).getPropertyValue(variable).trim();
 }
 
+// Color del modelo según su variable CSS
 function color(modelo) {
     return css(modelo.variable);
 }
 
+// Indica si la página está en modo oscuro (forzado por data-theme o por el sistema)
 function modoOscuro() {
     const forzado = document.documentElement.dataset.theme;
     return forzado ? forzado === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
 }
 
+// Formatea una proporción como porcentaje con coma decimal: 0.875 -> "87,5%"
 function pct(valor, decimales = 1) {
     return `${(valor * 100).toFixed(decimales).replace(".", ",")}%`;
 }
 
+// Formatea segundos con la unidad más legible (ms o s)
 function tiempo(s) {
     if (s < 0.001) {
         return `${(s * 1000).toFixed(2).replace(".", ",")} ms`;
@@ -50,6 +57,7 @@ function tiempo(s) {
     return `${s.toFixed(1).replace(".", ",")} s`;
 }
 
+// Formatea una razón como "n×" (un decimal si es menor que 10)
 function veces(valor) {
     return `${valor < 10 ? valor.toFixed(1).replace(".", ",") : valor.toFixed(0)}×`;
 }
@@ -59,6 +67,7 @@ function aciertoPorClase(matriz) {
     return matriz.map((fila, i) => fila[i] / fila.reduce((a, b) => a + b, 0));
 }
 
+// Divide cada fila de la matriz por su total (proporciones por clase real)
 function normalizarFilas(matriz) {
     return matriz.map(fila => {
         const total = fila.reduce((a, b) => a + b, 0);
@@ -97,6 +106,7 @@ function etiquetasCeldas(xs, ys, z, textos, min, max, ejes = {}) {
     return etiquetas;
 }
 
+// Configuración común de un eje de Plotly; `extra` sobrescribe valores
 function eje(extra = {}) {
     return {
         gridcolor: css("--grilla"),
@@ -109,10 +119,12 @@ function eje(extra = {}) {
     };
 }
 
+// Título de eje con el estilo de la página
 function titulo(texto) {
     return { text: texto, font: { size: 12, color: css("--texto-secundario") } };
 }
 
+// Layout común de Plotly (colores del tema, fuente, leyenda arriba); `extra` sobrescribe valores
 function base(extra = {}) {
     const superficie = css("--superficie");
 
@@ -182,12 +194,14 @@ function conectores(xs, ys, ejes = {}) {
     };
 }
 
+// Fracción horizontal del gráfico que ocupa cada panel cuando hay uno por prueba
 const DOMINIOS = [[0, 0.46], [0.54, 1]];
 
 // ---------------------------------------------------------------
 // K. Las piezas del boceto del grupo, con los datos reales
 // ---------------------------------------------------------------
 
+// K1: barras de accuracy agrupadas por modelo, una barra por prueba
 function barrasPorModelo(el) {
     const texto = css("--texto-primario");
 
@@ -217,6 +231,7 @@ function barrasPorModelo(el) {
     }), CONFIG);
 }
 
+// K2: tiempo de entrenamiento de cada modelo de una prueba a la otra
 function pendientesTiempo(el) {
     const texto = css("--texto-primario");
 
@@ -257,6 +272,7 @@ function pendientesTiempo(el) {
     }), CONFIG);
 }
 
+// K3: las 561 variables de cada caso de la Prueba 2 y, debajo, si cada modelo acertó
 function senalEtiquetada(el) {
     const p = DATOS.p2;
     const ind = p.individuales;
@@ -380,6 +396,7 @@ function senalEtiquetada(el) {
 // A. Quien acierta mas
 // ---------------------------------------------------------------
 
+// A1: barras de accuracy agrupadas por prueba, con la línea del azar
 function barrasAgrupadas(el) {
     const texto = css("--texto-primario");
 
@@ -431,6 +448,7 @@ function barrasAgrupadas(el) {
     }), CONFIG);
 }
 
+// A2: gráfico de pendientes de accuracy entre las dos pruebas
 function pendientes(el) {
     const texto = css("--texto-primario");
 
@@ -466,6 +484,7 @@ function pendientes(el) {
     }), CONFIG);
 }
 
+// A3: dumbbell de las cuatro métricas, un panel por prueba
 function dumbbellMetricas(el) {
     const nombres = METRICAS.map(m => m.nombre);
     const trazas = [];
@@ -504,6 +523,7 @@ function dumbbellMetricas(el) {
     }), CONFIG);
 }
 
+// A4: mapa de calor de métricas (filas: prueba y modelo; columnas: métrica)
 function mapaMetricas(el) {
     const filas = [];
     const z = [];
@@ -538,6 +558,7 @@ function mapaMetricas(el) {
     }), CONFIG);
 }
 
+// A5: diferencia CNN − MLP por métrica en puntos porcentuales
 function barrasDiferencia(el) {
     const nombres = METRICAS.map(m => m.nombre);
     const texto = css("--texto-primario");
@@ -597,6 +618,7 @@ function barrasDiferencia(el) {
 // B. Cuanto cuesta
 // ---------------------------------------------------------------
 
+// B1: dispersión de accuracy frente a tiempo de entrenamiento
 function dispersionCosto(el) {
     const texto = css("--texto-primario");
     const tenue = css("--texto-tenue");
@@ -659,6 +681,7 @@ const FILAS_TIEMPO = [
     { clave: "tiempo_prediccion_s", nombre: "Predecir el test" }
 ];
 
+// Filas de tiempos (entrenar / predecir × prueba) con el valor de cada modelo, para B2 y B3
 function filasTiempo() {
     const filas = [];
 
@@ -674,6 +697,7 @@ function filasTiempo() {
     return filas;
 }
 
+// B2: dumbbell de tiempos de entrenamiento y predicción (escala log)
 function puntosTiempo(el) {
     const filas = filasTiempo();
     const nombres = filas.map(f => f.nombre);
@@ -704,6 +728,7 @@ function puntosTiempo(el) {
     }), CONFIG);
 }
 
+// B3: cuántas veces más tarda la CNN que el MLP en cada tarea
 function barrasVeces(el) {
     const filas = filasTiempo();
     const razon = filas.map(f => f.valores[0] / f.valores[1]);
@@ -742,6 +767,7 @@ function barrasVeces(el) {
 // C. En que se equivocan
 // ---------------------------------------------------------------
 
+// C1: matrices de confusión de la Prueba 2, una por modelo
 function matricesConfusion(el) {
     const p = DATOS.p2;
     const texto = css("--texto-primario");
@@ -791,6 +817,7 @@ function matricesConfusion(el) {
     }), CONFIG);
 }
 
+// C2: recall de cada clase por modelo, en las dos pruebas
 function aciertoClases(el) {
     const texto = css("--texto-primario");
     const trazas = [];
@@ -831,6 +858,7 @@ function aciertoClases(el) {
     }), CONFIG);
 }
 
+// C3: las seis confusiones más frecuentes de la Prueba 2
 function topConfusiones(el) {
     const p = DATOS.p2;
     const texto = css("--texto-primario");
@@ -879,11 +907,13 @@ function topConfusiones(el) {
 // D. Caso a caso
 // ---------------------------------------------------------------
 
+// Convierte "#rrggbb" en [r, g, b]
 function hexARgb(hex) {
     const limpio = hex.replace("#", "");
     return [0, 2, 4].map(i => parseInt(limpio.slice(i, i + 2), 16));
 }
 
+// Pinta un dibujo de 28 x 28 en un canvas con los colores del tema (trazo = texto, fondo = plano)
 function pintarDibujo(canvas, pixeles) {
     canvas.width = 28;
     canvas.height = 28;
@@ -917,10 +947,12 @@ const FIGURAS = {
     "Acostado": '<circle cx="6.5" cy="16.5" r="2.4"/><path d="M9 17.5H25M12 17.5L16 14.5"/><path d="M3 21.5H26M4 21.5V25M25 21.5V25" opacity="0.45"/>'
 };
 
+// Devuelve el SVG (como texto) del pictograma de una actividad
 function figura(clase) {
     return `<svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${FIGURAS[clase]}</svg>`;
 }
 
+// D1: tabla HTML con los 10 casos individuales y la respuesta de cada modelo
 function grillaCasos(el) {
     el.innerHTML = "";
     el.className = "casos";
@@ -989,6 +1021,7 @@ const CONTEXTO = [
     }
 ];
 
+// Ícono de una clase: un dibujo real de ejemplo (Prueba 1) o un pictograma (Prueba 2)
 function iconoClase(prueba, i, clase) {
     const contexto = CONTEXTO[i];
 
@@ -1003,6 +1036,7 @@ function iconoClase(prueba, i, clase) {
     return caja.firstChild;
 }
 
+// D4: aciertos de cada 100 y tiempo de entrenamiento por modelo, con insignias del ganador
 function cadaCien(el) {
     el.innerHTML = "";
     el.className = "cien";
@@ -1076,6 +1110,7 @@ function cadaCien(el) {
     });
 }
 
+// D2: lollipop con la confianza de la CNN en cada caso, marcando los errores
 function confianza(el) {
     const texto = css("--texto-primario");
     const trazas = [];
@@ -1156,6 +1191,7 @@ function confianza(el) {
     }), CONFIG);
 }
 
+// D3: tiempo de predicción de cada caso individual (escala log)
 function tiemposCasos(el) {
     const trazas = [];
     const filas = [];
@@ -1212,6 +1248,7 @@ function tiemposCasos(el) {
 // E. Como aprenden
 // ---------------------------------------------------------------
 
+// E1: accuracy de la CNN por época en entrenamiento y validación
 function curvasAprendizaje(el) {
     const texto = css("--texto-primario");
     const trazas = [];
@@ -1258,6 +1295,9 @@ function curvasAprendizaje(el) {
 // Catalogo de tarjetas
 // ---------------------------------------------------------------
 
+// Secciones de la galería. Cada gráfico define su código, tipo, veredicto, textos
+// (título, subtítulo, qué muestra bien y su limitación) y la función que lo dibuja.
+// `ancha` ocupa todo el ancho; `html` indica que dibuja HTML en vez de Plotly.
 const SECCIONES = [
     {
         id: "k",
@@ -1467,8 +1507,10 @@ const LISTA_CORTA = [
 // Construccion de la pagina
 // ---------------------------------------------------------------
 
+// Contenedor de cada gráfico y su función de dibujo, para poder redibujarlos
 const lienzos = [];
 
+// Crea el índice, las secciones con sus tarjetas, la lista corta y la tabla de datos
 function construir() {
     const contenedor = document.getElementById("secciones");
     const indice = document.getElementById("indice");
@@ -1538,6 +1580,7 @@ function construir() {
     }).join("")).join("");
 }
 
+// Dibuja (o redibuja) el gráfico de cada tarjeta
 function dibujarTodo() {
     lienzos.forEach(l => l.dibujar(l.el));
 }

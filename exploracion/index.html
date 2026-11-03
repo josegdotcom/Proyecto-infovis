@@ -10,8 +10,14 @@
     <link rel="icon" type="image/png" href="../assets/icons/logo.png">
     <link rel="stylesheet" href="../css/style.css">
 
+    <!--
+        Galería de exploración de diseño: 19 alternativas de gráficos con los
+        resultados de las dos pruebas. Las tarjetas las genera galeria.js a
+        partir de datos.js; aquí solo están la estructura y los estilos propios.
+    -->
     <style>
-        /* Colores de los dos modelos actuales. MLP mantiene el verde de la V1. */
+        /* Colores de los dos modelos actuales. MLP mantiene el verde de la V1.
+           --sec-claro / --sec-oscuro: series de entrenamiento y validación (E1). */
         :root {
             --modelo-cnn: #2a78d6;
             --sec-claro: #86b6ef;
@@ -478,6 +484,7 @@
             <ul class="lista-corta" id="lista-corta"></ul>
         </header>
 
+        <!-- Índice y secciones: los llena construir() en galeria.js -->
         <nav class="indice" id="indice" aria-label="Secciones"></nav>
 
         <main id="secciones"></main>
@@ -506,6 +513,7 @@
 
     </div>
 
+    <!-- Plotly, datos exportados por data/exportar_galeria.py y la galería -->
     <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
     <script src="datos.js"></script>
     <script src="galeria.js"></script>

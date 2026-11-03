@@ -61,6 +61,7 @@ def leer_epocas(salidas):
 
 
 def generales(ruta):
+    """Lee el CSV de resultados generales: {modelo: {metrica: valor}}."""
     tabla = pd.read_csv(ruta)
     columnas = ["accuracy", "precision", "recall", "f1_score",
                 "tiempo_entrenamiento_s", "tiempo_prediccion_s"]
@@ -126,6 +127,10 @@ prueba_2 = {
         "senales": np.round(senales.astype(float), 2).tolist(),
     },
 }
+
+# ---------------------------------------------------------------
+# Escritura de exploracion/datos.js (variable global DATOS)
+# ---------------------------------------------------------------
 
 ruta = Path("../exploracion/datos.js")
 ruta.parent.mkdir(exist_ok=True)

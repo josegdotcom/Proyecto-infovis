@@ -1,14 +1,27 @@
+// dibujos.js
+// Pizarra interactiva de la Prueba 1 (exploracion/prueba_1.html).
+//
+// Flujo: el usuario dibuja un gato o un perro, indica qué dibujó y presiona
+// «Terminar dibujo». El dibujo se reduce a 28 x 28 píxeles y se envía a la API
+// local (api/main.py), donde la CNN y el MLP intentan adivinarlo; la etiqueta
+// solo sirve para saber si acertaron. Con al menos MINIMO_IMAGENES dibujos se
+// puede pedir el rendimiento general (accuracy, precisión, recall y F1).
+
+// Dibujos necesarios para pedir el rendimiento general
 const MINIMO_IMAGENES = 5;
 const TAMANO_DIBUJO = 26; // lado (px) del dibujo dentro de la imagen 28 x 28
+// Clases del modelo (mismas que en el entrenamiento)
 const ETIQUETAS = {
     0: "Gato",
     1: "Perro"
 };
+// Color de cada modelo (los mismos tonos que en la galería de exploración)
 const COLORES_MODELO = {
     CNN: "#2a78d6",
     MLP: "#1baf7a"
 };
 
+// Elementos de la página
 const canvas = document.getElementById("canvas-dibujo");
 const ctx = canvas.getContext("2d");
 
@@ -32,15 +45,18 @@ const veredictoMiniatura = document.getElementById("veredicto-miniatura");
 const veredictoReal = document.getElementById("veredicto-real");
 const veredictoModelos = document.getElementById("veredicto-modelos");
 
-let dibujando = false;
-let tieneTrazos = false;
-let etiquetaSeleccionada = null;
+// Estado de la pizarra
+let dibujando = false;              // hay un trazo en curso (botón o dedo presionado)
+let tieneTrazos = false;            // el lienzo tiene algo dibujado
+let etiquetaSeleccionada = null;    // 0 = Gato, 1 = Perro, null = sin elegir
+// Dibujos terminados: { pixeles: [784], etiqueta, adivinanzas: {modelo: {prediccion, confianza}} }
 const muestrasGuardadas = [];
 
 // ---------------------------------------------------------------
 // Configuración de dibujo en el canvas (448 x 448)
 // ---------------------------------------------------------------
 
+// Estilo del trazo: negro, redondeado y con grosor proporcional al lienzo
 function configurarPincel() {
     // Grosor proporcional al lienzo (9 px en uno de 280 px)
     ctx.lineWidth = canvas.width * 9 / 280;
@@ -51,6 +67,8 @@ function configurarPincel() {
 
 configurarPincel();
 
+// Posición del puntero (mouse o dedo) en coordenadas internas del canvas,
+// corrigiendo la escala cuando el canvas se muestra más chico que su tamaño real
 function obtenerPosicion(evento) {
     const rect = canvas.getBoundingClientRect();
     const escalaX = canvas.width / rect.width;
@@ -69,6 +87,7 @@ function obtenerPosicion(evento) {
     };
 }
 
+// Empieza un trazo con un punto (para que un toque sin arrastrar también marque)
 function iniciarTrazo(evento) {
     dibujando = true;
     tieneTrazos = true;
@@ -81,6 +100,7 @@ function iniciarTrazo(evento) {
     ctx.stroke();
 }
 
+// Continúa el trazo mientras el botón o el dedo siguen presionados
 function moverTrazo(evento) {
     if (!dibujando) return;
 
@@ -89,6 +109,7 @@ function moverTrazo(evento) {
     ctx.stroke();
 }
 
+// Termina el trazo al soltar o al salir del lienzo
 function finalizarTrazo() {
     dibujando = false;
 }
@@ -110,6 +131,7 @@ canvas.addEventListener("touchmove", (e) => {
 
 canvas.addEventListener("touchend", finalizarTrazo);
 
+// Borra todo el lienzo
 function limpiarCanvas() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     tieneTrazos = false;
@@ -159,6 +181,8 @@ function obtenerContornoDibujo() {
     return { x: minX, y: minY, ancho: maxX - minX + 1, alto: maxY - minY + 1 };
 }
 
+// Convierte el lienzo en 784 valores 0-255 (trazo alto, fondo 0), recortado,
+// centrado y con el máximo llevado a 255, que es el formato que esperan los modelos
 function extraerPixeles28x28() {
     const tempCanvas = document.createElement("canvas");
     tempCanvas.width = 28;
@@ -199,6 +223,7 @@ function extraerPixeles28x28() {
     return pixeles;
 }
 
+// Pinta 784 píxeles en un canvas de 28 x 28 (trazo oscuro sobre fondo blanco)
 function pintarMiniatura28x28(destinoCanvas, pixeles) {
     destinoCanvas.width = 28;
     destinoCanvas.height = 28;
@@ -216,11 +241,13 @@ function pintarMiniatura28x28(destinoCanvas, pixeles) {
     c.putImageData(imgData, 0, 0);
 }
 
+// Muestra un mensaje de estado; `tipo` (info, exito, error) define su color
 function mostrarMensaje(texto, tipo = "info") {
     mensajeEstado.textContent = texto;
     mensajeEstado.dataset.tipo = tipo;
 }
 
+// Redibuja la galería de dibujos terminados y actualiza contador y botones
 function actualizarInterfazGuardados() {
     const total = muestrasGuardadas.length;
     const listo = total >= MINIMO_IMAGENES;
@@ -288,6 +315,7 @@ function actualizarInterfazGuardados() {
     });
 }
 
+// Quita la etiqueta elegida, para que se pida de nuevo en el próximo dibujo
 function deseleccionarEtiqueta() {
     etiquetaSeleccionada = null;
     botonesEtiqueta.forEach((b) => {
@@ -296,6 +324,7 @@ function deseleccionarEtiqueta() {
     });
 }
 
+// Muestra junto a la pizarra lo que adivinó cada modelo sobre el último dibujo
 function mostrarVeredicto(muestra) {
     pintarMiniatura28x28(veredictoMiniatura, muestra.pixeles);
     veredictoReal.textContent = ETIQUETAS[muestra.etiqueta];
@@ -396,10 +425,13 @@ btnNuevaPrueba.addEventListener("click", () => {
 // Conexión con la API local de Python y visualización de resultados
 // ---------------------------------------------------------------
 
+// Pide a la API la evaluación de un lote de dibujos (predicciones y métricas)
 function enviarAPythonAPI(imagenes, etiquetas) {
     return llamarAPI("/api/test_1", { imagenes, etiquetas });
 }
 
+// POST a la API local. Prueba primero la ruta relativa (página servida por la API)
+// y luego localhost:8000, por si la página se abrió desde otro servidor
 async function llamarAPI(ruta, cuerpo) {
     const opciones = {
         method: "POST",
@@ -438,10 +470,12 @@ async function llamarAPI(ruta, cuerpo) {
     throw ultimoError || new Error("No se pudo conectar con la API local de Python.");
 }
 
+// Formatea una proporción como porcentaje con coma decimal: 0.875 -> "87,5%"
 function formatearPorcentaje(valor) {
     return `${(valor * 100).toFixed(1).replace(".", ",")}%`;
 }
 
+// Muestra el panel de rendimiento general: grilla por dibujo, tarjetas y tabla de métricas
 function renderizarResultados(resultados) {
     const { etiquetas_reales, predicciones, metricas } = resultados;
     const modelos = Object.keys(predicciones);

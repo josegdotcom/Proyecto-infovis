@@ -34,6 +34,7 @@
                 <div class="zona-dibujo">
                     <canvas id="canvas-dibujo" width="448" height="448"></canvas>
 
+                    <!-- Respuesta de cada modelo sobre el último dibujo (la llena mostrarVeredicto) -->
                     <aside id="panel-veredicto" class="panel-veredicto" aria-live="polite">
                         <h3>¿Qué creen los modelos?</h3>
                         <p id="veredicto-vacio" class="texto-vacio">Cuando termines tu dibujo, la CNN y el MLP intentarán adivinar si es un gato o un perro.</p>
@@ -130,6 +131,7 @@
             </section>
         </main>
 
+        <!-- Lógica de la pizarra y conexión con la API (requiere: python -m api.main) -->
         <script src="../js/dibujos.js"></script>
     </body>
 </html>
