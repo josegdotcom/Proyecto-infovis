@@ -38,11 +38,12 @@ let etiquetaSeleccionada = null;
 const muestrasGuardadas = [];
 
 // ---------------------------------------------------------------
-// Configuración de dibujo en el canvas (280 x 280)
+// Configuración de dibujo en el canvas (448 x 448)
 // ---------------------------------------------------------------
 
 function configurarPincel() {
-    ctx.lineWidth = 12;
+    // Grosor proporcional al lienzo (9 px en uno de 280 px)
+    ctx.lineWidth = canvas.width * 9 / 280;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
     ctx.strokeStyle = "black";

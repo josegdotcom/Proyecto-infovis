@@ -527,7 +527,7 @@ h3 {
 .panel-veredicto {
     flex: 1 1 280px;
     max-width: 440px;
-    min-height: 280px;
+    min-height: 448px;
     padding: 16px;
     border: 1px solid var(--borde);
     border-radius: 10px;
@@ -623,6 +623,7 @@ h3 {
     cursor: crosshair;
     touch-action: none;
     max-width: 100%;
+    height: auto;
 }
 
 /* Controles de Prueba 1: etiquetas, botones, galería de guardados y métricas */
