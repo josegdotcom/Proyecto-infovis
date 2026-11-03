@@ -151,6 +151,13 @@ h3 {
     border-color: var(--borde);
 }
 
+.contenedor-botones {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
 /* Paneles */
 
 .panel {
@@ -501,4 +508,20 @@ h3 {
     .modelos-info > h2 { font-size: 24px; margin-bottom: 14px; }
     .modelo-item { grid-template-columns: 28% minmax(0, 1fr); }
     .modelo-item + .modelo-item { border-left: 0; border-top: 1px solid var(--borde); padding: 18px 0 0; }
+}
+
+/* Recuadro de canvas y dibujo */
+
+.zona-dibujo {
+    display: flex;
+    justify-content: center;
+    margin: 30px;
+    padding: 20px;
+}
+
+#canvas-dibujo {
+    border: 2px solid #000000;
+    border-radius: 8px;
+    background: white;
+    cursor:crosshair;
 }
