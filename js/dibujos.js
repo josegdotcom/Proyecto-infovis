@@ -1,4 +1,5 @@
 const MINIMO_IMAGENES = 5;
+const TAMANO_DIBUJO = 26; // lado (px) del dibujo dentro de la imagen 28 x 28
 const ETIQUETAS = {
     0: "Gato",
     1: "Perro"
@@ -25,6 +26,11 @@ const panelResultados = document.getElementById("panel-resultados");
 const resumenMetricas = document.getElementById("resumen-metricas");
 const tablaMetricasCuerpo = document.getElementById("tabla-metricas-cuerpo");
 const grillaPredicciones = document.getElementById("grilla-predicciones");
+const veredictoVacio = document.getElementById("veredicto-vacio");
+const veredictoContenido = document.getElementById("veredicto-contenido");
+const veredictoMiniatura = document.getElementById("veredicto-miniatura");
+const veredictoReal = document.getElementById("veredicto-real");
+const veredictoModelos = document.getElementById("veredicto-modelos");
 
 let dibujando = false;
 let tieneTrazos = false;
@@ -131,13 +137,45 @@ botonesEtiqueta.forEach((boton) => {
     });
 });
 
+// Recorta el dibujo a su contorno y lo centra escalado en 28 x 28,
+// igual que los dibujos del dataset con que se entrenaron los modelos
+function obtenerContornoDibujo() {
+    const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    let minX = canvas.width, minY = canvas.height, maxX = -1, maxY = -1;
+
+    for (let y = 0; y < canvas.height; y++) {
+        for (let x = 0; x < canvas.width; x++) {
+            if (data[(y * canvas.width + x) * 4 + 3] > 0) {
+                if (x < minX) minX = x;
+                if (x > maxX) maxX = x;
+                if (y < minY) minY = y;
+                if (y > maxY) maxY = y;
+            }
+        }
+    }
+
+    if (maxX < 0) return null;
+    return { x: minX, y: minY, ancho: maxX - minX + 1, alto: maxY - minY + 1 };
+}
+
 function extraerPixeles28x28() {
     const tempCanvas = document.createElement("canvas");
     tempCanvas.width = 28;
     tempCanvas.height = 28;
     const tempCtx = tempCanvas.getContext("2d");
+    tempCtx.imageSmoothingQuality = "high";
 
-    tempCtx.drawImage(canvas, 0, 0, 28, 28);
+    const contorno = obtenerContornoDibujo();
+    if (contorno) {
+        const escala = TAMANO_DIBUJO / Math.max(contorno.ancho, contorno.alto);
+        const ancho = contorno.ancho * escala;
+        const alto = contorno.alto * escala;
+        tempCtx.drawImage(
+            canvas,
+            contorno.x, contorno.y, contorno.ancho, contorno.alto,
+            (28 - ancho) / 2, (28 - alto) / 2, ancho, alto
+        );
+    }
     const { data } = tempCtx.getImageData(0, 0, 28, 28);
 
     const pixeles = new Array(784);
@@ -187,20 +225,22 @@ function actualizarInterfazGuardados() {
     const listo = total >= MINIMO_IMAGENES;
 
     contadorGuardados.textContent = listo
-        ? `${total} imágenes guardadas (listo para predecir)`
-        : `${total} / ${MINIMO_IMAGENES} imágenes mínimas`;
+        ? `${total} dibujos (listo para ver rendimiento)`
+        : `${total} / ${MINIMO_IMAGENES} dibujos mínimos`;
     contadorGuardados.classList.toggle("completo", listo);
 
     btnPredecir.disabled = !listo;
     btnPredecir.textContent = listo
-        ? `Predecir con modelos (${total} imágenes)`
-        : `Predecir con modelos (${total}/${MINIMO_IMAGENES})`;
+        ? `Ver rendimiento general (${total} dibujos)`
+        : `Ver rendimiento general (${total}/${MINIMO_IMAGENES})`;
 
     btnVaciar.disabled = total === 0;
 
     if (total === 0) {
         listaGuardados.innerHTML =
-            '<p class="texto-vacio">Aún no has guardado ningún dibujo. Guarda al menos 5 para habilitar la predicción.</p>';
+            '<p class="texto-vacio">Aún no has terminado ningún dibujo. Haz al menos 5 para ver el rendimiento general.</p>';
+        veredictoVacio.hidden = false;
+        veredictoContenido.hidden = true;
         return;
     }
 
@@ -220,6 +260,13 @@ function actualizarInterfazGuardados() {
             <strong class="item-etiqueta">${ETIQUETAS[muestra.etiqueta]}</strong>
         `;
 
+        const adivinanzas = document.createElement("div");
+        adivinanzas.className = "item-adivinanzas";
+        adivinanzas.innerHTML = Object.entries(muestra.adivinanzas).map(([modelo, r]) => {
+            const acierto = r.prediccion === muestra.etiqueta;
+            return `<span class="${acierto ? "correcta" : "incorrecta"}" title="${modelo} dijo ${ETIQUETAS[r.prediccion]}">${modelo} ${acierto ? "✓" : "✗"}</span>`;
+        }).join("");
+
         const btnEliminar = document.createElement("button");
         btnEliminar.type = "button";
         btnEliminar.className = "btn-eliminar-item";
@@ -235,18 +282,52 @@ function actualizarInterfazGuardados() {
         tarjeta.appendChild(btnEliminar);
         tarjeta.appendChild(miniatura);
         tarjeta.appendChild(info);
+        tarjeta.appendChild(adivinanzas);
         listaGuardados.appendChild(tarjeta);
     });
 }
 
-btnGuardar.addEventListener("click", () => {
+function deseleccionarEtiqueta() {
+    etiquetaSeleccionada = null;
+    botonesEtiqueta.forEach((b) => {
+        b.classList.remove("seleccionada");
+        b.setAttribute("aria-pressed", "false");
+    });
+}
+
+function mostrarVeredicto(muestra) {
+    pintarMiniatura28x28(veredictoMiniatura, muestra.pixeles);
+    veredictoReal.textContent = ETIQUETAS[muestra.etiqueta];
+
+    veredictoModelos.innerHTML = Object.entries(muestra.adivinanzas).map(([modelo, r]) => {
+        const acierto = r.prediccion === muestra.etiqueta;
+        const color = COLORES_MODELO[modelo] || "var(--acento)";
+        return `
+            <li class="veredicto-modelo ${acierto ? "correcta" : "incorrecta"}">
+                <span class="veredicto-nombre">
+                    <span class="muestra-modelo" style="background:${color}"></span>${modelo}
+                </span>
+                <span class="veredicto-respuesta">
+                    Cree que es un <strong>${ETIQUETAS[r.prediccion].toLowerCase()}</strong>
+                    <span class="veredicto-confianza">(${formatearPorcentaje(r.confianza)} de confianza)</span>
+                </span>
+                <span class="veredicto-icono">${acierto ? "✓ Acertó" : "✗ Falló"}</span>
+            </li>
+        `;
+    }).join("");
+
+    veredictoVacio.hidden = true;
+    veredictoContenido.hidden = false;
+}
+
+btnGuardar.addEventListener("click", async () => {
     if (!tieneTrazos) {
-        mostrarMensaje("Dibuja algo en el recuadro antes de guardar la imagen.", "error");
+        mostrarMensaje("Dibuja algo en el recuadro antes de terminar.", "error");
         return;
     }
 
     if (etiquetaSeleccionada === null) {
-        mostrarMensaje("Selecciona qué dibujaste (Gato o Perro) antes de guardar.", "error");
+        mostrarMensaje("Indica qué dibujaste (Gato o Perro) para saber si los modelos aciertan.", "error");
         return;
     }
 
@@ -258,27 +339,40 @@ btnGuardar.addEventListener("click", () => {
         return;
     }
 
-    muestrasGuardadas.push({
-        pixeles,
-        etiqueta: etiquetaSeleccionada
-    });
+    const etiqueta = etiquetaSeleccionada;
+    btnGuardar.disabled = true;
+    mostrarMensaje("Los modelos están mirando tu dibujo...", "info");
 
+    let respuesta;
+    try {
+        respuesta = await llamarAPI("/api/test_1/predecir", { imagen: pixeles, etiqueta });
+    } catch (error) {
+        console.error("Error al adivinar:", error);
+        mostrarMensaje(
+            `Los modelos no pudieron adivinar: ${error.message}. Asegúrate de iniciar la API con: python -m api.main`,
+            "error"
+        );
+        return;
+    } finally {
+        btnGuardar.disabled = false;
+    }
+
+    const muestra = { pixeles, etiqueta, adivinanzas: respuesta.modelos };
+    muestrasGuardadas.push(muestra);
+
+    mostrarVeredicto(muestra);
     limpiarCanvas();
+    deseleccionarEtiqueta();
     actualizarInterfazGuardados();
 
     const total = muestrasGuardadas.length;
     const faltan = Math.max(0, MINIMO_IMAGENES - total);
-    if (faltan > 0) {
-        mostrarMensaje(
-            `Imagen #${total} guardada (${ETIQUETAS[etiquetaSeleccionada]}). Te faltan ${faltan} más como mínimo.`,
-            "exito"
-        );
-    } else {
-        mostrarMensaje(
-            `Imagen #${total} guardada (${ETIQUETAS[etiquetaSeleccionada]}). ¡Ya puedes presionar «Predecir con modelos» o seguir agregando dibujos!`,
-            "exito"
-        );
-    }
+    mostrarMensaje(
+        faltan > 0
+            ? `Dibujo #${total} evaluado. Haz ${faltan} más para ver el rendimiento general.`
+            : `Dibujo #${total} evaluado. Ya puedes ver el rendimiento general o seguir dibujando.`,
+        "exito"
+    );
 });
 
 btnVaciar.addEventListener("click", () => {
@@ -301,17 +395,21 @@ btnNuevaPrueba.addEventListener("click", () => {
 // Conexión con la API local de Python y visualización de resultados
 // ---------------------------------------------------------------
 
-async function enviarAPythonAPI(imagenes, etiquetas) {
+function enviarAPythonAPI(imagenes, etiquetas) {
+    return llamarAPI("/api/test_1", { imagenes, etiquetas });
+}
+
+async function llamarAPI(ruta, cuerpo) {
     const opciones = {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imagenes, etiquetas })
+        body: JSON.stringify(cuerpo)
     };
 
     const urls = [
-        "/api/test_1",
-        "http://localhost:8000/api/test_1",
-        "http://127.0.0.1:8000/api/test_1"
+        ruta,
+        `http://localhost:8000${ruta}`,
+        `http://127.0.0.1:8000${ruta}`
     ];
 
     let ultimoError = null;

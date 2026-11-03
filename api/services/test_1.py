@@ -119,3 +119,21 @@ class GatosPerrosPredictor(BasePredictor):
             "CNN": pred_cnn.tolist(),
             "MLP": pred_mlp.tolist()
         }
+
+    def predecir_con_confianza(self, data):
+        # Probabilidad de "Perro" (clase 1) de cada modelo para cada imagen
+        X = self.preprocess(data)
+
+        prob_cnn = self.models["CNN"].predict(
+            X.reshape(-1, 28, 28, 1),
+            verbose=0
+        ).flatten()
+
+        prob_mlp = self.models["MLP"].predict_proba(
+            X.reshape(-1, 784)
+        )[:, 1]
+
+        return {
+            "CNN": prob_cnn.tolist(),
+            "MLP": prob_mlp.tolist()
+        }

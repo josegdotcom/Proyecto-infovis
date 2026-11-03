@@ -514,10 +514,107 @@ h3 {
 
 .zona-dibujo {
     display: flex;
+    flex-wrap: wrap;
     justify-content: center;
+    align-items: flex-start;
+    gap: 24px;
     margin: 16px 0;
     padding: 12px;
 }
+
+/* Veredicto de los modelos sobre el último dibujo */
+
+.panel-veredicto {
+    flex: 1 1 280px;
+    max-width: 440px;
+    min-height: 280px;
+    padding: 16px;
+    border: 1px solid var(--borde);
+    border-radius: 10px;
+    background: var(--plano);
+}
+
+.panel-veredicto h3 {
+    margin: 0 0 12px;
+    font-size: 1.05rem;
+}
+
+.veredicto-dibujo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.veredicto-dibujo canvas {
+    width: 56px;
+    height: 56px;
+    border: 1px solid var(--borde);
+    border-radius: 4px;
+    background: #ffffff;
+    image-rendering: pixelated;
+}
+
+.veredicto-dibujo p {
+    margin: 0;
+}
+
+.veredicto-modelos {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.veredicto-modelo {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 2px 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--borde);
+    border-left-width: 4px;
+    border-radius: 8px;
+    background: var(--superficie);
+}
+
+.veredicto-modelo.correcta { border-left-color: var(--bien); }
+.veredicto-modelo.incorrecta { border-left-color: var(--mal); }
+
+.veredicto-nombre {
+    font-weight: 700;
+}
+
+.veredicto-icono {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.veredicto-modelo.correcta .veredicto-icono { color: var(--bien); }
+.veredicto-modelo.incorrecta .veredicto-icono { color: var(--mal); }
+
+.veredicto-respuesta {
+    grid-column: 1 / -1;
+    font-size: 0.92rem;
+}
+
+.veredicto-confianza {
+    color: var(--texto-secundario);
+}
+
+.item-adivinanzas {
+    display: flex;
+    gap: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.item-adivinanzas .correcta { color: var(--bien); }
+.item-adivinanzas .incorrecta { color: var(--mal); }
 
 #canvas-dibujo {
     border: 2px solid #000000;
@@ -525,6 +622,7 @@ h3 {
     background: white;
     cursor: crosshair;
     touch-action: none;
+    max-width: 100%;
 }
 
 /* Controles de Prueba 1: etiquetas, botones, galería de guardados y métricas */

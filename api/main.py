@@ -52,6 +52,32 @@ def procesar_evaluacion_test_1(payload):
     }
 
 
+def procesar_prediccion_dibujo(payload):
+    imagen = payload.get("imagen")
+
+    if not imagen or len(imagen) != 784:
+        raise ValueError("Se requiere 'imagen' con 784 píxeles (28 x 28).")
+
+    predictor = obtener_predictor_test_1()
+    probabilidades = predictor.predecir_con_confianza([imagen])
+
+    # Clase 1 = Perro; la confianza es la probabilidad de la clase elegida
+    resultado = {}
+    for modelo, probs in probabilidades.items():
+        prob_perro = float(probs[0])
+        prediccion = int(prob_perro >= 0.5)
+        resultado[modelo] = {
+            "prediccion": prediccion,
+            "confianza": prob_perro if prediccion == 1 else 1.0 - prob_perro,
+        }
+
+    etiqueta = payload.get("etiqueta")
+    return {
+        "etiqueta_real": None if etiqueta is None else int(etiqueta),
+        "modelos": resultado,
+    }
+
+
 class APIRequestHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(ROOT_DIR), **kwargs)
@@ -68,9 +94,10 @@ class APIRequestHandler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         rutas_validas = {"/api/test_1", "/api/evaluar", "/api/predict", "/predict", "/evaluar"}
+        rutas_dibujo = {"/api/test_1/predecir"}
         ruta = self.path.split("?")[0].rstrip("/")
 
-        if ruta not in rutas_validas:
+        if ruta not in rutas_validas and ruta not in rutas_dibujo:
             self._responder_json(404, {"error": f"Ruta no encontrada: {self.path}"})
             return
 
@@ -78,7 +105,10 @@ class APIRequestHandler(SimpleHTTPRequestHandler):
             content_length = int(self.headers.get("Content-Length", 0))
             cuerpo = self.rfile.read(content_length).decode("utf-8")
             payload = json.loads(cuerpo) if cuerpo else {}
-            resultados = procesar_evaluacion_test_1(payload)
+            if ruta in rutas_dibujo:
+                resultados = procesar_prediccion_dibujo(payload)
+            else:
+                resultados = procesar_evaluacion_test_1(payload)
             self._responder_json(200, resultados)
         except ValueError as err:
             self._responder_json(400, {"error": str(err)})

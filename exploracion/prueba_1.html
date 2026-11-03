@@ -17,7 +17,7 @@
             <p class="eyebrow" style="margin-top: 16px;">Prueba interactiva · Imágenes (28 × 28 px)</p>
             <h1>Prueba 1: Gato vs. Perro</h1>
             <p class="mensaje">
-                Dibuja un <strong>gato</strong> o un <strong>perro</strong> en el recuadro, indica qué dibujaste y guarda <strong>al menos 5 dibujos</strong>. Los modelos (<strong>CNN</strong> y <strong>MLP</strong>) solo verán los píxeles de tu dibujo para predecirlo, y al final se comparará su predicción con tu etiqueta para calcular su rendimiento general.
+                Dibuja un <strong>gato</strong> o un <strong>perro</strong> en el recuadro e indica qué dibujaste. Al terminar, los modelos (<strong>CNN</strong> y <strong>MLP</strong>) verán solo los píxeles de tu dibujo e intentarán adivinarlo; tu etiqueta sirve para saber si acertaron. Con <strong>al menos 5 dibujos</strong> podrás ver su rendimiento general.
             </p>
         </header>
 
@@ -25,14 +25,26 @@
             <section class="panel" aria-labelledby="titulo-area-dibujo">
                 <div class="panel-cabecera">
                     <div>
-                        <h2 id="titulo-area-dibujo">1. Dibuja y guarda tu imagen</h2>
-                        <p class="ayuda">Realiza tu dibujo en el lienzo, selecciona qué animal dibujaste y presiona «Guardar imagen».</p>
+                        <h2 id="titulo-area-dibujo">1. Dibuja y deja que los modelos adivinen</h2>
+                        <p class="ayuda">Realiza tu dibujo en el lienzo, selecciona qué animal dibujaste y presiona «Terminar dibujo».</p>
                     </div>
-                    <span id="contador-guardados" class="insignia-contador">0 / 5 imágenes mínimas</span>
+                    <span id="contador-guardados" class="insignia-contador">0 / 5 dibujos mínimos</span>
                 </div>
 
                 <div class="zona-dibujo">
                     <canvas id="canvas-dibujo" width="280" height="280"></canvas>
+
+                    <aside id="panel-veredicto" class="panel-veredicto" aria-live="polite">
+                        <h3>¿Qué creen los modelos?</h3>
+                        <p id="veredicto-vacio" class="texto-vacio">Cuando termines tu dibujo, la CNN y el MLP intentarán adivinar si es un gato o un perro.</p>
+                        <div id="veredicto-contenido" hidden>
+                            <div class="veredicto-dibujo">
+                                <canvas id="veredicto-miniatura"></canvas>
+                                <p>Tú dibujaste: <strong id="veredicto-real"></strong></p>
+                            </div>
+                            <ul id="veredicto-modelos" class="veredicto-modelos"></ul>
+                        </div>
+                    </aside>
                 </div>
 
                 <div class="controles-prueba">
@@ -55,10 +67,10 @@
                             Limpiar dibujo
                         </button>
                         <button type="button" id="btn-guardar" class="btn btn-primario">
-                            Guardar imagen
+                            Terminar dibujo
                         </button>
                         <button type="button" id="btn-predecir" class="btn btn-primario" disabled>
-                            Predecir con modelos (0/5)
+                            Ver rendimiento general (0/5)
                         </button>
                     </div>
 
@@ -69,8 +81,8 @@
             <section class="panel" aria-labelledby="titulo-guardados">
                 <div class="panel-cabecera">
                     <div>
-                        <h2 id="titulo-guardados">2. Imágenes y etiquetas guardadas</h2>
-                        <p class="ayuda">Vista previa en 28 × 28 píxeles tal como se enviarán a la API de Python.</p>
+                        <h2 id="titulo-guardados">2. Tus dibujos y lo que adivinaron</h2>
+                        <p class="ayuda">Vista previa en 28 × 28 píxeles, tal como la ven los modelos.</p>
                     </div>
                     <button type="button" id="btn-vaciar" class="btn" disabled>
                         Vaciar lista
@@ -78,7 +90,7 @@
                 </div>
 
                 <div id="lista-guardados" class="galeria-guardados">
-                    <p class="texto-vacio">Aún no has guardado ningún dibujo. Guarda al menos 5 para habilitar la predicción.</p>
+                    <p class="texto-vacio">Aún no has terminado ningún dibujo. Haz al menos 5 para ver el rendimiento general.</p>
                 </div>
             </section>
 
