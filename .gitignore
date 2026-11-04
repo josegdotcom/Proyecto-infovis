@@ -1,7 +1,4 @@
-# Entornos virtuales
-.venv/
-venv/
-# Entornos virtuales
+# Entornos virtuales de Python
 .venv/
 venv/
 env/
@@ -9,7 +6,6 @@ ENV/
 
 # Caché de Python
 __pycache__/
-**/__pycache__/
 *.py[cod]
 
 # Caché y archivos temporales
