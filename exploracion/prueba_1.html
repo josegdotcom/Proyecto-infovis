@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Prueba 1 · Dibujos de Gato y Perro</title>
+
+        <link rel="icon" type="image/png" href="../assets/icons/logo.png">
+        <link rel="stylesheet" href="../css/style.css">
+    </head>
+
+    <body>
+        <header class="cabecera">
+            <button onclick="location.href='pruebas.html'" class="btn">
+                ← Volver a selección de pruebas
+            </button>
+            <p class="eyebrow" style="margin-top: 16px;">Prueba interactiva · Imágenes (28 × 28 px)</p>
+            <h1>Prueba 1: Gato vs. Perro</h1>
+            <p class="mensaje">
+                Dibuja un <strong>gato</strong> o un <strong>perro</strong> en el recuadro, indica qué dibujaste y guarda <strong>al menos 5 dibujos</strong>. Los modelos (<strong>CNN</strong> y <strong>MLP</strong>) solo verán los píxeles de tu dibujo para predecirlo, y al final se comparará su predicción con tu etiqueta para calcular su rendimiento general.
+            </p>
+        </header>
+
+        <main>
+            <section class="panel" aria-labelledby="titulo-area-dibujo">
+                <div class="panel-cabecera">
+                    <div>
+                        <h2 id="titulo-area-dibujo">1. Dibuja y guarda tu imagen</h2>
+                        <p class="ayuda">Realiza tu dibujo en el lienzo, selecciona qué animal dibujaste y presiona «Guardar imagen».</p>
+                    </div>
+                    <span id="contador-guardados" class="insignia-contador">0 / 5 imágenes mínimas</span>
+                </div>
+
+                <div class="zona-dibujo">
+                    <canvas id="canvas-dibujo" width="280" height="280"></canvas>
+                </div>
+
+                <div class="controles-prueba">
+                    <div class="grupo-etiquetas" role="group" aria-label="Seleccionar qué animal dibujaste">
+                        <span class="etiqueta-titulo">¿Qué dibujaste?:</span>
+                        <div class="botones-etiqueta">
+                            <button type="button" id="btn-etiqueta-gato" class="btn btn-etiqueta" data-etiqueta="0">
+                                <img src="../assets/images/gato.svg" alt="" class="icono-etiqueta">
+                                Gato
+                            </button>
+                            <button type="button" id="btn-etiqueta-perro" class="btn btn-etiqueta" data-etiqueta="1">
+                                <img src="../assets/images/perro.svg" alt="" class="icono-etiqueta">
+                                Perro
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="botones-accion">
+                        <button type="button" id="btn-limpiar" class="btn">
+                            Limpiar dibujo
+                        </button>
+                        <button type="button" id="btn-guardar" class="btn btn-primario">
+                            Guardar imagen
+                        </button>
+                        <button type="button" id="btn-predecir" class="btn btn-primario" disabled>
+                            Predecir con modelos (0/5)
+                        </button>
+                    </div>
+
+                    <p id="mensaje-estado" class="estado-prueba" role="status" aria-live="polite"></p>
+                </div>
+            </section>
+
+            <section class="panel" aria-labelledby="titulo-guardados">
+                <div class="panel-cabecera">
+                    <div>
+                        <h2 id="titulo-guardados">2. Imágenes y etiquetas guardadas</h2>
+                        <p class="ayuda">Vista previa en 28 × 28 píxeles tal como se enviarán a la API de Python.</p>
+                    </div>
+                    <button type="button" id="btn-vaciar" class="btn" disabled>
+                        Vaciar lista
+                    </button>
+                </div>
+
+                <div id="lista-guardados" class="galeria-guardados">
+                    <p class="texto-vacio">Aún no has guardado ningún dibujo. Guarda al menos 5 para habilitar la predicción.</p>
+                </div>
+            </section>
+
+            <section id="panel-resultados" class="panel" aria-labelledby="titulo-resultados" hidden>
+                <div class="panel-cabecera">
+                    <div>
+                        <h2 id="titulo-resultados">3. Resultados de la prueba</h2>
+                        <p class="ayuda">Predicciones de cada modelo sobre tus dibujos y su rendimiento general entregado por la API.</p>
+                    </div>
+                    <button type="button" id="btn-nueva-prueba" class="btn">
+                        Nueva prueba
+                    </button>
+                </div>
+
+                <h3>Predicciones por imagen</h3>
+                <div class="grilla-contenedor" style="margin: 12px 0 28px;">
+                    <table id="grilla-predicciones" class="grilla"></table>
+                </div>
+
+                <h3>Rendimiento general de los modelos</h3>
+                <div id="resumen-metricas" class="tarjetas-metricas"></div>
+
+                <div class="tabla-datos">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Modelo</th>
+                                <th>Accuracy (Aciertos)</th>
+                                <th>Precisión</th>
+                                <th>Recall</th>
+                                <th>F1-Score</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-metricas-cuerpo"></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+
+        <script src="../js/dibujos.js"></script>
+    </body>
+</html>
