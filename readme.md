@@ -15,58 +15,35 @@ Visualización interactiva que compara una red convolucional (CNN) y una red den
 
 [Página publicada](https://josegdotcom.github.io/Proyecto-infovis/)
 
-### Diseño
-
-- Explicación de ambos modelos con diagramas antes de los resultados.
-- CNN en azul y MLP en verde, identificadas también con texto.
-- Dos filas: datos de imágenes y datos tabulares, con ilustraciones y contexto.
-- Aciertos y entrenamiento en columnas; el mejor resultado de cada par aparece en negrita.
-- Escalas lineales compartidas entre pruebas: 0–100 % de aciertos y 0–24 segundos de entrenamiento. Las barras parten de cero.
-- Diseño adaptable a escritorio, tablet y teléfono, con controles accesibles por teclado.
-
-| Prueba | CNN: aciertos | MLP: aciertos | CNN: entrenamiento | MLP: entrenamiento |
-|---|---:|---:|---:|---:|
-| Dibujos | 88 % | 82 % | 21,8 s | 2,1 s |
-| Actividades | 92 % | 95 % | 5,5 s | 2,7 s |
-
-Los porcentajes se redondean a enteros y los tiempos a un decimal. Los resultados proceden de `exploracion/datos.js`; el cambio de diseño no modifica los datos experimentales.
-
-Los dibujos de gato y perro son pictogramas ilustrativos. Las imágenes de entrada son de 28 × 28 píxeles. La tabla x/y/z también es ilustrativa: las entradas del modelo contienen 561 características derivadas de acelerómetro y giroscopio, no únicamente tres lecturas crudas. Se muestran cinco actividades como ejemplos; el conjunto de datos incluye además «Parado».
-
-### Sonificación
-
-Los botones «Escuchar» reproducen cada prueba; «Escuchar todo» recorre ambas. También se puede activar una barra con clic, Enter o espacio. Después de activar el audio, pasar el cursor por una barra la reproduce, salvo durante una secuencia.
-
-| Dato | Representación sonora |
-|---|---|
-| Aciertos | Altura de la nota: más agudo significa más aciertos |
-| Entrenamiento | Duración de una serie de pulsos |
-| Modelo | Timbre y posición estéreo: CNN a la izquierda, MLP a la derecha |
-
-El audio utiliza Tone.js 15.0.4 desde un CDN y requiere conexión a Internet. La reproducción comienza tras una interacción del usuario.
-
-## Archivos principales
-
-- `index.html`: cabecera, explicación de modelos y contenedor de la comparación.
-- `css/style.css`: estilos compartidos y página principal.
-- `css/comparacion.css`: tarjetas, barras y adaptación a pantallas pequeñas.
-- `exploracion/comparacion.js`: gráficos y controles de audio.
-- `exploracion/datos.js`: resultados y ejemplos exportados.
-- `js/modelos_audio.js`: síntesis de audio.
-- `assets/images/`: pictogramas SVG.
-- `exploracion/index.html`: galería de exploración.
-- `exploracion/comparacion.html`: vista independiente de la comparación.
-- `data/`: notebooks, exportadores y resultados de experimentos.
-
 ## Ejecutar localmente
 
-No hay paso de compilación ni dependencias de npm. Desde la raíz del repositorio:
+A causa de las modificaciones recientes y la necesidad de utilizar APIs de Python, es necesario configurar el entorno. Saltate estos pasos y ya tienes el entorno virtual.
 
 ```bash
+.\instalacion-python.ps1
+```
+
+Para crear el entorno de Python con todas sus dependencias y bibliotecas, *se necesita tener Python en la versión 3.10 o superior*.
+
+Para entrar al entorno virtual:
+```bash
+.\.venv\Scripts\Activate.ps1
+```
+
+Para salir del entorno virtual:
+```bash
+deactivate
+```
+
+Una vez dentro del entorno y en la carpeta raiz
+```bash
+python -m api.main
+
 python -m http.server 8000
 ```
 
 Abrir `http://localhost:8000`. También es posible usar cualquier servidor estático, como Live Server.
+
 
 ## Publicar en GitHub Pages
 
