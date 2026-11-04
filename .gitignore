@@ -1,14 +1,18 @@
 # Entornos virtuales
 .venv/
 venv/
+# Entornos virtuales
+.venv/
+venv/
 env/
 ENV/
 
-# Archivos temporales de Python
+# Caché de Python
 __pycache__/
+**/__pycache__/
 *.py[cod]
 
-# Caché y pruebas
+# Caché y archivos temporales
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
