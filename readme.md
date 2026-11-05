@@ -20,10 +20,13 @@ Visualización interactiva que compara una red convolucional (CNN) y una red den
 A causa de las modificaciones recientes y la necesidad de utilizar APIs de Python, es necesario configurar el entorno. Saltate estos pasos y ya tienes el entorno virtual.
 
 ```bash
+# en caso de que la ejecucion de scrips este deshabilitada
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process 
+
 .\instalacion-python.ps1
 ```
 
-Para crear el entorno de Python con todas sus dependencias y bibliotecas, *se necesita tener Python en la versión 3.10 o superior*.
+Para crear el entorno de Python con todas sus dependencias y bibliotecas, **se necesita tener Python en la versión 3.10 o superior**.
 
 Para entrar al entorno virtual:
 ```bash
