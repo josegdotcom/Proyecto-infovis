@@ -42,14 +42,14 @@
 
     <body>
         <h1>Prueba de Giroscopio/h1>
-
         <p id="estado">Comprobado dispositivo</p>
-
-        <pre id="datos"></pre>
+        <pre id="datos_g"></pre>
+        <pre id="datos_a"></pre>
 
         <script>
             const estado = document.getElementById("estado")
-            const datos = document.getElementById("datos")
+            const datos_g = document.getElementById("datos_g")
+            const datos_a = document.getElementById("datos_a")
 
             if (typeof DeviceMotionEvent == "undefined") {
                 estado.textContent = "DeviceMotionEvent no disponible"
@@ -62,14 +62,30 @@
                     function(event) {
                         const gyro = event.rotationRate;
                         if (!gyro || gyro.alpha === null || gyro.beta === null || gyro.gamma === null) {
-                            datos.textContent = "No esta disponible el giroscopio";
+                            datos_g.textContent = "No esta disponible el giroscopio";
                             return;
                         }
                         /* recordar que to_fixed() aproxima decimales*/
-                        datos.textContent = "Giroscopio: \n" + 
+                        datos_g.textContent = "Giroscopio: \n" + 
                         "X: " + gyro.alpha.toFixed(2) + ", \n" +
                         "Y: " + gyro.beta.toFixed(2) + ", \n" +
                         "Z: " + gyro.gamma.toFixed(2) + ".";
+                    }
+                );
+
+                window.addEventListener(
+                    "devicemotion",
+                    function(event) {
+                        const acc = event.acceleration;
+
+                        if (!acc || acc.x === null || acc.y === null || acc.z === null) {
+                            datos_a.textContent = "No esta disponible el acelerometro";
+                            return;
+                        }
+                        datos_a.textContent = "\nAcelerometro: \n" +
+                        "X: " + acc.x.toFixed(2) + ", \n" +
+                        "Y: " + acc.y.toFixed(2) + ", \n" +
+                        "Z: " + acc.z.toFixed(2) + ".";
                     }
                 );
             }
