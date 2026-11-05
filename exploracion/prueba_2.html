@@ -9,6 +9,70 @@
     </head>
 
     <body>
-        <h1>No flaco... todavia no</h1>
+        <h1>En construccion flaco</h1>
+        <h2>Se requiere del Acelerometro y del Giroscopio</h2>
+    </body>
+
+    <pre>
+                Acelerómetro
+                /      |      \
+               X       Y       Z
+               │       │       │
+               ▼       ▼       ▼
+          total acceleration
+               │
+          ┌────┴────┐
+          │         │
+       gravedad   movimiento
+          │         │
+          │         ▼
+          │    body acceleration
+          │
+          ▼
+       gravity
+
+                 Giroscopio
+                /     |     \
+               X      Y      Z
+               │      │      │
+               ▼      ▼      ▼
+          body gyro
+    </pre>
+
+
+    <body>
+        <h1>Prueba de Giroscopio/h1>
+
+        <p id="estado">Comprobado dispositivo</p>
+
+        <pre id="datos"></pre>
+
+        <script>
+            const estado = document.getElementById("estado")
+            const datos = document.getElementById("datos")
+
+            if (typeof DeviceMotionEvent == "undefined") {
+                estado.textContent = "DeviceMotionEvent no disponible"
+            } 
+            else {
+                estado.textContent = "DeviceMotionEvent disponible"
+
+                window.addEventListener(
+                    "devicemotion", 
+                    function(event) {
+                        const gyro = event.rotationRate;
+                        if (!gyro || gyro.alpha === null || gyro.beta === null || gyro.gamma === null) {
+                            datos.textContent = "No esta disponible el giroscopio";
+                            return;
+                        }
+                        /* recordar que to_fixed() aproxima decimales*/
+                        datos.textContent = "Giroscopio: \n" + 
+                        "X: " + gyro.alpha.toFixed(2) + ", \n" +
+                        "Y: " + gyro.beta.toFixed(2) + ", \n" +
+                        "Z: " + gyro.gamma.toFixed(2) + ".";
+                    }
+                );
+            }
+        </script>
     </body>
 </html>
