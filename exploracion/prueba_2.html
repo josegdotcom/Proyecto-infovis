@@ -1,94 +1,391 @@
 <!DOCTYPE html>
 <html lang="es">
-    <head>
-        <meta charset="UTF-8">
-        <title>Prueba 2</title>
+<head>
+    <meta charset="UTF-8">
+    <title>Prueba 2 - Sensores</title>
+</head>
+<body>
 
-        <link rel="icon" type="image/png" href="../assets/icons/logo.png">
-        <link rel="stylesheet" href="../css/style.css">
-    </head>
+<h1>Prueba 2 - Acelerómetro y Giroscopio</h1>
 
-    <body>
-        <h1>En construccion flaco</h1>
-        <h2>Se requiere del Acelerometro y del Giroscopio</h2>
-    </body>
+<p id="estado">Comprobando dispositivo...</p>
 
-    <pre>
-                Acelerómetro
-                /      |      \
-               X       Y       Z
-               │       │       │
-               ▼       ▼       ▼
-          total acceleration
-               │
-          ┌────┴────┐
-          │         │
-       gravedad   movimiento
-          │         │
-          │         ▼
-          │    body acceleration
-          │
-          ▼
-       gravity
+<label for="etiquetaReal">Actividad real:</label>
+<select id="etiquetaReal">
+    <option value="1">Walking</option>
+    <option value="2">Walking Upstairs</option>
+    <option value="3">Walking Downstairs</option>
+    <option value="4">Sitting</option>
+    <option value="5">Standing</option>
+    <option value="6">Laying</option>
+</select>
 
-                 Giroscopio
-                /     |     \
-               X      Y      Z
-               │      │      │
-               ▼      ▼      ▼
-          body gyro
-    </pre>
+<p id="contador">Muestras: 0</p>
+<p id="progreso">Actividades completadas: 0 / 5</p>
+<p id="tiempo">Tiempo: 0.00 / 5.00 segundos</p>
 
+<button id="btnIniciar">Iniciar grabación</button>
+<button id="btnDetener" disabled>Detener grabación</button>
+<button id="btnEnviar" disabled>Enviar a API</button>
+<button id="btnLimpiar">Limpiar</button>
 
-    <body>
-        <h1>Prueba de Giroscopio/h1>
-        <p id="estado">Comprobado dispositivo</p>
-        <pre id="datos_g"></pre>
-        <pre id="datos_a"></pre>
+<pre id="datos">Esperando datos...</pre>
 
-        <script>
-            const estado = document.getElementById("estado")
-            const datos_g = document.getElementById("datos_g")
-            const datos_a = document.getElementById("datos_a")
+<pre id="respuesta">Todavía no se ha enviado ninguna grabación.</pre>
 
-            if (typeof DeviceMotionEvent == "undefined") {
-                estado.textContent = "DeviceMotionEvent no disponible"
-            } 
-            else {
-                estado.textContent = "DeviceMotionEvent disponible"
+<script>
+const estado = document.getElementById("estado");
+const contador = document.getElementById("contador");
+const progreso = document.getElementById("progreso");
+const tiempo = document.getElementById("tiempo");
+const datos = document.getElementById("datos");
+const respuesta = document.getElementById("respuesta");
+const etiquetaReal = document.getElementById("etiquetaReal");
 
-                window.addEventListener(
-                    "devicemotion", 
-                    function(event) {
-                        const gyro = event.rotationRate;
-                        if (!gyro || gyro.alpha === null || gyro.beta === null || gyro.gamma === null) {
-                            datos_g.textContent = "No esta disponible el giroscopio";
-                            return;
-                        }
-                        /* recordar que to_fixed() aproxima decimales*/
-                        datos_g.textContent = "Giroscopio: \n" + 
-                        "X: " + gyro.alpha.toFixed(2) + ", \n" +
-                        "Y: " + gyro.beta.toFixed(2) + ", \n" +
-                        "Z: " + gyro.gamma.toFixed(2) + ".";
-                    }
-                );
+const btnIniciar = document.getElementById("btnIniciar");
+const btnDetener = document.getElementById("btnDetener");
+const btnEnviar = document.getElementById("btnEnviar");
+const btnLimpiar = document.getElementById("btnLimpiar");
 
-                window.addEventListener(
-                    "devicemotion",
-                    function(event) {
-                        const acc = event.acceleration;
+const DURACION_GRABACION = 5000;
+const TOTAL_ACTIVIDADES = 5;
+const API_URL = window.location.origin + "/api/test_2";
 
-                        if (!acc || acc.x === null || acc.y === null || acc.z === null) {
-                            datos_a.textContent = "No esta disponible el acelerometro";
-                            return;
-                        }
-                        datos_a.textContent = "\nAcelerometro: \n" +
-                        "X: " + acc.x.toFixed(2) + ", \n" +
-                        "Y: " + acc.y.toFixed(2) + ", \n" +
-                        "Z: " + acc.z.toFixed(2) + ".";
-                    }
-                );
+let grabando = false;
+let acelerometro = [];
+let giroscopio = [];
+let inicioGrabacion = 0;
+let temporizador = null;
+let actividadesCompletadas = 0;
+let resultadosAcumulados = [];
+
+function actualizarContador() {
+    contador.textContent = "Muestras: " + acelerometro.length;
+    progreso.textContent =
+        "Actividades completadas: " +
+        actividadesCompletadas +
+        " / " +
+        TOTAL_ACTIVIDADES;
+}
+
+function actualizarTiempo() {
+    if (!grabando) {
+        return;
+    }
+
+    const transcurrido = Date.now() - inicioGrabacion;
+    const segundos = Math.min(transcurrido / 1000, DURACION_GRABACION / 1000);
+
+    tiempo.textContent =
+        "Tiempo: " + segundos.toFixed(2) + " / 5.00 segundos";
+
+    if (transcurrido >= DURACION_GRABACION) {
+        detenerGrabacion();
+    }
+}
+
+function limpiarDatos() {
+    if (temporizador !== null) {
+        clearInterval(temporizador);
+        temporizador = null;
+    }
+
+    grabando = false;
+    acelerometro = [];
+    giroscopio = [];
+    actividadesCompletadas = 0;
+    resultadosAcumulados = [];
+
+    actualizarContador();
+    tiempo.textContent = "Tiempo: 0.00 / 5.00 segundos";
+    datos.textContent = "Esperando datos...";
+    respuesta.textContent = "Todavía no se ha enviado ninguna grabación.";
+    estado.textContent = "Datos limpiados.";
+    btnEnviar.disabled = true;
+    btnIniciar.disabled = false;
+    btnDetener.disabled = true;
+    etiquetaReal.disabled = false;
+    actualizarContador();
+}
+
+function manejarMovimiento(event) {
+    const gyro = event.rotationRate;
+    const acc = event.accelerationIncludingGravity;
+
+    if (!gyro || gyro.alpha === null || gyro.beta === null || gyro.gamma === null) {
+        datos.textContent = "No está disponible el giroscopio.";
+        return;
+    }
+
+    if (!acc || acc.x === null || acc.y === null || acc.z === null) {
+        datos.textContent = "No está disponible el acelerómetro.";
+        return;
+    }
+
+    datos.textContent =
+        "Actividad real: " + etiquetaReal.options[etiquetaReal.selectedIndex].text + "\n\n" +
+        "Acelerómetro:\n" +
+        "X: " + Number(acc.x).toFixed(4) + "\n" +
+        "Y: " + Number(acc.y).toFixed(4) + "\n" +
+        "Z: " + Number(acc.z).toFixed(4) + "\n\n" +
+        "Giroscopio:\n" +
+        "X: " + Number(gyro.alpha).toFixed(4) + "\n" +
+        "Y: " + Number(gyro.beta).toFixed(4) + "\n" +
+        "Z: " + Number(gyro.gamma).toFixed(4);
+
+    if (!grabando) {
+        return;
+    }
+
+    acelerometro.push({
+        x: Number(acc.x),
+        y: Number(acc.y),
+        z: Number(acc.z)
+    });
+
+    giroscopio.push({
+        x: Number(gyro.alpha),
+        y: Number(gyro.beta),
+        z: Number(gyro.gamma)
+    });
+
+    actualizarContador();
+}
+
+function iniciarGrabacion() {
+    if (actividadesCompletadas >= TOTAL_ACTIVIDADES) {
+        return;
+    }
+
+    acelerometro = [];
+    giroscopio = [];
+
+    grabando = true;
+    inicioGrabacion = Date.now();
+
+    estado.textContent =
+        "Grabando durante 5 segundos...";
+
+    respuesta.textContent =
+        "Grabacion en curso...";
+
+    btnIniciar.disabled = true;
+    btnDetener.disabled = false;
+    btnEnviar.disabled = true;
+    etiquetaReal.disabled = true;
+
+    actualizarContador();
+
+    if (temporizador !== null) {
+        clearInterval(temporizador);
+    }
+
+    temporizador = setInterval(actualizarTiempo, 50);
+}
+
+function detenerGrabacion() {
+    if (!grabando) {
+        return;
+    }
+
+    grabando = false;
+
+    if (temporizador !== null) {
+        clearInterval(temporizador);
+        temporizador = null;
+    }
+
+    tiempo.textContent = "Tiempo: 5.00 / 5.00 segundos";
+    estado.textContent = "Grabacion terminada.";
+    btnIniciar.disabled = true;
+    btnDetener.disabled = true;
+
+    if (
+        acelerometro.length > 0 &&
+        acelerometro.length === giroscopio.length
+    ) {
+        btnEnviar.disabled = false;
+
+        respuesta.textContent =
+            "Grabacion terminada.\n" +
+            "Actividad real: " + etiquetaReal.options[etiquetaReal.selectedIndex].text + "\n" +
+            "Acelerometro: " + acelerometro.length + " muestras\n" +
+            "Giroscopio: " + giroscopio.length + " muestras";
+    } else {
+        respuesta.textContent =
+            "Error: las cantidades de muestras no coinciden.";
+        btnIniciar.disabled = false;
+        etiquetaReal.disabled = false;
+    }
+}
+
+function mostrarMetricasFinales() {
+    const modelos = ["CNN", "MLP"];
+    let texto = "Metricas finales de las 5 actividades\n\n";
+
+    for (const modelo of modelos) {
+        const reales = [];
+        const predicciones = [];
+
+        for (const resultado of resultadosAcumulados) {
+            const preds = resultado.predicciones && resultado.predicciones[modelo];
+            if (!preds) {
+                continue;
             }
-        </script>
-    </body>
+            for (const pred of preds) {
+                reales.push(Number(resultado.etiqueta_real));
+                predicciones.push(Number(pred));
+            }
+        }
+
+        if (reales.length === 0) {
+            continue;
+        }
+
+        let correctos = 0;
+        const clases = new Set(reales.concat(predicciones));
+        const tp = {};
+        const fp = {};
+        const fn = {};
+
+        for (let i = 0; i < reales.length; i++) {
+            const real = reales[i];
+            const pred = predicciones[i];
+
+            if (real === pred) {
+                correctos++;
+                tp[real] = (tp[real] || 0) + 1;
+            } else {
+                fp[pred] = (fp[pred] || 0) + 1;
+                fn[real] = (fn[real] || 0) + 1;
+            }
+        }
+
+        let precision = 0;
+        let recall = 0;
+        let f1 = 0;
+
+        for (const clase of clases) {
+            const soporte = reales.filter(x => x === clase).length;
+            const verdaderosPositivos = tp[clase] || 0;
+            const falsosPositivos = fp[clase] || 0;
+            const falsosNegativos = fn[clase] || 0;
+
+            const p = verdaderosPositivos + falsosPositivos === 0
+                ? 0
+                : verdaderosPositivos / (verdaderosPositivos + falsosPositivos);
+            const r = verdaderosPositivos + falsosNegativos === 0
+                ? 0
+                : verdaderosPositivos / (verdaderosPositivos + falsosNegativos);
+            const f = p + r === 0
+                ? 0
+                : 2 * p * r / (p + r);
+
+            precision += p * soporte;
+            recall += r * soporte;
+            f1 += f * soporte;
+        }
+
+        precision /= reales.length;
+        recall /= reales.length;
+        f1 /= reales.length;
+
+        texto += modelo + ":\n";
+        texto += "Accuracy: " + (correctos / reales.length * 100).toFixed(2) + "%\n";
+        texto += "Precision: " + (precision * 100).toFixed(2) + "%\n";
+        texto += "Recall: " + (recall * 100).toFixed(2) + "%\n";
+        texto += "F1-Score: " + (f1 * 100).toFixed(2) + "%\n\n";
+    }
+
+    respuesta.textContent = texto;
+    estado.textContent = "Se completaron las 5 actividades.";
+}
+
+async function enviarDatos() {
+    if (acelerometro.length === 0) {
+        respuesta.textContent = "No hay datos para enviar.";
+        return;
+    }
+
+    if (acelerometro.length !== giroscopio.length) {
+        respuesta.textContent =
+            "Error: acelerómetro y giroscopio tienen distinta cantidad de muestras.";
+        return;
+    }
+
+    btnEnviar.disabled = true;
+
+    estado.textContent = "Enviando datos a la API...";
+    respuesta.textContent = "Enviando " + acelerometro.length + " muestras...";
+
+    const payload = {
+        accelerometer: acelerometro,
+        gyroscope: giroscopio,
+        etiqueta_real: Number(etiquetaReal.value)
+    };
+
+    try {
+        const response = await fetch(API_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const resultado = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                resultado.error ||
+                "La API respondió con HTTP " + response.status
+            );
+        }
+
+        resultadosAcumulados.push(resultado);
+        actividadesCompletadas++;
+        actualizarContador();
+
+        if (actividadesCompletadas >= TOTAL_ACTIVIDADES) {
+            btnEnviar.disabled = true;
+            btnIniciar.disabled = true;
+            etiquetaReal.disabled = true;
+            mostrarMetricasFinales();
+        } else {
+            btnEnviar.disabled = true;
+            btnIniciar.disabled = false;
+            etiquetaReal.disabled = false;
+            respuesta.textContent =
+                "Actividad " + actividadesCompletadas +
+                " enviada correctamente.\n" +
+                "Prepare la siguiente actividad.";
+            estado.textContent = "Actividad enviada correctamente.";
+        }
+
+    } catch (error) {
+        respuesta.textContent =
+            "Error al comunicarse con la API:\n\n" + error.message;
+
+        estado.textContent = "Error al enviar los datos.";
+        btnEnviar.disabled = false;
+    }
+}
+
+btnIniciar.addEventListener("click", iniciarGrabacion);
+btnDetener.addEventListener("click", detenerGrabacion);
+btnEnviar.addEventListener("click", enviarDatos);
+btnLimpiar.addEventListener("click", limpiarDatos);
+
+if (typeof DeviceMotionEvent === "undefined") {
+    estado.textContent =
+        "DeviceMotionEvent no disponible en este dispositivo.";
+} else {
+    estado.textContent =
+        "DeviceMotionEvent disponible. Esperando lecturas...";
+
+    window.addEventListener("devicemotion", manejarMovimiento);
+}
+</script>
+
+</body>
 </html>
