@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        <title>Sensor Cámara · Gato vs. Perro en Tiempo Real</title>
+
+        <link rel="icon" type="image/png" href="../assets/icons/logo.png">
+        <link rel="stylesheet" href="../css/style.css">
+        <style>
+            body.cuerpo-sensor {
+                padding: 12px 12px 32px;
+                max-width: 520px;
+                margin: 0 auto;
+                background: var(--plano);
+                color: var(--texto-primario);
+            }
+            .cabecera-sensor {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+                padding: 8px 0 12px;
+                border-bottom: 1px solid var(--borde);
+                margin-bottom: 12px;
+            }
+            .cabecera-sensor h1 {
+                font-size: 1.15rem;
+                margin: 0;
+            }
+            .badge-conexion {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 4px 10px;
+                border-radius: 999px;
+                font-size: 0.78rem;
+                font-weight: 600;
+                background: var(--superficie);
+                border: 1px solid var(--borde);
+            }
+            .punto-estado {
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: var(--bien);
+                box-shadow: 0 0 0 3px rgba(12, 163, 12, 0.2);
+            }
+            .visor-camara-sensor {
+                position: relative;
+                width: 100%;
+                aspect-ratio: 1 / 1;
+                background: #111;
+                border-radius: 14px;
+                overflow: hidden;
+                border: 2px solid var(--borde);
+                box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+            }
+            .visor-camara-sensor video,
+            .visor-camara-sensor img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                display: block;
+            }
+            .guia-recuadro {
+                position: absolute;
+                inset: 13%;
+                border: 2.5px dashed rgba(255, 255, 255, 0.88);
+                border-radius: 12px;
+                box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.38);
+                pointer-events: none;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                padding: 8px 10px;
+            }
+            .guia-recuadro span {
+                align-self: center;
+                background: rgba(0, 0, 0, 0.68);
+                color: #fff;
+                font-size: 0.76rem;
+                padding: 3px 10px;
+                border-radius: 999px;
+                font-weight: 600;
+                letter-spacing: 0.01em;
+            }
+            .miniatura-flotante {
+                position: absolute;
+                bottom: 10px;
+                right: 10px;
+                background: rgba(15, 15, 15, 0.85);
+                border: 1px solid rgba(255, 255, 255, 0.25);
+                border-radius: 8px;
+                padding: 4px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 2px;
+                z-index: 3;
+            }
+            .miniatura-flotante canvas {
+                width: 56px;
+                height: 56px;
+                background: #fff;
+                border-radius: 4px;
+                image-rendering: pixelated;
+            }
+            .miniatura-flotante small {
+                color: #fff;
+                font-size: 0.65rem;
+                font-weight: 600;
+            }
+            .veredicto-vivo-sensor {
+                margin-top: 12px;
+                padding: 12px 14px;
+                border-radius: 12px;
+                background: var(--superficie);
+                border: 1px solid var(--borde);
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+            .tarjetas-modelos-sensor {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+            }
+            .tarjeta-modelo-mini {
+                padding: 10px;
+                border-radius: 10px;
+                background: var(--plano);
+                border: 1px solid var(--borde);
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+            }
+            .tarjeta-modelo-mini .cabecera-mini {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                font-size: 0.78rem;
+                font-weight: 700;
+                color: var(--texto-secundario);
+            }
+            .tarjeta-modelo-mini .animal-mini {
+                font-size: 1.2rem;
+                font-weight: 800;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+            .tarjeta-modelo-mini .animal-mini img {
+                width: 22px;
+                height: 22px;
+            }
+            .barra-confianza-mini {
+                height: 6px;
+                background: var(--grilla);
+                border-radius: 999px;
+                overflow: hidden;
+            }
+            .barra-confianza-mini > div {
+                height: 100%;
+                border-radius: 999px;
+                transition: width 0.2s ease;
+            }
+            .controles-sensor {
+                margin-top: 12px;
+                padding: 12px 14px;
+                border-radius: 12px;
+                background: var(--superficie);
+                border: 1px solid var(--borde);
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+            }
+            .fila-botones-sensor {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            .fila-botones-sensor .btn {
+                flex: 1 1 auto;
+                justify-content: center;
+                font-size: 0.85rem;
+                padding: 8px 10px;
+            }
+            .control-slider {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+                font-size: 0.85rem;
+            }
+            .control-slider label {
+                display: flex;
+                justify-content: space-between;
+                font-weight: 600;
+            }
+            .alerta-https {
+                padding: 12px;
+                border-radius: 10px;
+                background: rgba(235, 104, 52, 0.12);
+                border: 1px solid #eb6834;
+                font-size: 0.85rem;
+                margin-bottom: 12px;
+            }
+        </style>
+    </head>
+
+    <body class="cuerpo-sensor">
+        <header class="cabecera-sensor">
+            <div>
+                <p class="eyebrow">Physical Viz Toolkit · Sensor Móvil</p>
+                <h1>📱 Cámara: Gato vs. Perro</h1>
+            </div>
+            <span id="badge-estado-sensor" class="badge-conexion">
+                <span class="punto-estado"></span>
+                <span id="texto-estado-sensor">En vivo</span>
+            </span>
+        </header>
+
+        <div id="alerta-https" class="alerta-https" hidden>
+            <strong>🔒 Permiso de cámara en vivo:</strong> Los navegadores móviles requieren HTTPS para abrir el video continuo en WiFi local.
+            <div style="margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap;">
+                <a id="enlace-https" href="#" class="btn btn-primario" style="text-decoration: none;">
+                    Abrir cámara segura (HTTPS)
+                </a>
+                <button type="button" id="btn-foto-alerta" class="btn">
+                    📷 Tomar foto directa
+                </button>
+            </div>
+        </div>
+
+        <div class="visor-camara-sensor">
+            <video id="video-sensor" autoplay playsinline muted></video>
+            <img id="imagen-fija-sensor" alt="Foto capturada" hidden>
+            <div class="guia-recuadro">
+                <span>Enfoca el dibujo dentro del recuadro</span>
+                <span id="indicador-tinta">Esperando trazos...</span>
+            </div>
+            <div class="miniatura-flotante" title="Imagen 28×28 enviada al modelo">
+                <canvas id="canvas-preview-28" width="28" height="28"></canvas>
+                <small>28 × 28 px</small>
+            </div>
+        </div>
+
+        <section class="veredicto-vivo-sensor" aria-live="polite">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <strong id="resumen-veredicto" style="font-size: 1rem;">Apunta a un dibujo de gato o perro</strong>
+                <button type="button" id="btn-voz-sensor" class="btn" style="padding: 4px 10px; font-size: 0.78rem;">
+                    🔇 Voz: Desactivada
+                </button>
+            </div>
+            <div class="tarjetas-modelos-sensor">
+                <div class="tarjeta-modelo-mini">
+                    <div class="cabecera-mini">
+                        <span><span class="muestra-modelo" style="background:#2a78d6"></span>CNN</span>
+                        <span id="confianza-cnn-sensor">—</span>
+                    </div>
+                    <div id="etiqueta-cnn-sensor" class="animal-mini">Esperando...</div>
+                    <div class="barra-confianza-mini">
+                        <div id="barra-cnn-sensor" style="width: 0%; background: #2a78d6;"></div>
+                    </div>
+                </div>
+                <div class="tarjeta-modelo-mini">
+                    <div class="cabecera-mini">
+                        <span><span class="muestra-modelo" style="background:#1baf7a"></span>MLP</span>
+                        <span id="confianza-mlp-sensor">—</span>
+                    </div>
+                    <div id="etiqueta-mlp-sensor" class="animal-mini">Esperando...</div>
+                    <div class="barra-confianza-mini">
+                        <div id="barra-mlp-sensor" style="width: 0%; background: #1baf7a;"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="controles-sensor">
+            <div class="fila-botones-sensor">
+                <button type="button" id="btn-cambiar-camara" class="btn">
+                    🔄 Cambiar cámara
+                </button>
+                <button type="button" id="btn-congelar" class="btn">
+                    ⏸️ Congelar
+                </button>
+                <button type="button" id="btn-linterna" class="btn" hidden>
+                    🔦 Linterna
+                </button>
+                <button type="button" id="btn-subir-foto" class="btn">
+                    📷 Foto
+                </button>
+                <input type="file" id="input-foto-sensor" accept="image/*" capture="environment" hidden>
+            </div>
+
+            <div class="control-slider">
+                <label for="slider-umbral">
+                    <span>Sensibilidad del trazo (contraste)</span>
+                    <span id="valor-umbral">18</span>
+                </label>
+                <input type="range" id="slider-umbral" min="6" max="48" value="18">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+                    <small style="color: var(--texto-tenue);">Sube si el papel tiene sombras; baja si el trazo es suave.</small>
+                    <button type="button" id="btn-calibrar-papel" class="btn" style="padding: 4px 8px; font-size: 0.76rem;">
+                        ☀️ Calibrar papel
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <section class="controles-sensor" style="margin-top: 10px;">
+            <strong style="font-size: 0.9rem;">Guardar este dibujo en la prueba (Pantalla Principal)</strong>
+            <div class="fila-botones-sensor">
+                <button type="button" class="btn btn-etiqueta-sensor" data-etiqueta="0">
+                    🐱 Es un Gato
+                </button>
+                <button type="button" class="btn btn-etiqueta-sensor" data-etiqueta="1">
+                    🐶 Es un Perro
+                </button>
+            </div>
+            <button type="button" id="btn-capturar-remoto" class="btn btn-primario" style="width: 100%; justify-content: center;">
+                📸 Enviar dibujo a la lista de evaluación
+            </button>
+            <p id="estado-captura-sensor" class="estado-prueba" style="margin: 0;"></p>
+        </section>
+
+        <!-- Protobject framework & config -->
+        <script src="https://app.protobject.com/framework/p.js"></script>
+        <script src="config.js"></script>
+        <script>
+            (function () {
+                const video = document.getElementById("video-sensor");
+                const imgFija = document.getElementById("imagen-fija-sensor");
+                const canvasPreview28 = document.getElementById("canvas-preview-28");
+                const indicadorTinta = document.getElementById("indicador-tinta");
+                const textoEstado = document.getElementById("texto-estado-sensor");
+
+                const resumenVeredicto = document.getElementById("resumen-veredicto");
+                const etiquetaCnn = document.getElementById("etiqueta-cnn-sensor");
+                const confianzaCnn = document.getElementById("confianza-cnn-sensor");
+                const barraCnn = document.getElementById("barra-cnn-sensor");
+                const etiquetaMlp = document.getElementById("etiqueta-mlp-sensor");
+                const confianzaMlp = document.getElementById("confianza-mlp-sensor");
+                const barraMlp = document.getElementById("barra-mlp-sensor");
+
+                const sliderUmbral = document.getElementById("slider-umbral");
+                const valorUmbral = document.getElementById("valor-umbral");
+                const btnCambiarCamara = document.getElementById("btn-cambiar-camara");
+                const btnCongelar = document.getElementById("btn-congelar");
+                const btnLinterna = document.getElementById("btn-linterna");
+                const btnSubirFoto = document.getElementById("btn-subir-foto");
+                const btnFotoAlerta = document.getElementById("btn-foto-alerta");
+                const inputFoto = document.getElementById("input-foto-sensor");
+                const btnCalibrarPapel = document.getElementById("btn-calibrar-papel");
+                const btnVoz = document.getElementById("btn-voz-sensor");
+                const btnCapturarRemoto = document.getElementById("btn-capturar-remoto");
+                const estadoCaptura = document.getElementById("estado-captura-sensor");
+                const alertaHttps = document.getElementById("alerta-https");
+                const enlaceHttps = document.getElementById("enlace-https");
+
+                const workCanvas = document.createElement("canvas");
+                workCanvas.width = 112;
+                workCanvas.height = 112;
+                const workCtx = workCanvas.getContext("2d", { willReadFrequently: true });
+
+                const outCanvas = document.createElement("canvas");
+                outCanvas.width = 28;
+                outCanvas.height = 28;
+                const outCtx = outCanvas.getContext("2d", { willReadFrequently: true });
+
+                let streamActual = null;
+                let usandoFrontal = false;
+                let congelado = false;
+                let usandoImagenFija = false;
+                let linternaActiva = false;
+                let vozActiva = false;
+                let etiquetaRemota = null;
+                let ultimoVeredictoHablado = "";
+                let ultimoTiempoVoz = 0;
+                let enviandoFrame = false;
+                let ultimosPixeles = new Array(784).fill(0);
+                let ultimoTieneDibujo = false;
+                let mapaFondoPapel = null; // Calibración opcional de iluminación de papel
+
+                // Verificar si requiere enlace HTTPS en red local
+                if (!window.isSecureContext && location.hostname !== "localhost" && location.hostname !== "127.0.0.1") {
+                    alertaHttps.hidden = false;
+                    enlaceHttps.href = `https://${location.hostname}:8443${location.pathname}${location.search}`;
+                }
+
+                sliderUmbral.addEventListener("input", () => {
+                    valorUmbral.textContent = sliderUmbral.value;
+                });
+
+                document.querySelectorAll(".btn-etiqueta-sensor").forEach((btn) => {
+                    btn.addEventListener("click", () => {
+                        etiquetaRemota = Number(btn.dataset.etiqueta);
+                        document.querySelectorAll(".btn-etiqueta-sensor").forEach((b) => {
+                            b.classList.toggle("seleccionada", b === btn);
+                        });
+                        estadoCaptura.textContent = `Etiqueta seleccionada: ${etiquetaRemota === 1 ? "Perro" : "Gato"}`;
+                        estadoCaptura.dataset.tipo = "info";
+                    });
+                });
+
+                btnVoz.addEventListener("click", () => {
+                    vozActiva = !vozActiva;
+                    btnVoz.textContent = vozActiva ? "🔊 Voz: Activada" : "🔇 Voz: Desactivada";
+                    if (vozActiva && "speechSynthesis" in window) {
+                        const u = new SpeechSynthesisUtterance("Voz activada");
+                        u.lang = "es-ES";
+                        window.speechSynthesis.speak(u);
+                    }
+                });
+
+                async function iniciarCamara() {
+                    usandoImagenFija = false;
+                    imgFija.hidden = true;
+                    video.hidden = false;
+
+                    if (streamActual) {
+                        streamActual.getTracks().forEach((t) => t.stop());
+                    }
+
+                    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                        alertaHttps.hidden = false;
+                        textoEstado.textContent = "Modo foto";
+                        return;
+                    }
+
+                    try {
+                        streamActual = await navigator.mediaDevices.getUserMedia({
+                            audio: false,
+                            video: {
+                                facingMode: { ideal: usandoFrontal ? "user" : "environment" },
+                                width: { ideal: 480 },
+                                height: { ideal: 480 }
+                            }
+                        });
+                        video.srcObject = streamActual;
+                        await video.play();
+                        textoEstado.textContent = "Cámara activa";
+
+                        // Verificar soporte de linterna (torch)
+                        const track = streamActual.getVideoTracks()[0];
+                        if (track && track.getCapabilities) {
+                            const caps = track.getCapabilities();
+                            btnLinterna.hidden = !caps.torch;
+                        }
+                    } catch (err) {
+                        console.warn("No se pudo abrir getUserMedia:", err);
+                        alertaHttps.hidden = false;
+                        textoEstado.textContent = "Usa botón Foto o HTTPS";
+                    }
+                }
+
+                btnCambiarCamara.addEventListener("click", () => {
+                    usandoFrontal = !usandoFrontal;
+                    mapaFondoPapel = null;
+                    iniciarCamara();
+                });
+
+                btnLinterna.addEventListener("click", async () => {
+                    if (!streamActual) return;
+                    const track = streamActual.getVideoTracks()[0];
+                    if (!track) return;
+                    try {
+                        linternaActiva = !linternaActiva;
+                        await track.applyConstraints({ advanced: [{ torch: linternaActiva }] });
+                        btnLinterna.textContent = linternaActiva ? "🔦 Apagar luz" : "🔦 Linterna";
+                    } catch (e) {
+                        console.warn("No se pudo cambiar linterna:", e);
+                    }
+                });
+
+                btnCongelar.addEventListener("click", () => {
+                    congelado = !congelado;
+                    if (congelado) {
+                        video.pause();
+                        btnCongelar.textContent = "▶️ Reanudar";
+                        textoEstado.textContent = "Congelado";
+                    } else {
+                        if (!usandoImagenFija) video.play();
+                        btnCongelar.textContent = "⏸️ Congelar";
+                        textoEstado.textContent = "En vivo";
+                    }
+                });
+
+                function abrirSelectorFoto() {
+                    inputFoto.click();
+                }
+
+                btnSubirFoto.addEventListener("click", abrirSelectorFoto);
+                if (btnFotoAlerta) btnFotoAlerta.addEventListener("click", abrirSelectorFoto);
+
+                inputFoto.addEventListener("change", (e) => {
+                    const archivo = e.target.files && e.target.files[0];
+                    if (!archivo) return;
+                    const url = URL.createObjectURL(archivo);
+                    imgFija.onload = () => {
+                        usandoImagenFija = true;
+                        congelado = false;
+                        video.hidden = true;
+                        imgFija.hidden = false;
+                        textoEstado.textContent = "Foto cargada";
+                        procesarYEnviarFrame(false);
+                    };
+                    imgFija.src = url;
+                });
+
+                // Preprocesamiento adaptativo de cámara -> 28x28 estilo QuickDraw
+                function extraer28x28DesdeFuente(calibrarPapel = false) {
+                    const fuente = usandoImagenFija ? imgFija : video;
+                    const vw = usandoImagenFija ? imgFija.naturalWidth : video.videoWidth;
+                    const vh = usandoImagenFija ? imgFija.naturalHeight : video.videoHeight;
+
+                    if (!vw || !vh) {
+                        return { pixeles: new Array(784).fill(0), tieneDibujo: false };
+                    }
+
+                    const lado = Math.min(vw, vh) * 0.74;
+                    const sx = (vw - lado) / 2;
+                    const sy = (vh - lado) / 2;
+
+                    const N = 112;
+                    workCtx.drawImage(fuente, sx, sy, lado, lado, 0, 0, N, N);
+                    const { data } = workCtx.getImageData(0, 0, N, N);
+
+                    const gris = new Float32Array(N * N);
+                    for (let i = 0; i < N * N; i++) {
+                        const r = data[i * 4];
+                        const g = data[i * 4 + 1];
+                        const b = data[i * 4 + 2];
+                        gris[i] = 0.299 * r + 0.587 * g + 0.114 * b;
+                    }
+
+                    if (calibrarPapel) {
+                        mapaFondoPapel = new Float32Array(gris);
+                    }
+
+                    // Imagen integral para umbral adaptativo local (ventana 17x17)
+                    const integral = new Float64Array((N + 1) * (N + 1));
+                    for (let y = 0; y < N; y++) {
+                        let sumaFila = 0;
+                        for (let x = 0; x < N; x++) {
+                            const val = mapaFondoPapel
+                                ? Math.min(255, Math.max(0, 255 - (mapaFondoPapel[y * N + x] - gris[y * N + x])))
+                                : gris[y * N + x];
+                            sumaFila += val;
+                            integral[(y + 1) * (N + 1) + (x + 1)] =
+                                integral[y * (N + 1) + (x + 1)] + sumaFila;
+                        }
+                    }
+
+                    const umbral = Number(sliderUmbral.value) || 18;
+                    const radio = 8;
+                    const margenBorde = 5;
+                    const mascara = new Uint8Array(N * N);
+
+                    for (let y = margenBorde; y < N - margenBorde; y++) {
+                        const y0 = Math.max(0, y - radio);
+                        const y1 = Math.min(N - 1, y + radio);
+                        for (let x = margenBorde; x < N - margenBorde; x++) {
+                            const x0 = Math.max(0, x - radio);
+                            const x1 = Math.min(N - 1, x + radio);
+                            const area = (x1 - x0 + 1) * (y1 - y0 + 1);
+                            const suma =
+                                integral[(y1 + 1) * (N + 1) + (x1 + 1)] -
+                                integral[y0 * (N + 1) + (x1 + 1)] -
+                                integral[(y1 + 1) * (N + 1) + x0] +
+                                integral[y0 * (N + 1) + x0];
+                            const mediaLocal = suma / area;
+                            const valorActual = mapaFondoPapel
+                                ? Math.min(255, Math.max(0, 255 - (mapaFondoPapel[y * N + x] - gris[y * N + x])))
+                                : gris[y * N + x];
+                            const diff = mediaLocal - valorActual;
+                            if (diff > umbral) {
+                                mascara[y * N + x] = Math.min(255, Math.round((diff - umbral) * 4.2));
+                            }
+                        }
+                    }
+
+                    // Filtro morfológico: eliminar puntos aislados y engrosar trazos finos
+                    const limpia = new Uint8Array(N * N);
+                    let minX = N, minY = N, maxX = -1, maxY = -1;
+                    let pixelesActivos = 0;
+
+                    for (let y = 1; y < N - 1; y++) {
+                        for (let x = 1; x < N - 1; x++) {
+                            const idx = y * N + x;
+                            let vecinos = 0;
+                            let maxVecino = mascara[idx];
+                            for (let dy = -1; dy <= 1; dy++) {
+                                for (let dx = -1; dx <= 1; dx++) {
+                                    const v = mascara[(y + dy) * N + (x + dx)];
+                                    if (v > 0) vecinos++;
+                                    if (v > maxVecino) maxVecino = v;
+                                }
+                            }
+                            if ( (mascara[idx] > 0 && vecinos >= 2) || vecinos >= 4 ) {
+                                const valorFinal = mascara[idx] > 0 ? mascara[idx] : Math.round(maxVecino * 0.75);
+                                limpia[idx] = valorFinal;
+                                pixelesActivos++;
+                                if (x < minX) minX = x;
+                                if (x > maxX) maxX = x;
+                                if (y < minY) minY = y;
+                                if (y > maxY) maxY = y;
+                            }
+                        }
+                    }
+
+                    const fraccionActiva = pixelesActivos / (N * N);
+                    if (pixelesActivos < 22 || fraccionActiva > 0.48 || maxX <= minX || maxY <= minY) {
+                        return { pixeles: new Array(784).fill(0), tieneDibujo: false };
+                    }
+
+                    // Dibujar trazos limpios y centrar en 22x22 dentro de 28x28
+                    const tempImg = workCtx.createImageData(N, N);
+                    for (let i = 0; i < N * N; i++) {
+                        tempImg.data[i * 4] = 255;
+                        tempImg.data[i * 4 + 1] = 255;
+                        tempImg.data[i * 4 + 2] = 255;
+                        tempImg.data[i * 4 + 3] = limpia[i];
+                    }
+                    workCtx.putImageData(tempImg, 0, 0);
+
+                    const bw = maxX - minX + 1;
+                    const bh = maxY - minY + 1;
+                    const ladoCaja = Math.max(bw, bh);
+                    const cx = minX + bw / 2;
+                    const cy = minY + bh / 2;
+
+                    outCtx.clearRect(0, 0, 28, 28);
+                    const escalaDestino = 22 / ladoCaja;
+                    const dw = Math.max(1, bw * escalaDestino);
+                    const dh = Math.max(1, bh * escalaDestino);
+                    const dx = (28 - dw) / 2;
+                    const dy = (28 - dh) / 2;
+
+                    outCtx.drawImage(
+                        workCanvas,
+                        cx - bw / 2,
+                        cy - bh / 2,
+                        bw,
+                        bh,
+                        dx,
+                        dy,
+                        dw,
+                        dh
+                    );
+
+                    const outData = outCtx.getImageData(0, 0, 28, 28).data;
+                    const pixeles = new Array(784);
+                    let maxP = 0;
+                    for (let i = 0; i < 784; i++) {
+                        const v = outData[i * 4 + 3];
+                        pixeles[i] = v;
+                        if (v > maxP) maxP = v;
+                    }
+                    if (maxP > 0) {
+                        for (let i = 0; i < 784; i++) {
+                            pixeles[i] = Math.min(255, Math.round((pixeles[i] / maxP) * 255));
+                        }
+                    }
+
+                    return { pixeles, tieneDibujo: maxP > 25 };
+                }
+
+                function pintarPreview28(pixeles) {
+                    const ctx28 = canvasPreview28.getContext("2d");
+                    const img = ctx28.createImageData(28, 28);
+                    for (let i = 0; i < 784; i++) {
+                        const v = 255 - (pixeles[i] || 0);
+                        img.data[i * 4] = v;
+                        img.data[i * 4 + 1] = v;
+                        img.data[i * 4 + 2] = v;
+                        img.data[i * 4 + 3] = 255;
+                    }
+                    ctx28.putImageData(img, 0, 0);
+                }
+
+                function actualizarTarjetasSensor(predicciones, tieneDibujo) {
+                    if (!tieneDibujo || !predicciones) {
+                        resumenVeredicto.textContent = "Apunta a un dibujo de gato o perro";
+                        etiquetaCnn.textContent = "Sin dibujo";
+                        confianzaCnn.textContent = "—";
+                        barraCnn.style.width = "0%";
+                        etiquetaMlp.textContent = "Sin dibujo";
+                        confianzaMlp.textContent = "—";
+                        barraMlp.style.width = "0%";
+                        return;
+                    }
+
+                    const cnn = predicciones.CNN;
+                    const mlp = predicciones.MLP;
+
+                    if (cnn) {
+                        const icono = cnn.prediccion === 1 ? "🐶" : "🐱";
+                        const pct = Math.round(cnn.confianza * 100);
+                        etiquetaCnn.textContent = `${icono} ${cnn.etiqueta}`;
+                        confianzaCnn.textContent = `${pct}%`;
+                        barraCnn.style.width = `${pct}%`;
+                    }
+                    if (mlp) {
+                        const icono = mlp.prediccion === 1 ? "🐶" : "🐱";
+                        const pct = Math.round(mlp.confianza * 100);
+                        etiquetaMlp.textContent = `${icono} ${mlp.etiqueta}`;
+                        confianzaMlp.textContent = `${pct}%`;
+                        barraMlp.style.width = `${pct}%`;
+                    }
+
+                    if (cnn && mlp) {
+                        if (cnn.prediccion === mlp.prediccion) {
+                            const animal = cnn.etiqueta;
+                            const icono = cnn.prediccion === 1 ? "🐶" : "🐱";
+                            resumenVeredicto.textContent = `${icono} ¡Ambos modelos ven un ${animal.toUpperCase()}!`;
+                            anunciarVoz(animal);
+                        } else {
+                            resumenVeredicto.textContent = `🤔 CNN dice ${cnn.etiqueta} · MLP dice ${mlp.etiqueta}`;
+                        }
+                    }
+                }
+
+                function anunciarVoz(animal) {
+                    if (!vozActiva || !("speechSynthesis" in window)) return;
+                    const ahora = Date.now();
+                    if (animal === ultimoVeredictoHablado && ahora - ultimoTiempoVoz < 3500) return;
+                    if (ahora - ultimoTiempoVoz < 1800) return;
+                    ultimoVeredictoHablado = animal;
+                    ultimoTiempoVoz = ahora;
+                    window.speechSynthesis.cancel();
+                    const u = new SpeechSynthesisUtterance(`Parece un ${animal}`);
+                    u.lang = "es-ES";
+                    u.rate = 1.05;
+                    window.speechSynthesis.speak(u);
+                }
+
+                btnCalibrarPapel.addEventListener("click", () => {
+                    extraer28x28DesdeFuente(true);
+                    estadoCaptura.textContent = "Papel blanco calibrado para compensar sombras.";
+                    estadoCaptura.dataset.tipo = "exito";
+                });
+
+                async function procesarYEnviarFrame(capturar = false) {
+                    if (enviandoFrame && !capturar) return;
+                    enviandoFrame = true;
+
+                    try {
+                        const { pixeles, tieneDibujo } = extraer28x28DesdeFuente(false);
+                        ultimosPixeles = pixeles;
+                        ultimoTieneDibujo = tieneDibujo;
+                        pintarPreview28(pixeles);
+
+                        indicadorTinta.textContent = tieneDibujo
+                            ? "✓ Dibujo detectado"
+                            : "Centra el trazo oscuro sobre papel claro";
+
+                        const paquete = {
+                            tipo: "frame_camara",
+                            pixeles,
+                            tiene_dibujo: tieneDibujo,
+                            capturar,
+                            etiqueta: etiquetaRemota
+                        };
+
+                        // 1. Enviar por Protobject (WebRTC) si está disponible
+                        if (typeof Protobject !== "undefined" && Protobject.Core && Protobject.Core.send) {
+                            try {
+                                Protobject.Core.send(paquete).to("prueba_1.html");
+                            } catch (e) {
+                                // Ignorar si aún no hay par conectado
+                            }
+                        }
+
+                        // 2. Enviar al puente local en Python (/api/camara/frame)
+                        const resp = await fetch("/api/camara/frame", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify(paquete)
+                        });
+                        if (resp.ok) {
+                            const datos = await resp.json();
+                            actualizarTarjetasSensor(datos.predicciones, datos.tiene_dibujo);
+                            if (capturar) {
+                                estadoCaptura.textContent = "✓ Dibujo enviado a la pantalla principal.";
+                                estadoCaptura.dataset.tipo = "exito";
+                            }
+                        }
+                    } catch (err) {
+                        // Si está en GitHub Pages sin servidor Python local, Protobject maneja el envío
+                    } finally {
+                        enviandoFrame = false;
+                    }
+                }
+
+                // Recibir predicciones de vuelta por Protobject si se ejecuta en servidor externo
+                if (typeof Protobject !== "undefined" && Protobject.Core && Protobject.Core.onReceived) {
+                    Protobject.Core.onReceived((mensaje) => {
+                        if (mensaje && mensaje.tipo === "veredicto_modelos") {
+                            actualizarTarjetasSensor(mensaje.predicciones, mensaje.tiene_dibujo);
+                        }
+                    });
+                }
+
+                btnCapturarRemoto.addEventListener("click", () => {
+                    if (!ultimoTieneDibujo) {
+                        estadoCaptura.textContent = "Enfoca primero un dibujo visible antes de enviarlo.";
+                        estadoCaptura.dataset.tipo = "error";
+                        return;
+                    }
+                    if (etiquetaRemota === null) {
+                        estadoCaptura.textContent = "Selecciona si tu dibujo es un Gato o un Perro.";
+                        estadoCaptura.dataset.tipo = "error";
+                        return;
+                    }
+                    procesarYEnviarFrame(true);
+                });
+
+                iniciarCamara();
+                setInterval(() => {
+                    if (!congelado && !usandoImagenFija) {
+                        procesarYEnviarFrame(false);
+                    }
+                }, 240);
+            })();
+        </script>
+    </body>
+</html>

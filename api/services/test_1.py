@@ -119,3 +119,32 @@ class GatosPerrosPredictor(BasePredictor):
             "CNN": pred_cnn.tolist(),
             "MLP": pred_mlp.tolist()
         }
+
+    def predecir_con_confianza(self, data):
+        """Retorna para cada modelo la probabilidad de clase 1 (Perro) por cada imagen (28x28)."""
+        X = self.preprocess(data)
+
+        X_cnn = X.reshape(-1, 28, 28, 1)
+        X_mlp = X.reshape(-1, 784)
+
+        prob_cnn = np.asarray(
+            self.models["CNN"].predict(X_cnn, verbose=0),
+            dtype=np.float32
+        ).reshape(-1)
+
+        mlp_model = self.models["MLP"]
+        if hasattr(mlp_model, "predict_proba"):
+            prob_mlp = np.asarray(
+                mlp_model.predict_proba(X_mlp)[:, 1],
+                dtype=np.float32
+            ).reshape(-1)
+        else:
+            prob_mlp = np.asarray(
+                mlp_model.predict(X_mlp),
+                dtype=np.float32
+            ).reshape(-1)
+
+        return {
+            "CNN": prob_cnn.tolist(),
+            "MLP": prob_mlp.tolist()
+        }

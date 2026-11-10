@@ -753,3 +753,444 @@ h3 {
     font-weight: 700;
     font-variant-numeric: tabular-nums;
 }
+
+
+/* ==========================================================================
+   Reconocimiento en Tiempo Real con Cámara (Physical Viz Toolkit / Prueba 1)
+   ========================================================================== */
+
+.estado-cabecera-derecha {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.insignia-sensor {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    background: rgba(42, 120, 214, 0.12);
+    color: var(--acento);
+    border: 1px solid rgba(42, 120, 214, 0.28);
+}
+
+.selector-modo-entrada {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 4px 0 16px;
+    padding: 4px;
+    background: var(--plano);
+    border: 1px solid var(--borde);
+    border-radius: 10px;
+}
+
+.btn-modo-entrada {
+    flex: 1 1 240px;
+    padding: 10px 14px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--texto-secundario);
+    font: inherit;
+    font-size: 0.92rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.18s ease;
+}
+
+.btn-modo-entrada:hover {
+    color: var(--texto-primario);
+    background: rgba(42, 120, 214, 0.06);
+}
+
+.btn-modo-entrada.activo {
+    background: var(--superficie);
+    color: var(--acento);
+    border-color: var(--borde);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.tarjeta-qr-sensor {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 16px;
+    margin-bottom: 18px;
+    border-radius: 12px;
+    background: var(--plano);
+    border: 1px solid var(--borde);
+}
+
+.qr-columna-info {
+    flex: 1 1 320px;
+}
+
+.qr-titulo-fila {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.96rem;
+}
+
+.punto-sensor {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.punto-sensor.desconectado {
+    background: #eb6834;
+    box-shadow: 0 0 0 3px rgba(235, 104, 52, 0.2);
+}
+
+.punto-sensor.conectado {
+    background: var(--bien);
+    box-shadow: 0 0 0 3px rgba(12, 163, 12, 0.22);
+}
+
+.enlaces-sensor-movil {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.codigo-url-sensor {
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 0.8rem;
+    padding: 5px 10px;
+    border-radius: 6px;
+    background: var(--superficie);
+    border: 1px solid var(--borde);
+    text-decoration: none;
+    word-break: break-all;
+}
+
+.btn-pequeno {
+    padding: 5px 10px;
+    font-size: 0.8rem;
+}
+
+.qr-columna-imagen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 8px;
+    border-radius: 10px;
+    background: #ffffff;
+    border: 1px solid var(--borde);
+}
+
+.qr-columna-imagen img {
+    display: block;
+    border-radius: 6px;
+}
+
+.qr-columna-imagen small {
+    color: #333333;
+    font-size: 0.72rem;
+    font-weight: 600;
+}
+
+.grilla-tiempo-real {
+    display: grid;
+    grid-template-columns: 1.05fr 0.95fr;
+    gap: 20px;
+    align-items: start;
+}
+
+@media (max-width: 860px) {
+    .grilla-tiempo-real {
+        grid-template-columns: 1fr;
+    }
+}
+
+.botones-fuente-camara {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.visores-camara-grid {
+    display: grid;
+    grid-template-columns: 1fr 165px;
+    gap: 12px;
+    align-items: stretch;
+}
+
+@media (max-width: 540px) {
+    .visores-camara-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.visor-principal-camara {
+    position: relative;
+    min-height: 250px;
+    aspect-ratio: 4 / 3;
+    border-radius: 12px;
+    background: #141413;
+    border: 1px solid var(--borde);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.visor-principal-camara video,
+.visor-principal-camara img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.guia-recuadro-local {
+    position: absolute;
+    inset: 13%;
+    border: 2px dashed rgba(255, 255, 255, 0.85);
+    border-radius: 10px;
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.35);
+    pointer-events: none;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 8px;
+}
+
+.guia-recuadro-local span {
+    background: rgba(0, 0, 0, 0.7);
+    color: #ffffff;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 999px;
+}
+
+.placeholder-sensor {
+    padding: 20px;
+    text-align: center;
+    color: #e6e5df;
+    max-width: 340px;
+}
+
+.icono-grande-sensor {
+    font-size: 2.2rem;
+    margin-bottom: 6px;
+}
+
+.placeholder-sensor strong {
+    display: block;
+    font-size: 0.98rem;
+    margin-bottom: 6px;
+}
+
+.placeholder-sensor p {
+    margin: 0;
+    font-size: 0.83rem;
+    color: #b8b7b0;
+    line-height: 1.4;
+}
+
+.visor-28x28-vivo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px;
+    border-radius: 12px;
+    background: var(--plano);
+    border: 1px solid var(--borde);
+}
+
+.etiqueta-visor-28 {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--texto-secundario);
+    text-align: center;
+}
+
+#canvas-vista-28 {
+    width: 124px;
+    height: 124px;
+    background: #ffffff;
+    border: 2px solid var(--texto-primario);
+    border-radius: 8px;
+    image-rendering: pixelated;
+}
+
+.estado-trazo {
+    font-size: 0.76rem;
+    color: var(--texto-tenue);
+    text-align: center;
+}
+
+.estado-trazo.activo {
+    color: var(--bien);
+    font-weight: 700;
+}
+
+.barra-ajuste-camara {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--plano);
+    border: 1px solid var(--borde);
+    font-size: 0.85rem;
+}
+
+.barra-ajuste-camara input[type="range"] {
+    flex: 1 1 120px;
+}
+
+.columna-prediccion-viva {
+    padding: 16px;
+    border-radius: 12px;
+    background: var(--plano);
+    border: 1px solid var(--borde);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.cabecera-prediccion-viva {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.cabecera-prediccion-viva h3 {
+    margin: 0;
+}
+
+.banner-veredicto {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--borde);
+    background: var(--superficie);
+    transition: all 0.2s ease;
+}
+
+.banner-veredicto.consenso {
+    border-color: rgba(12, 163, 12, 0.45);
+    background: rgba(12, 163, 12, 0.08);
+}
+
+.banner-veredicto.discrepancia {
+    border-color: rgba(235, 104, 52, 0.45);
+    background: rgba(235, 104, 52, 0.08);
+}
+
+.icono-veredicto {
+    font-size: 1.9rem;
+    line-height: 1;
+}
+
+.banner-veredicto strong {
+    display: block;
+    font-size: 1rem;
+}
+
+.banner-veredicto p {
+    margin: 2px 0 0;
+    font-size: 0.82rem;
+    color: var(--texto-secundario);
+}
+
+.tarjetas-vivo-modelos {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.tarjeta-vivo-modelo {
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: var(--superficie);
+    border: 1px solid var(--borde);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.cabecera-vivo-modelo {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.badge-confianza {
+    font-size: 0.78rem;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--plano);
+    border: 1px solid var(--borde);
+    font-variant-numeric: tabular-nums;
+}
+
+.cuerpo-vivo-modelo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.icono-animal-vivo {
+    width: 34px;
+    height: 34px;
+    object-fit: contain;
+}
+
+.etiqueta-animal-vivo {
+    font-size: 1.35rem;
+    font-weight: 800;
+}
+
+.medidor-dual {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.medidor-etiquetas {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.76rem;
+    color: var(--texto-secundario);
+    font-variant-numeric: tabular-nums;
+}
+
+.barra-dual-fondo {
+    height: 8px;
+    border-radius: 999px;
+    background: var(--grilla);
+    overflow: hidden;
+}
+
+.barra-dual-relleno {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.22s ease;
+}
