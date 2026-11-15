@@ -30,7 +30,7 @@
                         <p class="ayuda">Elige usar la cámara en tiempo real (teléfono como sensor o cámara local) o dibujar directamente en el lienzo.</p>
                     </div>
                     <div class="estado-cabecera-derecha">
-                        <span id="insignia-fuente-activa" class="insignia-sensor">📱 Modo Cámara Activo</span>
+                        <span id="insignia-fuente-activa" class="insignia-sensor">Modo Cámara Activo</span>
                         <span id="contador-guardados" class="insignia-contador">0 / 5 imágenes mínimas</span>
                     </div>
                 </div>
@@ -38,10 +38,10 @@
                 <!-- Pestañas de modo: Cámara en Tiempo Real vs Lienzo -->
                 <div class="selector-modo-entrada" role="tablist" aria-label="Modo de entrada del dibujo">
                     <button type="button" id="tab-modo-camara" class="btn-modo-entrada activo" role="tab" aria-selected="true">
-                        📱 Cámara en Tiempo Real (Teléfono / Sensor)
+                        Cámara en Tiempo Real (Teléfono / Sensor)
                     </button>
                     <button type="button" id="tab-modo-lienzo" class="btn-modo-entrada" role="tab" aria-selected="false">
-                        ✏️ Dibujar en Lienzo
+                        Dibujar en Lienzo
                     </button>
                 </div>
 
@@ -60,10 +60,10 @@
                                 Cargando dirección local del sensor...
                             </a>
                             <button type="button" id="btn-copiar-url-sensor" class="btn btn-pequeno">
-                                📋 Copiar enlace
+                                Copiar enlace
                             </button>
                             <button type="button" id="btn-abrir-protobject" class="btn btn-pequeno">
-                                🔗 QR Protobject WebRTC
+                                QR Protobject WebRTC
                             </button>
                         </div>
                     </div>
@@ -81,19 +81,19 @@
                         <div id="contenedor-modo-camara" class="bloque-modo-camara">
                             <div class="botones-fuente-camara">
                                 <button type="button" id="btn-toggle-qr" class="btn">
-                                    📲 Ocultar / Ver QR del teléfono
+                                    Ocultar / Ver QR del teléfono
                                 </button>
                                 <button type="button" id="btn-camara-local" class="btn">
-                                    🎥 Usar cámara de este dispositivo
+                                    Usar cámara de este dispositivo
                                 </button>
                                 <button type="button" id="btn-cambiar-camara-local" class="btn" hidden>
-                                    🔄 Cambiar lente
+                                    Cambiar lente
                                 </button>
                                 <button type="button" id="btn-congelar-local" class="btn" hidden>
-                                    ⏸️ Congelar
+                                    Congelar
                                 </button>
                                 <button type="button" id="btn-subir-foto-local" class="btn">
-                                    📷 Subir / Tomar foto
+                                    Subir / Tomar foto
                                 </button>
                                 <input type="file" id="input-foto-local" accept="image/*" capture="environment" hidden>
                             </div>
@@ -107,10 +107,10 @@
                                         <span>Centra el dibujo aquí</span>
                                     </div>
                                     <div id="placeholder-sensor-remoto" class="placeholder-sensor">
-                                        <div class="icono-grande-sensor">📱</div>
+                                        <div class="icono-grande-sensor"></div>
                                         <strong id="titulo-placeholder-sensor">Esperando señal de la cámara...</strong>
                                         <p id="subtitulo-placeholder-sensor">
-                                            Escanea el código QR con tu teléfono para enviar video en vivo, o presiona <strong>«🎥 Usar cámara de este dispositivo»</strong> / <strong>«📷 Subir / Tomar foto»</strong>.
+                                            Escanea el código QR con tu teléfono para enviar video en vivo, o presiona <strong>«Usar cámara de este dispositivo»</strong> / <strong>« Subir / Tomar foto»</strong>.
                                         </p>
                                     </div>
                                 </div>
@@ -130,7 +130,7 @@
                                 </label>
                                 <input type="range" id="slider-umbral-local" min="6" max="48" value="18">
                                 <button type="button" id="btn-calibrar-local" class="btn btn-pequeno" title="Compensa sombras del papel blanco">
-                                    ☀️ Calibrar papel
+                                    Calibrar papel
                                 </button>
                             </div>
                         </div>
@@ -154,13 +154,13 @@
                                 <p class="ayuda">Respuesta instantánea de cada red neuronal al dibujo actual.</p>
                             </div>
                             <button type="button" id="btn-audio-tiempo-real" class="btn btn-pequeno" aria-pressed="false">
-                                🔇 Audio / Voz: Off
+                                Audio / Voz: Off
                             </button>
                         </div>
 
                         <!-- Banner de veredicto combinado -->
                         <div id="banner-veredicto-vivo" class="banner-veredicto esperando">
-                            <span id="icono-veredicto-vivo" class="icono-veredicto">🔍</span>
+                            <span id="icono-veredicto-vivo" class="icono-veredicto"></span>
                             <div>
                                 <strong id="titulo-veredicto-vivo">Mostrando espera de dibujo...</strong>
                                 <p id="detalle-veredicto-vivo">Muestra un dibujo frente a la cámara o traza en el lienzo para ver si es un gato o un perro.</p>
@@ -184,8 +184,8 @@
                                 </div>
                                 <div class="medidor-dual">
                                     <div class="medidor-etiquetas">
-                                        <span>🐱 Gato (<span id="prob-gato-cnn">50%</span>)</span>
-                                        <span>🐶 Perro (<span id="prob-perro-cnn">50%</span>)</span>
+                                        <span>Gato (<span id="prob-gato-cnn">50%</span>)</span>
+                                        <span>Perro (<span id="prob-perro-cnn">50%</span>)</span>
                                     </div>
                                     <div class="barra-dual-fondo">
                                         <div id="barra-perro-cnn" class="barra-dual-relleno" style="width: 50%; background: #2a78d6;"></div>
@@ -208,8 +208,8 @@
                                 </div>
                                 <div class="medidor-dual">
                                     <div class="medidor-etiquetas">
-                                        <span>🐱 Gato (<span id="prob-gato-mlp">50%</span>)</span>
-                                        <span>🐶 Perro (<span id="prob-perro-mlp">50%</span>)</span>
+                                        <span> Gato (<span id="prob-gato-mlp">50%</span>)</span>
+                                        <span> Perro (<span id="prob-perro-mlp">50%</span>)</span>
                                     </div>
                                     <div class="barra-dual-fondo">
                                         <div id="barra-perro-mlp" class="barra-dual-relleno" style="width: 50%; background: #1baf7a;"></div>
@@ -241,7 +241,7 @@
                             Limpiar / Reiniciar vista
                         </button>
                         <button type="button" id="btn-guardar" class="btn btn-primario">
-                            📸 Guardar imagen en la prueba
+                             Guardar imagen en la prueba
                         </button>
                         <button type="button" id="btn-predecir" class="btn btn-primario" disabled>
                             Evaluar lote con modelos (0/5)

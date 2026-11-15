@@ -1,14 +1,297 @@
 <!DOCTYPE html>
 <html lang="es">
-    <head>
-        <meta charset="UTF-8">
-        <title>Prueba 2</title>
 
-        <link rel="icon" type="image/png" href="../assets/icons/logo.png">
-        <link rel="stylesheet" href="../css/style.css">
-    </head>
+<head>
 
-    <body>
-        <h1>No flaco... todavia no</h1>
-    </body>
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Prueba 2</title>
+
+
+    <!-- Librería para generar el código QR -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+</head>
+
+
+<body>
+
+    <!-- ===================================================== -->
+    <!-- QR -->
+    <!-- ===================================================== -->
+
+    <div id="qr-container">
+
+        <h2>Prueba 2 - Sensor</h2>
+
+        <p>
+            No hay ningún teléfono conectado.
+        </p>
+
+        <p>
+            Escanea este código QR con tu teléfono:
+        </p>
+
+        <div id="qrcode"></div>
+
+    </div>
+
+
+    <!-- ===================================================== -->
+    <!-- DATOS DE LOS SENSORES -->
+    <!-- ===================================================== -->
+
+    <div id="sensores" style="display: none;">
+
+        <h2>Prueba 2 - Sensores</h2>
+
+        <p id="conexion">
+            Teléfono conectado
+        </p>
+
+
+        <h3>Acelerómetro</h3>
+
+        <p>
+            Ax:
+            <span id="ax">0</span>
+        </p>
+
+        <p>
+            Ay:
+            <span id="ay">0</span>
+        </p>
+
+        <p>
+            Az:
+            <span id="az">0</span>
+        </p>
+
+
+        <h3>Giroscopio</h3>
+
+        <p>
+            Gx:
+            <span id="gx">0</span>
+        </p>
+
+        <p>
+            Gy:
+            <span id="gy">0</span>
+        </p>
+
+        <p>
+            Gz:
+            <span id="gz">0</span>
+        </p>
+
+
+        <p>
+            Timestamp:
+            <span id="timestamp">0</span>
+        </p>
+
+    </div>
+
+
+    <script>
+
+        // =====================================================
+        // OBTENER URL DEL SENSOR
+        // =====================================================
+
+        let sensorURL = null;
+
+        async function obtenerURLSensor() {
+
+            const respuesta =
+                await fetch("/api/prueba_2/url");
+
+            const datos =
+                await respuesta.json();
+
+            sensorURL = datos.url;
+
+        }
+
+
+        let qrGenerado = false;
+
+
+        // =====================================================
+        // MOSTRAR QR
+        // =====================================================
+
+        function mostrarQR() {
+
+            document.getElementById("qr-container").style.display =
+                "block";
+
+            document.getElementById("sensores").style.display =
+                "none";
+
+
+            // El QR se genera solamente una vez
+            if (!qrGenerado) {
+
+                new QRCode(
+                    document.getElementById("qrcode"),
+                    {
+                        text: sensorURL,
+                        width: 250,
+                        height: 250
+                    }
+                );
+
+                qrGenerado = true;
+
+            }
+
+        }
+
+
+        // =====================================================
+        // MOSTRAR SENSORES
+        // =====================================================
+
+        function mostrarSensores() {
+
+            document.getElementById("qr-container").style.display =
+                "none";
+
+            document.getElementById("sensores").style.display =
+                "block";
+
+        }
+
+
+        // =====================================================
+        // ACTUALIZAR DATOS
+        // =====================================================
+
+        async function actualizar() {
+
+            try {
+
+                const respuesta =
+                    await fetch("/api/prueba_2/estado");
+
+                const datos =
+                    await respuesta.json();
+
+
+                // El servidor determina si el teléfono
+                // sigue conectado
+                if (datos.conectado) {
+
+                    mostrarSensores();
+
+
+                    // -----------------------------
+                    // Acelerómetro
+                    // -----------------------------
+
+                    document.getElementById("ax").textContent =
+                        datos.ax;
+
+                    document.getElementById("ay").textContent =
+                        datos.ay;
+
+                    document.getElementById("az").textContent =
+                        datos.az;
+
+
+                    // -----------------------------
+                    // Giroscopio
+                    // -----------------------------
+
+                    document.getElementById("gx").textContent =
+                        datos.gx;
+
+                    document.getElementById("gy").textContent =
+                        datos.gy;
+
+                    document.getElementById("gz").textContent =
+                        datos.gz;
+
+
+                    // -----------------------------
+                    // Timestamp
+                    // -----------------------------
+
+                    document.getElementById("timestamp").textContent =
+                        datos.timestamp;
+
+                }
+
+                else {
+
+                    mostrarQR();
+
+                }
+
+            }
+
+            catch (error) {
+
+                console.error(
+                    "Error consultando estado:",
+                    error
+                );
+
+                mostrarQR();
+
+            }
+
+        }
+
+
+        // =====================================================
+        // INICIO
+        // =====================================================
+
+        async function iniciar() {
+
+            try {
+
+                // Primero obtenemos la URL correcta
+                await obtenerURLSensor();
+
+                console.log(
+                    "URL del sensor:",
+                    sensorURL
+                );
+
+
+                // Ahora sí generamos el QR
+                mostrarQR();
+
+
+                // Comprobamos el estado cada 100 ms
+                setInterval(actualizar, 100);
+
+                actualizar();
+
+            }
+
+            catch (error) {
+
+                console.error(
+                    "No se pudo obtener la URL del sensor:",
+                    error
+                );
+
+            }
+
+        }
+
+
+        iniciar();
+
+    </script>
+
+</body>
+
 </html>

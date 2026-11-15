@@ -36,18 +36,56 @@ _estado_camara = {
     "ultima_captura": None,
 }
 
+_estado_prueba_2 = {
+    "timestamp": 0,
+    "ax": 0,
+    "ay": 0,
+    "az": 0,
+    "gx": 0,
+    "gy": 0,
+    "gz": 0,
+    "conectado": False,
+}
 
 def obtener_ip_local():
-    """Obtiene la IP en la red local (WiFi/LAN) para conectar el teléfono mediante código QR."""
+    """
+    Obtiene la IP IPv4 de la interfaz de red local real.
+    Evita interfaces virtuales como Cloudflare WARP.
+    """
+
     try:
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-            s.connect(("8.8.8.8", 80))
-            return s.getsockname()[0]
+        conexiones = socket.getaddrinfo(
+            socket.gethostname(),
+            None,
+            socket.AF_INET
+        )
+
+        for conexion in conexiones:
+            ip = conexion[4][0]
+
+            # Ignorar localhost
+            if ip.startswith("127."):
+                continue
+
+            # Ignorar Cloudflare WARP
+            if ip.startswith("172.16."):
+                continue
+
+            # Preferir redes privadas normales
+            if (
+                ip.startswith("192.168.") or
+                ip.startswith("10.") or
+                (
+                    ip.startswith("172.")
+                    and not ip.startswith("172.16.")
+                )
+            ):
+                return ip
+
     except Exception:
-        try:
-            return socket.gethostbyname(socket.gethostname())
-        except Exception:
-            return "127.0.0.1"
+        pass
+
+    return "127.0.0.1"
 
 
 def obtener_predictor_test_1():
@@ -178,6 +216,30 @@ def procesar_frame_camara(payload):
     return respuesta
 
 
+def procesar_sensor_prueba_2(payload):
+    global _estado_prueba_2
+
+    try:
+        _estado_prueba_2 = {
+            "timestamp": payload.get("timestamp", 0),
+            "ax": payload.get("ax", 0),
+            "ay": payload.get("ay", 0),
+            "az": payload.get("az", 0),
+            "gx": payload.get("gx", 0),
+            "gy": payload.get("gy", 0),
+            "gz": payload.get("gz", 0),
+            "conectado": True,
+        }
+
+        return True
+
+    except Exception as e:
+        print(f"Error procesando sensor prueba 2: {e}")
+        return False
+
+
+
+
 class APIRequestHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(ROOT_DIR), **kwargs)
@@ -230,6 +292,37 @@ class APIRequestHandler(SimpleHTTPRequestHandler):
             self._responder_json(200, datos)
             return
 
+        if ruta == "/api/prueba_2/estado":
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+
+            self.wfile.write(
+                json.dumps(_estado_prueba_2).encode("utf-8")
+            )
+
+            return
+
+        if ruta == "/api/prueba_2/url":
+            ip_local = obtener_ip_local()
+
+            if _puerto_https_activo:
+                url = (
+                    f"https://{ip_local}:{_puerto_https_activo}"
+                    "/exploracion/sensor_prueba_2.html"
+                )
+            else:
+                url = (
+                    f"http://{ip_local}:{_puerto_http_activo}"
+                    "/exploracion/sensor_prueba_2.html"
+                )
+
+            self._responder_json(200, {
+                "url": url
+            })
+
+            return
+
         super().do_GET()
 
     def do_POST(self):
@@ -259,6 +352,42 @@ class APIRequestHandler(SimpleHTTPRequestHandler):
             self._responder_json(400, {"error": str(err)})
         except Exception as err:
             self._responder_json(500, {"error": f"Error al procesar la predicción: {err}"})
+
+
+        if self.path == "/api/prueba_2/sensor":
+            try:
+                content_length = int(self.headers.get("Content-Length", 0))
+                body = self.rfile.read(content_length)
+
+                payload = json.loads(body.decode("utf-8"))
+
+                procesar_sensor_prueba_2(payload)
+
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+
+                self.wfile.write(
+                    json.dumps({
+                        "ok": True
+                    }).encode("utf-8")
+                )
+
+            except Exception as e:
+                print(f"Error en /api/prueba_2/sensor: {e}")
+
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+
+                self.wfile.write(
+                    json.dumps({
+                        "ok": False,
+                        "error": str(e)
+                    }).encode("utf-8")
+                )
+
+            return
 
     def _responder_json(self, status_code, data):
         respuesta = json.dumps(data).encode("utf-8")

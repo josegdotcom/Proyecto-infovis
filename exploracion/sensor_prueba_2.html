@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Sensor - Prueba 2</title>
+</head>
+
+<body>
+
+    <h2>Sensor del teléfono</h2>
+
+    <p id="estado">Esperando permiso para acceder a los sensores...</p>
+
+    <p>
+        Datos enviados:
+        <span id="contador">0</span>
+    </p>
+
+    <script>
+
+        const SERVER = window.location.origin;
+        const ENDPOINT = SERVER + "/api/prueba_2/sensor";
+
+        let contador = 0;
+
+
+        async function enviarSensor(event) {
+
+            const acceleration = event.acceleration;
+            const rotation = event.rotationRate;
+
+            const datos = {
+
+                timestamp: Date.now(),
+
+                ax: acceleration?.x ?? 0,
+                ay: acceleration?.y ?? 0,
+                az: acceleration?.z ?? 0,
+
+                gx: rotation?.alpha ?? 0,
+                gy: rotation?.beta ?? 0,
+                gz: rotation?.gamma ?? 0
+            };
+
+
+            try {
+
+                const respuesta = await fetch(ENDPOINT, {
+
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+
+                    body: JSON.stringify(datos)
+                });
+
+
+                if (respuesta.ok) {
+
+                    contador++;
+
+                    document.getElementById("estado").textContent =
+                        "Sensores activos";
+
+                    document.getElementById("contador").textContent =
+                        contador;
+                }
+
+            } catch (error) {
+
+                document.getElementById("estado").textContent =
+                    "Error enviando datos al servidor";
+
+                console.error(error);
+            }
+        }
+
+
+        async function iniciarSensores() {
+
+            try {
+
+                /*
+                 * Algunos navegadores, especialmente iOS,
+                 * requieren solicitar permiso explícitamente.
+                 */
+                if (
+                    typeof DeviceMotionEvent !== "undefined" &&
+                    typeof DeviceMotionEvent.requestPermission === "function"
+                ) {
+
+                    const permiso =
+                        await DeviceMotionEvent.requestPermission();
+
+                    if (permiso !== "granted") {
+
+                        document.getElementById("estado").textContent =
+                            "Permiso de sensores rechazado";
+
+                        return;
+                    }
+                }
+
+
+                window.addEventListener(
+                    "devicemotion",
+                    enviarSensor
+                );
+
+
+                document.getElementById("estado").textContent =
+                    "Sensores activos";
+
+            } catch (error) {
+
+                document.getElementById("estado").textContent =
+                    "No se pudieron activar los sensores";
+
+                console.error(error);
+            }
+        }
+
+
+        /*
+         * Se inicia al tocar la pantalla.
+         * Esto permite que el navegador muestre
+         * la solicitud de permisos.
+         */
+        document.body.addEventListener(
+            "click",
+            iniciarSensores,
+            { once: true }
+        );
+
+    </script>
+
+</body>
+
+</html>
