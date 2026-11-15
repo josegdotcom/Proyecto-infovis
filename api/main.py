@@ -329,9 +329,10 @@ class APIRequestHandler(SimpleHTTPRequestHandler):
         rutas_lote = {"/api/test_1", "/api/evaluar", "/api/predict", "/predict", "/evaluar"}
         rutas_individual = {"/api/test_1/predecir", "/api/predecir_dibujo"}
         rutas_camara = {"/api/camara/frame"}
+        rutas_prueba_2 = {"/api/prueba_2/sensor"}
         ruta = self.path.split("?")[0].rstrip("/")
 
-        if ruta not in rutas_lote and ruta not in rutas_individual and ruta not in rutas_camara:
+        if ruta not in rutas_lote and ruta not in rutas_individual and ruta not in rutas_camara and ruta not in rutas_prueba_2:
             self._responder_json(404, {"error": f"Ruta no encontrada: {self.path}"})
             return
 
@@ -342,8 +343,14 @@ class APIRequestHandler(SimpleHTTPRequestHandler):
 
             if ruta in rutas_individual:
                 resultados = procesar_prediccion_dibujo(payload)
+
             elif ruta in rutas_camara:
                 resultados = procesar_frame_camara(payload)
+
+            elif ruta in rutas_prueba_2:
+                procesar_sensor_prueba_2(payload)
+                resultados = {"ok": True}
+
             else:
                 resultados = procesar_evaluacion_test_1(payload)
 
@@ -354,40 +361,6 @@ class APIRequestHandler(SimpleHTTPRequestHandler):
             self._responder_json(500, {"error": f"Error al procesar la predicción: {err}"})
 
 
-        if self.path == "/api/prueba_2/sensor":
-            try:
-                content_length = int(self.headers.get("Content-Length", 0))
-                body = self.rfile.read(content_length)
-
-                payload = json.loads(body.decode("utf-8"))
-
-                procesar_sensor_prueba_2(payload)
-
-                self.send_response(200)
-                self.send_header("Content-Type", "application/json")
-                self.end_headers()
-
-                self.wfile.write(
-                    json.dumps({
-                        "ok": True
-                    }).encode("utf-8")
-                )
-
-            except Exception as e:
-                print(f"Error en /api/prueba_2/sensor: {e}")
-
-                self.send_response(400)
-                self.send_header("Content-Type", "application/json")
-                self.end_headers()
-
-                self.wfile.write(
-                    json.dumps({
-                        "ok": False,
-                        "error": str(e)
-                    }).encode("utf-8")
-                )
-
-            return
 
     def _responder_json(self, status_code, data):
         respuesta = json.dumps(data).encode("utf-8")
