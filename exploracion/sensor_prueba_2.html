@@ -3,71 +3,345 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prueba acelerómetro</title>
+    <title>Sensor prueba 2</title>
 </head>
 
 <body>
 
-<h2>Prueba de acelerómetro</h2>
+<h2>Sensor de movimiento</h2>
 
-<button onclick="iniciar()">Activar sensores</button>
+<button id="btnSensores" onclick="iniciar()">
+    Activar sensores
+</button>
+
+<p>
+    Estado:
+    <span id="estado">Esperando...</span>
+</p>
 
 <p>Ax: <span id="ax">0</span></p>
 <p>Ay: <span id="ay">0</span></p>
 <p>Az: <span id="az">0</span></p>
 
+<p>Gx: <span id="gx">0</span></p>
+<p>Gy: <span id="gy">0</span></p>
+<p>Gz: <span id="gz">0</span></p>
+
+<p>
+    Muestras:
+    <span id="muestras">0</span> / 128
+</p>
+
+<p>
+    Ventanas:
+    <span id="ventanas">0</span> / 5
+</p>
+
 <script>
 
+const TAMANO_VENTANA = 128;
+
+let buffer = [];
+let sensorActivo = false;
+let grabando = false;
+let grabandoAnterior = false;
+
+let ultimoEnvioHeartbeat = 0;
+
+
+// =====================================================
+// ESTADO DEL SERVIDOR
+// =====================================================
+
+async function actualizarEstadoGrabacion() {
+
+    try {
+
+        const respuesta = await fetch(
+            "/api/prueba_2/estado",
+            { cache: "no-store" }
+        );
+
+        const datos = await respuesta.json();
+
+        const nuevoEstado = datos.grabando === true;
+
+        if (datos.conectado && !nuevoEstado && !grabando) {
+            document.getElementById("estado").textContent =
+                "Sensores activos - esperando grabación";
+        }
+
+        if (nuevoEstado && !grabandoAnterior) {
+
+            buffer = [];
+
+            document.getElementById("muestras").textContent = "0";
+
+            document.getElementById("ventanas").textContent =
+                datos.ventanas ?? 0;
+
+            document.getElementById("estado").textContent =
+                "GRABANDO";
+        }
+
+        if (!nuevoEstado && grabandoAnterior) {
+
+            buffer = [];
+
+            document.getElementById("muestras").textContent = "0";
+
+            document.getElementById("ventanas").textContent =
+                datos.ventanas ?? 0;
+
+            document.getElementById("estado").textContent =
+                "Grabación finalizada";
+        }
+
+        if (nuevoEstado) {
+
+            document.getElementById("estado").textContent =
+                `GRABANDO - ventana ${Number(datos.ventanas ?? 0) + 1}/5`;
+
+            document.getElementById("ventanas").textContent =
+                datos.ventanas ?? 0;
+        }
+
+        grabando = nuevoEstado;
+        grabandoAnterior = nuevoEstado;
+
+    }
+    catch (error) {
+
+        console.error(
+            "Error consultando estado:",
+            error
+        );
+    }
+}
+
+
+// =====================================================
+// ACTIVAR SENSORES
+// =====================================================
+
 async function iniciar() {
+
+    if (sensorActivo) {
+        return;
+    }
 
     if (
         typeof DeviceMotionEvent !== "undefined" &&
         typeof DeviceMotionEvent.requestPermission === "function"
     ) {
-        const permiso = await DeviceMotionEvent.requestPermission();
 
-        if (permiso !== "granted") {
-            alert("Permiso de movimiento rechazado");
+        try {
+
+            const permiso =
+                await DeviceMotionEvent.requestPermission();
+
+            if (permiso !== "granted") {
+                alert("Permiso de movimiento rechazado");
+                return;
+            }
+
+        }
+        catch (error) {
+
+            console.error(
+                "Error solicitando permiso:",
+                error
+            );
+
+            alert("No se pudo obtener permiso para los sensores.");
             return;
         }
     }
 
-    window.addEventListener("devicemotion", (event) => {
+    sensorActivo = true;
 
-        const a = event.accelerationIncludingGravity;
+    window.addEventListener(
+        "devicemotion",
+        recibirSensor,
+        { passive: true }
+    );
 
-        document.getElementById("ax").textContent =
-            a?.x ?? "null";
+    document.getElementById("btnSensores").disabled = true;
 
-        document.getElementById("ay").textContent =
-            a?.y ?? "null";
+    document.getElementById("estado").textContent =
+        "Sensores activos - esperando conexión";
 
-        document.getElementById("az").textContent =
-            a?.z ?? "null";
+    actualizarEstadoGrabacion();
 
-        // Enviar datos al PC
-        fetch("/api/prueba_2/sensor", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                timestamp: Date.now(),
-                ax: a?.x ?? 0,
-                ay: a?.y ?? 0,
-                az: a?.z ?? 0,
-                gx: event.rotationRate?.alpha ?? 0,
-                gy: event.rotationRate?.beta ?? 0,
-                gz: event.rotationRate?.gamma ?? 0
-            })
-        })
-        .then(r => console.log("Datos enviados:", r.status))
-        .catch(e => console.error("Error enviando:", e));
-
-    });
-
-    alert("Sensor activado");
+    console.log("Sensores activados");
 }
+
+
+// =====================================================
+// DATOS DEL SENSOR
+// =====================================================
+
+function recibirSensor(event) {
+
+    const a = event.accelerationIncludingGravity;
+
+    const muestra = {
+
+        timestamp: Date.now(),
+
+        ax: a?.x ?? 0,
+        ay: a?.y ?? 0,
+        az: a?.z ?? 0,
+
+        gx: event.rotationRate?.alpha ?? 0,
+        gy: event.rotationRate?.beta ?? 0,
+        gz: event.rotationRate?.gamma ?? 0
+    };
+
+    // Mostrar SIEMPRE los valores, incluso antes de grabar.
+    document.getElementById("ax").textContent =
+        Number(muestra.ax).toFixed(3);
+
+    document.getElementById("ay").textContent =
+        Number(muestra.ay).toFixed(3);
+
+    document.getElementById("az").textContent =
+        Number(muestra.az).toFixed(3);
+
+    document.getElementById("gx").textContent =
+        Number(muestra.gx).toFixed(3);
+
+    document.getElementById("gy").textContent =
+        Number(muestra.gy).toFixed(3);
+
+    document.getElementById("gz").textContent =
+        Number(muestra.gz).toFixed(3);
+
+    // Heartbeat cada 500 ms.
+    const ahora = Date.now();
+
+    if (ahora - ultimoEnvioHeartbeat >= 500) {
+
+        ultimoEnvioHeartbeat = ahora;
+
+        enviarHeartbeat(muestra);
+    }
+
+    // Fuera de grabación no acumulamos muestras.
+    if (!grabando) {
+        return;
+    }
+
+    buffer.push(muestra);
+
+    document.getElementById("muestras").textContent =
+        buffer.length;
+
+    if (buffer.length >= TAMANO_VENTANA) {
+
+        const ventana =
+            buffer.slice(0, TAMANO_VENTANA);
+
+        buffer =
+            buffer.slice(TAMANO_VENTANA);
+
+        document.getElementById("muestras").textContent =
+            buffer.length;
+
+        enviarVentana(ventana);
+    }
+}
+
+
+// =====================================================
+// HEARTBEAT
+// =====================================================
+
+async function enviarHeartbeat(muestra) {
+
+    try {
+
+        await fetch(
+            "/api/prueba_2/sensor",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    tipo: "heartbeat",
+                    muestras: [muestra]
+                })
+            }
+        );
+
+    }
+    catch (error) {
+
+        console.error(
+            "Error enviando heartbeat:",
+            error
+        );
+    }
+}
+
+
+// =====================================================
+// ENVIAR VENTANA DE 128
+// =====================================================
+
+async function enviarVentana(ventana) {
+
+    try {
+
+        const respuesta = await fetch(
+            "/api/prueba_2/sensor",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    tipo: "ventana",
+                    muestras: ventana
+                })
+            }
+        );
+
+        const datos = await respuesta.json();
+
+        console.log(
+            "Ventana enviada:",
+            ventana.length,
+            "muestras"
+        );
+
+        console.log(
+            "Respuesta servidor:",
+            datos
+        );
+
+    }
+    catch (error) {
+
+        console.error(
+            "Error enviando ventana:",
+            error
+        );
+    }
+}
+
+
+// =====================================================
+// POLLING DEL ESTADO
+// =====================================================
+
+setInterval(
+    actualizarEstadoGrabacion,
+    1000
+);
+
+actualizarEstadoGrabacion();
 
 </script>
 

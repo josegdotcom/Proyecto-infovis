@@ -7,6 +7,7 @@ import sys
 import tempfile
 import threading
 import time
+import csv
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -36,6 +37,10 @@ _estado_camara = {
     "ultima_captura": None,
 }
 
+# =====================================================
+# PRUEBA 2 - ESTADO DEL SENSOR
+# =====================================================
+
 _estado_prueba_2 = {
     "timestamp": 0,
     "ax": 0,
@@ -46,6 +51,16 @@ _estado_prueba_2 = {
     "gz": 0,
     "conectado": False,
 }
+
+_buffer_sensor_prueba_2 = []
+
+# Carpeta donde se guardarán las grabaciones individuales
+CARPETA_GRABACIONES_PRUEBA_2 = ROOT_DIR / "grabaciones"
+CARPETA_GRABACIONES_PRUEBA_2.mkdir(parents=True, exist_ok=True)
+
+# Archivo correspondiente a la grabación actualmente activa
+ARCHIVO_GRABACION_PRUEBA_2 = None
+
 
 def obtener_ip_local():
     """
@@ -216,28 +231,185 @@ def procesar_frame_camara(payload):
     return respuesta
 
 
-def procesar_sensor_prueba_2(payload):
-    global _estado_prueba_2
+# =====================================================
+# PRUEBA 2 - GRABACIÓN
+# =====================================================
 
-    try:
-        _estado_prueba_2 = {
-            "timestamp": payload.get("timestamp", 0),
-            "ax": payload.get("ax", 0),
-            "ay": payload.get("ay", 0),
-            "az": payload.get("az", 0),
-            "gx": payload.get("gx", 0),
-            "gy": payload.get("gy", 0),
-            "gz": payload.get("gz", 0),
-            "conectado": True,
+_estado_grabacion_prueba_2 = {
+    "grabando": False,
+    "ventanas": 0,
+    "total_ventanas": 5,
+}
+
+
+def iniciar_grabacion_prueba_2():
+    global _estado_grabacion_prueba_2
+    global _buffer_sensor_prueba_2
+    global ARCHIVO_GRABACION_PRUEBA_2
+
+    # Limpiar cualquier muestra anterior
+    _buffer_sensor_prueba_2 = []
+
+    # Crear un archivo nuevo para ESTA grabación
+    ahora = time.strftime("%Y-%m-%d_%H-%M-%S")
+    ARCHIVO_GRABACION_PRUEBA_2 = (
+        CARPETA_GRABACIONES_PRUEBA_2
+        / f"grabacion_{ahora}.csv"
+    )
+
+    _estado_grabacion_prueba_2["grabando"] = True
+    _estado_grabacion_prueba_2["ventanas"] = 0
+
+    print()
+    print("=" * 60)
+    print("GRABACIÓN PRUEBA 2 INICIADA")
+    print(f"Archivo: {ARCHIVO_GRABACION_PRUEBA_2}")
+    print("Objetivo: 5 ventanas × 128 muestras = 640 muestras")
+    print("=" * 60)
+
+
+def finalizar_grabacion_prueba_2():
+    global _estado_grabacion_prueba_2
+    global _buffer_sensor_prueba_2
+    global ARCHIVO_GRABACION_PRUEBA_2
+
+    _estado_grabacion_prueba_2["grabando"] = False
+
+    # Eliminar cualquier muestra sobrante
+    _buffer_sensor_prueba_2 = []
+
+    if ARCHIVO_GRABACION_PRUEBA_2 is not None:
+        print()
+        print("=" * 60)
+        print("GRABACIÓN PRUEBA 2 FINALIZADA")
+        print(
+            f"Ventanas: "
+            f"{_estado_grabacion_prueba_2['ventanas']}/5"
+        )
+        print(f"Archivo: {ARCHIVO_GRABACION_PRUEBA_2}")
+        print("=" * 60)
+
+    ARCHIVO_GRABACION_PRUEBA_2 = None
+
+
+def procesar_sensor_prueba_2(payload):
+    global _buffer_sensor_prueba_2
+    global ARCHIVO_GRABACION_PRUEBA_2
+
+    muestras = payload.get("muestras", [])
+
+    if not muestras:
+        return
+
+    # =================================================
+    # ACTUALIZAR SIEMPRE EL ÚLTIMO SENSOR
+    # =================================================
+
+    ultima_muestra = muestras[-1]
+
+    _estado_prueba_2.update({
+        "timestamp": ultima_muestra.get("timestamp", 0),
+        "ax": ultima_muestra.get("ax", 0),
+        "ay": ultima_muestra.get("ay", 0),
+        "az": ultima_muestra.get("az", 0),
+        "gx": ultima_muestra.get("gx", 0),
+        "gy": ultima_muestra.get("gy", 0),
+        "gz": ultima_muestra.get("gz", 0),
+        "conectado": True,
+    })
+
+    # =================================================
+    # SI NO ESTAMOS GRABANDO
+    # =================================================
+
+    # El heartbeat actualiza el estado del teléfono,
+    # pero NO se guarda como parte de una grabación.
+    if not _estado_grabacion_prueba_2["grabando"]:
+        return
+
+    if ARCHIVO_GRABACION_PRUEBA_2 is None:
+        return
+
+    # =================================================
+    # AGREGAR MUESTRAS AL BUFFER
+    # =================================================
+
+    for muestra in muestras:
+        muestra_normalizada = {
+            "timestamp": muestra.get("timestamp", 0),
+            "ax": muestra.get("ax", 0),
+            "ay": muestra.get("ay", 0),
+            "az": muestra.get("az", 0),
+            "gx": muestra.get("gx", 0),
+            "gy": muestra.get("gy", 0),
+            "gz": muestra.get("gz", 0),
         }
 
-        return True
+        _buffer_sensor_prueba_2.append(muestra_normalizada)
 
-    except Exception as e:
-        print(f"Error procesando sensor prueba 2: {e}")
-        return False
+    # =================================================
+    # PROCESAR VENTANAS DE 128 MUESTRAS
+    # =================================================
 
+    while (
+        len(_buffer_sensor_prueba_2) >= 128
+        and _estado_grabacion_prueba_2["grabando"]
+    ):
 
+        ventana = _buffer_sensor_prueba_2[:128]
+        _buffer_sensor_prueba_2 = _buffer_sensor_prueba_2[128:]
+
+        # ---------------------------------------------
+        # GUARDAR VENTANA EN EL CSV ACTUAL
+        # ---------------------------------------------
+
+        archivo_nuevo = not ARCHIVO_GRABACION_PRUEBA_2.exists()
+
+        with open(
+            ARCHIVO_GRABACION_PRUEBA_2,
+            "a",
+            newline="",
+            encoding="utf-8"
+        ) as f:
+
+            escritor = csv.DictWriter(
+                f,
+                fieldnames=[
+                    "timestamp",
+                    "ax", "ay", "az",
+                    "gx", "gy", "gz"
+                ]
+            )
+
+            if archivo_nuevo:
+                escritor.writeheader()
+
+            escritor.writerows(ventana)
+
+        # ---------------------------------------------
+        # CONTAR VENTANA
+        # ---------------------------------------------
+
+        _estado_grabacion_prueba_2["ventanas"] += 1
+
+        numero_ventana = _estado_grabacion_prueba_2["ventanas"]
+
+        print(
+            f"Ventana {numero_ventana}/"
+            f"{_estado_grabacion_prueba_2['total_ventanas']} "
+            f"guardada: 128 muestras"
+        )
+
+        # ---------------------------------------------
+        # TERMINAR AL COMPLETAR LAS 5 VENTANAS
+        # ---------------------------------------------
+
+        if (
+            numero_ventana
+            >= _estado_grabacion_prueba_2["total_ventanas"]
+        ):
+            finalizar_grabacion_prueba_2()
+            break
 
 
 class APIRequestHandler(SimpleHTTPRequestHandler):
@@ -245,9 +417,14 @@ class APIRequestHandler(SimpleHTTPRequestHandler):
         super().__init__(*args, directory=str(ROOT_DIR), **kwargs)
 
     def log_message(self, format, *args):
-        # Evitar saturar la consola con el polling en tiempo real de la cámara
-        if self.path.startswith("/api/camara") or self.path.startswith("/api/test_1/predecir"):
+        # Evitar saturar la consola con peticiones de polling
+        if (
+            self.path.startswith("/api/camara")
+            or self.path.startswith("/api/test_1/predecir")
+            or self.path.startswith("/api/prueba_2/estado")
+        ):
             return
+
         super().log_message(format, *args)
 
     def end_headers(self):
@@ -293,14 +470,25 @@ class APIRequestHandler(SimpleHTTPRequestHandler):
             return
 
         if ruta == "/api/prueba_2/estado":
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json")
-            self.end_headers()
+            ahora_ms = time.time() * 1000.0
+            ultimo_dato = float(_estado_prueba_2.get("timestamp", 0) or 0)
 
-            self.wfile.write(
-                json.dumps(_estado_prueba_2).encode("utf-8")
+            # El teléfono se considera conectado si envió un dato
+            # durante los últimos 3 segundos.
+            conectado = (
+                bool(_estado_prueba_2["conectado"])
+                and (ahora_ms - ultimo_dato) < 3000
             )
 
+            estado = {
+                **_estado_prueba_2,
+                "conectado": conectado,
+                "grabando": _estado_grabacion_prueba_2["grabando"],
+                "ventanas": _estado_grabacion_prueba_2["ventanas"],
+                "total_ventanas": _estado_grabacion_prueba_2["total_ventanas"],
+            }
+
+            self._responder_json(200, estado)
             return
 
         if ruta == "/api/prueba_2/url":
@@ -326,19 +514,50 @@ class APIRequestHandler(SimpleHTTPRequestHandler):
         super().do_GET()
 
     def do_POST(self):
-        rutas_lote = {"/api/test_1", "/api/evaluar", "/api/predict", "/predict", "/evaluar"}
-        rutas_individual = {"/api/test_1/predecir", "/api/predecir_dibujo"}
-        rutas_camara = {"/api/camara/frame"}
-        rutas_prueba_2 = {"/api/prueba_2/sensor"}
+        rutas_lote = {
+            "/api/test_1",
+            "/api/evaluar",
+            "/api/predict",
+            "/predict",
+            "/evaluar"
+        }
+        rutas_individual = {
+            "/api/test_1/predecir",
+            "/api/predecir_dibujo"
+        }
+        rutas_camara = {
+            "/api/camara/frame"
+        }
+        rutas_prueba_2 = {
+            "/api/prueba_2/sensor",
+            "/api/prueba_2/iniciar"
+        }
+
         ruta = self.path.split("?")[0].rstrip("/")
 
-        if ruta not in rutas_lote and ruta not in rutas_individual and ruta not in rutas_camara and ruta not in rutas_prueba_2:
-            self._responder_json(404, {"error": f"Ruta no encontrada: {self.path}"})
+        if (
+            ruta not in rutas_lote
+            and ruta not in rutas_individual
+            and ruta not in rutas_camara
+            and ruta not in rutas_prueba_2
+        ):
+            self._responder_json(
+                404,
+                {"error": f"Ruta no encontrada: {self.path}"}
+            )
             return
 
         try:
-            content_length = int(self.headers.get("Content-Length", 0))
-            cuerpo = self.rfile.read(content_length).decode("utf-8")
+            content_length = int(
+                self.headers.get("Content-Length", 0)
+            )
+
+            cuerpo = (
+                self.rfile
+                .read(content_length)
+                .decode("utf-8")
+            )
+
             payload = json.loads(cuerpo) if cuerpo else {}
 
             if ruta in rutas_individual:
@@ -348,25 +567,52 @@ class APIRequestHandler(SimpleHTTPRequestHandler):
                 resultados = procesar_frame_camara(payload)
 
             elif ruta in rutas_prueba_2:
-                procesar_sensor_prueba_2(payload)
-                resultados = {"ok": True}
+
+                if ruta == "/api/prueba_2/iniciar":
+
+                    iniciar_grabacion_prueba_2()
+
+                    resultados = {
+                        "ok": True,
+                        "ventanas": _estado_grabacion_prueba_2["total_ventanas"],
+                    }
+
+                elif ruta == "/api/prueba_2/sensor":
+
+                    procesar_sensor_prueba_2(payload)
+
+                    resultados = {
+                        "ok": True
+                    }
 
             else:
                 resultados = procesar_evaluacion_test_1(payload)
 
             self._responder_json(200, resultados)
+
         except ValueError as err:
-            self._responder_json(400, {"error": str(err)})
+            self._responder_json(
+                400,
+                {"error": str(err)}
+            )
+
         except Exception as err:
-            self._responder_json(500, {"error": f"Error al procesar la predicción: {err}"})
-
-
+            self._responder_json(
+                500,
+                {"error": f"Error al procesar la predicción: {err}"}
+            )
 
     def _responder_json(self, status_code, data):
         respuesta = json.dumps(data).encode("utf-8")
         self.send_response(status_code)
-        self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Content-Length", str(len(respuesta)))
+        self.send_header(
+            "Content-Type",
+            "application/json; charset=utf-8"
+        )
+        self.send_header(
+            "Content-Length",
+            str(len(respuesta))
+        )
         self.end_headers()
         self.wfile.write(respuesta)
 
@@ -378,7 +624,11 @@ def _generar_certificado_https(ip_local):
         r"C:\Program Files\Git\usr\bin\openssl.exe",
         r"C:\Program Files (x86)\Git\usr\bin\openssl.exe",
     ]
-    openssl_bin = next((c for c in candidatas_openssl if c and Path(c).is_file()), None)
+    openssl_bin = next(
+        (c for c in candidatas_openssl if c and Path(c).is_file()),
+        None
+    )
+
     if not openssl_bin:
         return None
 
@@ -408,8 +658,14 @@ def _generar_certificado_https(ip_local):
         "-addext",
         f"subjectAltName=IP:{ip_local},IP:127.0.0.1,DNS:localhost",
     ]
+
     try:
-        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run(
+            cmd,
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
         return cert_file, key_file
     except Exception:
         return None
@@ -423,38 +679,77 @@ def iniciar_servidor(host="0.0.0.0", port=8000):
     obtener_predictor_test_1()
     ip_local = obtener_ip_local()
 
-    servidor = ThreadingHTTPServer((host, port), APIRequestHandler)
+    servidor = ThreadingHTTPServer(
+        (host, port),
+        APIRequestHandler
+    )
 
-    # Levantar también un puerto HTTPS (port + 443, ej. 8443) para que iOS/Android permitan getUserMedia en WiFi
+    # Levantar también un puerto HTTPS (port + 443, ej. 8443)
+    # para que iOS/Android permitan getUserMedia en WiFi.
     cert_pair = _generar_certificado_https(ip_local)
+
     if cert_pair is not None:
         puerto_https = port + 443
+
         try:
-            servidor_https = ThreadingHTTPServer((host, puerto_https), APIRequestHandler)
-            contexto_ssl = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-            contexto_ssl.load_cert_chain(certfile=str(cert_pair[0]), keyfile=str(cert_pair[1]))
-            servidor_https.socket = contexto_ssl.wrap_socket(servidor_https.socket, server_side=True)
-            hilo_https = threading.Thread(target=servidor_https.serve_forever, daemon=True)
+            servidor_https = ThreadingHTTPServer(
+                (host, puerto_https),
+                APIRequestHandler
+            )
+
+            contexto_ssl = ssl.SSLContext(
+                ssl.PROTOCOL_TLS_SERVER
+            )
+
+            contexto_ssl.load_cert_chain(
+                certfile=str(cert_pair[0]),
+                keyfile=str(cert_pair[1])
+            )
+
+            servidor_https.socket = contexto_ssl.wrap_socket(
+                servidor_https.socket,
+                server_side=True
+            )
+
+            hilo_https = threading.Thread(
+                target=servidor_https.serve_forever,
+                daemon=True
+            )
+
             hilo_https.start()
             _puerto_https_activo = puerto_https
+
         except Exception:
             _puerto_https_activo = None
 
-    print(f"Servidor API local activo en http://localhost:{port}")
-    print(f"Abre http://localhost:{port}/exploracion/prueba_1.html en tu navegador")
+    print(
+        f"Servidor API local activo en http://localhost:{port}"
+    )
+
+    print(
+        f"Abre http://localhost:{port}/exploracion/prueba_1.html "
+        "en tu navegador"
+    )
+
     if _puerto_https_activo:
         print(
-            f"Sensor de cámara para teléfono (WiFi): https://{ip_local}:{_puerto_https_activo}/exploracion/sensor_camara.html"
+            "Sensor de cámara para teléfono (WiFi): "
+            f"https://{ip_local}:{_puerto_https_activo}"
+            "/exploracion/sensor_camara.html"
         )
     else:
         print(
-            f"Sensor de cámara para teléfono (WiFi): http://{ip_local}:{port}/exploracion/sensor_camara.html"
+            "Sensor de cámara para teléfono (WiFi): "
+            f"http://{ip_local}:{port}"
+            "/exploracion/sensor_camara.html"
         )
 
     try:
         servidor.serve_forever()
+
     except KeyboardInterrupt:
         print("\nServidor detenido.")
+
     finally:
         servidor.server_close()
 

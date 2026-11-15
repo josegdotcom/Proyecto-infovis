@@ -39,6 +39,8 @@
     </div>
 
 
+
+
     <!-- ===================================================== -->
     <!-- DATOS DE LOS SENSORES -->
     <!-- ===================================================== -->
@@ -93,10 +95,28 @@
             <span id="timestamp">0</span>
         </p>
 
+
+        <!-- ================================================= -->
+        <!-- CONTROL DE GRABACIÓN -->
+        <!-- ================================================= -->
+
+        <div>
+
+            <button id="btnIniciarGrabacion">
+                Iniciar grabación
+            </button>
+
+            <span id="estadoGrabacion">
+                Esperando...
+            </span>
+
+        </div>
+
     </div>
 
 
     <script>
+
 
         // =====================================================
         // OBTENER URL DEL SENSOR
@@ -182,8 +202,10 @@
                     await respuesta.json();
 
 
-                // El servidor determina si el teléfono
-                // sigue conectado
+                // -------------------------------------------------
+                // Teléfono conectado
+                // -------------------------------------------------
+
                 if (datos.conectado) {
 
                     mostrarSensores();
@@ -224,6 +246,37 @@
                     document.getElementById("timestamp").textContent =
                         datos.timestamp;
 
+
+                    // -----------------------------
+                    // Estado de grabación
+                    // -----------------------------
+
+                    if (datos.grabando) {
+
+                        document.getElementById(
+                            "estadoGrabacion"
+                        ).textContent =
+                            "Grabando...";
+
+                        document.getElementById(
+                            "btnIniciarGrabacion"
+                        ).disabled = true;
+
+                    }
+
+                    else {
+
+                        document.getElementById(
+                            "estadoGrabacion"
+                        ).textContent =
+                            "Esperando...";
+
+                        document.getElementById(
+                            "btnIniciarGrabacion"
+                        ).disabled = false;
+
+                    }
+
                 }
 
                 else {
@@ -249,6 +302,68 @@
 
 
         // =====================================================
+        // INICIAR GRABACIÓN
+        // =====================================================
+
+        document
+            .getElementById("btnIniciarGrabacion")
+            .addEventListener("click", async () => {
+
+                const duracion = 10;
+
+                try {
+
+                    const respuesta =
+                        await fetch(
+                            "/api/prueba_2/iniciar",
+                            {
+                                method: "POST",
+
+                                headers: {
+                                    "Content-Type":
+                                        "application/json"
+                                },
+
+                                body: JSON.stringify({
+                                    duracion: duracion
+                                })
+                            }
+                        );
+
+
+                    const datos =
+                        await respuesta.json();
+
+
+                    if (datos.ok) {
+
+                        document.getElementById(
+                            "estadoGrabacion"
+                        ).textContent =
+                            "Iniciando grabación...";
+
+                    }
+
+                }
+
+                catch (error) {
+
+                    console.error(
+                        "Error iniciando grabación:",
+                        error
+                    );
+
+                    document.getElementById(
+                        "estadoGrabacion"
+                    ).textContent =
+                        "Error al iniciar";
+
+                }
+
+            });
+
+
+        // =====================================================
         // INICIO
         // =====================================================
 
@@ -270,7 +385,7 @@
 
 
                 // Comprobamos el estado cada 100 ms
-                setInterval(actualizar, 100);
+                setInterval(actualizar, 500);
 
                 actualizar();
 
