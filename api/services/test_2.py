@@ -1,5 +1,6 @@
 from pathlib import Path
 import sys
+from collections import Counter
 
 import joblib
 import numpy as np
@@ -34,6 +35,9 @@ class ActividadPredictor(BasePredictor):
             model_dir = ROOT_DIR / "data" / "modelos"
 
         super().__init__(Path(model_dir))
+
+        # BasePredictor no carga los modelos automáticamente.
+        self.load_models()
 
     def load_models(self):
         cnn_path = self.model_dir / "test-2_cnn.keras"
@@ -180,7 +184,7 @@ def predecir_csv(ruta_csv):
 
     predicciones = predictor.predict(features)
 
-    print("[3/3] Resultados:\n")
+    print("[3/3] Resultados por ventana:\n")
 
     for i in range(len(features)):
         print(f"Ventana {i + 1}:")
@@ -195,7 +199,36 @@ def predecir_csv(ruta_csv):
 
         print()
 
-    return features, predicciones
+    # La predicción final representa todo el registro, no una sola ventana.
+    # Se usa votación mayoritaria entre las ventanas de 2.56 s.
+    resultados_finales = {}
+
+    for modelo, valores in predicciones.items():
+        conteo = Counter(int(v) for v in valores)
+        etiqueta_final, votos = conteo.most_common(1)[0]
+        total = len(valores)
+
+        resultados_finales[modelo] = {
+            "etiqueta": etiqueta_final,
+            "actividad": predictor.nombre_actividad(etiqueta_final),
+            "votos": votos,
+            "total": total,
+            "porcentaje": 100.0 * votos / total,
+        }
+
+    print("=" * 55)
+    print("PREDICCIÓN FINAL DEL REGISTRO")
+    print("=" * 55)
+
+    for modelo, resultado in resultados_finales.items():
+        print(f"\n{modelo}:")
+        print(f"  Actividad: {resultado['actividad']}")
+        print(f"  Votos: {resultado['votos']}/{resultado['total']}")
+        print(f"  Consistencia: {resultado['porcentaje']:.1f}%")
+
+    print()
+
+    return features, predicciones, resultados_finales
 
 
 def main():
