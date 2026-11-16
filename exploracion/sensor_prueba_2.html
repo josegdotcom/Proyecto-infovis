@@ -28,8 +28,8 @@
 <p>Gz: <span id="gz">0</span></p>
 
 <p>
-    Muestras:
-    <span id="muestras">0</span> / 128
+    Muestras crudas:
+    <span id="muestras">0</span>
 </p>
 
 <p>
@@ -39,7 +39,11 @@
 
 <script>
 
-const TAMANO_VENTANA = 128;
+// UCI HAR: 50 Hz, ventanas de 128 muestras = 2,56 s,
+// con 50% de solapamiento.
+const FRECUENCIA_OBJETIVO = 50;
+const DURACION_VENTANA_MS = 2560;
+const SOLAPAMIENTO_MS = 1280;
 
 let buffer = [];
 let sensorActivo = false;
@@ -237,18 +241,39 @@ function recibirSensor(event) {
     document.getElementById("muestras").textContent =
         buffer.length;
 
-    if (buffer.length >= TAMANO_VENTANA) {
+    // No usamos "128 muestras crudas" porque el teléfono entrega
+    // aproximadamente 60 Hz. Esperamos que el buffer cubra 2,56 s
+    // y enviamos todas las muestras crudas de ese intervalo.
+    //
+    // Después conservamos los últimos 1,28 s para obtener el
+    // solapamiento del 50% utilizado por UCI HAR.
+    while (
+        buffer.length >= 2 &&
+        (buffer[buffer.length - 1].timestamp - buffer[0].timestamp)
+            >= DURACION_VENTANA_MS
+    ) {
 
-        const ventana =
-            buffer.slice(0, TAMANO_VENTANA);
+        const ventana = [...buffer];
 
-        buffer =
-            buffer.slice(TAMANO_VENTANA);
+        enviarVentana(ventana);
+
+        const limiteSolapamiento =
+            buffer[0].timestamp + SOLAPAMIENTO_MS;
+
+        // Conservamos la segunda mitad de la ventana.
+        let indiceInicio = 0;
+
+        while (
+            indiceInicio < buffer.length &&
+            buffer[indiceInicio].timestamp < limiteSolapamiento
+        ) {
+            indiceInicio++;
+        }
+
+        buffer = buffer.slice(indiceInicio);
 
         document.getElementById("muestras").textContent =
             buffer.length;
-
-        enviarVentana(ventana);
     }
 }
 
@@ -287,7 +312,8 @@ async function enviarHeartbeat(muestra) {
 
 
 // =====================================================
-// ENVIAR VENTANA DE 128
+// ENVIAR VENTANA CRUDA (~2,56 s)
+// El servidor la remuestrea a 128 muestras a 50 Hz.
 // =====================================================
 
 async function enviarVentana(ventana) {
@@ -311,7 +337,7 @@ async function enviarVentana(ventana) {
         const datos = await respuesta.json();
 
         console.log(
-            "Ventana enviada:",
+            "Ventana cruda enviada:",
             ventana.length,
             "muestras"
         );

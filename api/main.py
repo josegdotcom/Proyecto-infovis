@@ -264,7 +264,9 @@ def iniciar_grabacion_prueba_2():
     print("=" * 60)
     print("GRABACIÓN PRUEBA 2 INICIADA")
     print(f"Archivo: {ARCHIVO_GRABACION_PRUEBA_2}")
-    print("Objetivo: 5 ventanas × 128 muestras = 640 muestras")
+    print(
+        "Objetivo: 5 ventanas × 128 muestras a 50 Hz = 640 muestras"
+    )
     print("=" * 60)
 
 
@@ -292,14 +294,100 @@ def finalizar_grabacion_prueba_2():
     ARCHIVO_GRABACION_PRUEBA_2 = None
 
 
+_ultimo_contacto_prueba_2 = 0.0
+def remuestrear_50hz(muestras):
+    """
+    Convierte una ventana temporal de muestras (~60 Hz) a exactamente
+    128 muestras a 50 Hz mediante interpolación lineal.
+
+    UCI HAR utiliza 50 Hz y ventanas de 128 muestras, por lo que la
+    salida cubre 2,56 segundos con timestamps separados por 20 ms.
+
+    Entrada:
+        lista de diccionarios con:
+        timestamp, ax, ay, az, gx, gy, gz
+
+    Salida:
+        lista de exactamente 128 muestras, o [] si no hay suficiente
+        duración temporal para construir la ventana completa.
+    """
+
+    if len(muestras) < 2:
+        return []
+
+    # Ordenar por timestamp por seguridad.
+    muestras = sorted(
+        muestras,
+        key=lambda m: float(m.get("timestamp", 0))
+    )
+
+    tiempos = [
+        float(m["timestamp"]) / 1000.0
+        for m in muestras
+    ]
+
+    # El primer timestamp es el origen temporal de esta ventana.
+    t0 = tiempos[0]
+    tiempos_relativos = [t - t0 for t in tiempos]
+
+    # 128 muestras a 50 Hz:
+    # 0.00, 0.02, ..., 2.54 segundos.
+    tiempos_nuevos = [
+        i / 50.0
+        for i in range(128)
+    ]
+
+    # Necesitamos que la ventana cruda cubra al menos 2,54 s.
+    if tiempos_relativos[-1] < tiempos_nuevos[-1]:
+        return []
+
+    columnas = ["ax", "ay", "az", "gx", "gy", "gz"]
+    resultado = []
+
+    indice = 0
+
+    for t in tiempos_nuevos:
+
+        while (
+            indice < len(tiempos_relativos) - 2
+            and tiempos_relativos[indice + 1] < t
+        ):
+            indice += 1
+
+        t1 = tiempos_relativos[indice]
+        t2 = tiempos_relativos[indice + 1]
+
+        if t2 == t1:
+            alpha = 0.0
+        else:
+            alpha = (t - t1) / (t2 - t1)
+
+        muestra = {
+            "timestamp": int(round((t0 + t) * 1000))
+        }
+
+        for columna in columnas:
+            v1 = float(muestras[indice].get(columna, 0))
+            v2 = float(muestras[indice + 1].get(columna, 0))
+
+            muestra[columna] = v1 + alpha * (v2 - v1)
+
+        resultado.append(muestra)
+
+    return resultado
+
 def procesar_sensor_prueba_2(payload):
-    global _buffer_sensor_prueba_2
+    global _ultimo_contacto_prueba_2
     global ARCHIVO_GRABACION_PRUEBA_2
 
     muestras = payload.get("muestras", [])
 
     if not muestras:
         return
+
+    # El servidor mide el momento real de recepción del mensaje.
+    # Esto se utiliza para determinar si el teléfono sigue conectado.
+    _ultimo_contacto_prueba_2 = time.time()
 
     # =================================================
     # ACTUALIZAR SIEMPRE EL ÚLTIMO SENSOR
@@ -319,11 +407,21 @@ def procesar_sensor_prueba_2(payload):
     })
 
     # =================================================
-    # SI NO ESTAMOS GRABANDO
+    # HEARTBEAT
     # =================================================
 
-    # El heartbeat actualiza el estado del teléfono,
-    # pero NO se guarda como parte de una grabación.
+    # El heartbeat mantiene la conexión viva y actualiza los valores
+    # mostrados en el PC, pero NUNCA entra a la grabación.
+    if payload.get("tipo") == "heartbeat":
+        return
+
+    # =================================================
+    # SOLO PROCESAR VENTANAS DE DATOS
+    # =================================================
+
+    if payload.get("tipo") != "ventana":
+        return
+
     if not _estado_grabacion_prueba_2["grabando"]:
         return
 
@@ -331,85 +429,72 @@ def procesar_sensor_prueba_2(payload):
         return
 
     # =================================================
-    # AGREGAR MUESTRAS AL BUFFER
+    # REMUESTREO A 50 Hz
     # =================================================
 
-    for muestra in muestras:
-        muestra_normalizada = {
-            "timestamp": muestra.get("timestamp", 0),
-            "ax": muestra.get("ax", 0),
-            "ay": muestra.get("ay", 0),
-            "az": muestra.get("az", 0),
-            "gx": muestra.get("gx", 0),
-            "gy": muestra.get("gy", 0),
-            "gz": muestra.get("gz", 0),
-        }
+    # El teléfono entrega aproximadamente 60 Hz. La ventana recibida
+    # cubre ~2,56 s y puede contener ~154 muestras crudas.
+    # Aquí la convertimos a exactamente 128 muestras a 50 Hz.
+    ventana_50hz = remuestrear_50hz(muestras)
 
-        _buffer_sensor_prueba_2.append(muestra_normalizada)
-
-    # =================================================
-    # PROCESAR VENTANAS DE 128 MUESTRAS
-    # =================================================
-
-    while (
-        len(_buffer_sensor_prueba_2) >= 128
-        and _estado_grabacion_prueba_2["grabando"]
-    ):
-
-        ventana = _buffer_sensor_prueba_2[:128]
-        _buffer_sensor_prueba_2 = _buffer_sensor_prueba_2[128:]
-
-        # ---------------------------------------------
-        # GUARDAR VENTANA EN EL CSV ACTUAL
-        # ---------------------------------------------
-
-        archivo_nuevo = not ARCHIVO_GRABACION_PRUEBA_2.exists()
-
-        with open(
-            ARCHIVO_GRABACION_PRUEBA_2,
-            "a",
-            newline="",
-            encoding="utf-8"
-        ) as f:
-
-            escritor = csv.DictWriter(
-                f,
-                fieldnames=[
-                    "timestamp",
-                    "ax", "ay", "az",
-                    "gx", "gy", "gz"
-                ]
-            )
-
-            if archivo_nuevo:
-                escritor.writeheader()
-
-            escritor.writerows(ventana)
-
-        # ---------------------------------------------
-        # CONTAR VENTANA
-        # ---------------------------------------------
-
-        _estado_grabacion_prueba_2["ventanas"] += 1
-
-        numero_ventana = _estado_grabacion_prueba_2["ventanas"]
-
+    if len(ventana_50hz) != 128:
         print(
-            f"Ventana {numero_ventana}/"
-            f"{_estado_grabacion_prueba_2['total_ventanas']} "
-            f"guardada: 128 muestras"
+            "[PRUEBA 2] Ventana descartada: "
+            "no cubre suficiente tiempo para obtener "
+            "128 muestras a 50 Hz."
+        )
+        return
+
+    # =================================================
+    # GUARDAR VENTANA
+    # =================================================
+
+    archivo_nuevo = not ARCHIVO_GRABACION_PRUEBA_2.exists()
+
+    with open(
+        ARCHIVO_GRABACION_PRUEBA_2,
+        "a",
+        newline="",
+        encoding="utf-8"
+    ) as f:
+
+        escritor = csv.DictWriter(
+            f,
+            fieldnames=[
+                "timestamp",
+                "ax", "ay", "az",
+                "gx", "gy", "gz"
+            ]
         )
 
-        # ---------------------------------------------
-        # TERMINAR AL COMPLETAR LAS 5 VENTANAS
-        # ---------------------------------------------
+        if archivo_nuevo:
+            escritor.writeheader()
 
-        if (
-            numero_ventana
-            >= _estado_grabacion_prueba_2["total_ventanas"]
-        ):
-            finalizar_grabacion_prueba_2()
-            break
+        escritor.writerows(ventana_50hz)
+
+    # =================================================
+    # CONTAR VENTANA
+    # =================================================
+
+    _estado_grabacion_prueba_2["ventanas"] += 1
+
+    numero_ventana = _estado_grabacion_prueba_2["ventanas"]
+
+    print(
+        f"Ventana {numero_ventana}/"
+        f"{_estado_grabacion_prueba_2['total_ventanas']} "
+        f"guardada: 128 muestras a 50 Hz"
+    )
+
+    # =================================================
+    # TERMINAR AL COMPLETAR LAS 5 VENTANAS
+    # =================================================
+
+    if (
+        numero_ventana
+        >= _estado_grabacion_prueba_2["total_ventanas"]
+    ):
+        finalizar_grabacion_prueba_2()
 
 
 class APIRequestHandler(SimpleHTTPRequestHandler):
@@ -470,14 +555,9 @@ class APIRequestHandler(SimpleHTTPRequestHandler):
             return
 
         if ruta == "/api/prueba_2/estado":
-            ahora_ms = time.time() * 1000.0
-            ultimo_dato = float(_estado_prueba_2.get("timestamp", 0) or 0)
-
-            # El teléfono se considera conectado si envió un dato
-            # durante los últimos 3 segundos.
             conectado = (
-                bool(_estado_prueba_2["conectado"])
-                and (ahora_ms - ultimo_dato) < 3000
+                _ultimo_contacto_prueba_2 > 0
+                and (time.time() - _ultimo_contacto_prueba_2) < 3.0
             )
 
             estado = {

@@ -1,10 +1,20 @@
 from pathlib import Path
+import sys
 
 import joblib
 import numpy as np
 from tensorflow.keras.models import load_model
 
+# Permite ejecutar:
+#   python api/services/test_2.py
+# desde la raíz del proyecto.
+ROOT_DIR = Path(__file__).resolve().parents[2]
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
 from api.models.base_predictor import BasePredictor
+from api.services.uci_har_recovery import HARConverter
+
 
 ACTIVIDADES = {
     1: "Walking",
@@ -17,30 +27,28 @@ ACTIVIDADES = {
 
 
 class ActividadPredictor(BasePredictor):
-    
-    # Predictor para la prueba 2: UCI HAR.
+    """Predictor para UCI HAR usando 561 características."""
 
+    def __init__(self, model_dir=None):
+        if model_dir is None:
+            model_dir = ROOT_DIR / "data" / "modelos"
 
-    def __init__(self, model_dir):
         super().__init__(Path(model_dir))
-        self.load_models()
 
     def load_models(self):
         cnn_path = self.model_dir / "test-2_cnn.keras"
         mlp_path = self.model_dir / "test-2_mlp.joblib"
 
-        faltantes = []
-
-        if not cnn_path.is_file():
-            faltantes.append(str(cnn_path))
-
-        if not mlp_path.is_file():
-            faltantes.append(str(mlp_path))
+        faltantes = [
+            str(p)
+            for p in (cnn_path, mlp_path)
+            if not p.is_file()
+        ]
 
         if faltantes:
             raise FileNotFoundError(
-                "No se encontraron los modelos de la prueba 2:\n"
-                + "\n".join(faltantes)
+                "No se encontraron los modelos de la prueba 2: "
+                + ", ".join(faltantes)
             )
 
         self.models = {
@@ -49,49 +57,34 @@ class ActividadPredictor(BasePredictor):
         }
 
     def preprocess(self, data):
-        
-        # Convierte los datos a numpy y verifica que tengan exactamente 561 características.
-
         X = np.asarray(data, dtype=np.float32)
 
         if X.ndim == 1:
             X = X.reshape(1, -1)
 
-        if X.ndim != 2:
+        if X.ndim != 2 or X.shape[1] != 561:
             raise ValueError(
-                f"Los datos deben tener 2 dimensiones. "
-                f"Forma recibida: {X.shape}"
-            )
-
-        if X.shape[1] != 561:
-            raise ValueError(
-                f"Se esperaban 561 caracteristicas, "
-                f"pero se recibieron {X.shape[1]}."
+                "Se esperaba una matriz de forma (n, 561); "
+                f"se recibió {X.shape}."
             )
 
         if not np.isfinite(X).all():
-            raise ValueError("Los datos contienen valores NaN o infinitos.")
+            raise ValueError(
+                "Los datos contienen valores NaN o infinitos."
+            )
 
         return X
 
-    def _adaptar_entrada_cnn(self, X):
-        
-        # Adapta X a la forma que espera la CNN.
-
-        model = self.models["CNN"]
-
+    @staticmethod
+    def _adaptar_entrada_cnn(model, X):
+        """Adapta las 561 variables a la forma de entrada de Keras."""
         input_shape = model.input_shape
 
-        # Algunas redes pueden devolver una lista de entradas.
-
         if isinstance(input_shape, list):
-
             if len(input_shape) != 1:
                 raise ValueError(
-                    "La CNN tiene múltiples entradas y "
-                    "no es compatible con este predictor."
+                    "La CNN tiene múltiples entradas y no es compatible."
                 )
-
             input_shape = input_shape[0]
 
         if len(input_shape) == 2 and input_shape[-1] == 561:
@@ -103,16 +96,18 @@ class ActividadPredictor(BasePredictor):
         if len(input_shape) == 4 and input_shape[1:] == (561, 1, 1):
             return X.reshape(-1, 561, 1, 1)
 
-        raise ValueError(f"Forma de entrada de CNN no reconocida: {input_shape}")
+        raise ValueError(
+            f"Forma de entrada CNN no reconocida: {input_shape}."
+        )
 
     def predict(self, data):
-
         X = self.preprocess(data)
 
-
         # CNN
-
-        cnn_input = self._adaptar_entrada_cnn(X)
+        cnn_input = self._adaptar_entrada_cnn(
+            self.models["CNN"],
+            X
+        )
 
         cnn_output = np.asarray(
             self.models["CNN"].predict(
@@ -122,44 +117,111 @@ class ActividadPredictor(BasePredictor):
         )
 
         if cnn_output.ndim == 1:
-            pred_cnn = np.rint(cnn_output).astype(int)
+            pred_cnn = np.rint(
+                cnn_output
+            ).astype(int)
 
         elif cnn_output.shape[-1] == 1:
-            pred_cnn = np.rint(cnn_output.reshape(-1)).astype(int)
+            pred_cnn = np.rint(
+                cnn_output.reshape(-1)
+            ).astype(int)
 
         else:
-            pred_cnn = (np.argmax(cnn_output, axis=1) + 1)
-
+            pred_cnn = np.argmax(
+                cnn_output,
+                axis=1
+            ) + 1
 
         # MLP
-
-        pred_mlp = np.asarray(self.models["MLP"].predict(X)).reshape(-1).astype(int)
-
-        return {"CNN": pred_cnn.tolist(), "MLP": pred_mlp.tolist(),}
-
-    def evaluar(self, data, etiquetas):
-
-        X = self.preprocess(data)
-
-        y_real = np.asarray(etiquetas, dtype=int).reshape(-1)
-
-        if len(X) != len(y_real):
-            raise ValueError("La cantidad de muestras y etiquetas debe coincidir.")
-
-        predicciones = self.predict(X)
-
-        metricas = {}
-
-        for nombre, pred in predicciones.items():
-            metricas[nombre] = self.calcular_metricas(y_real, pred)
+        pred_mlp = np.asarray(
+            self.models["MLP"].predict(X)
+        ).reshape(-1).astype(int)
 
         return {
-            "etiquetas_reales": list(y_real),
-            "predicciones": predicciones,
-            "metricas": metricas
+            "CNN": pred_cnn.tolist(),
+            "MLP": pred_mlp.tolist(),
         }
 
     @staticmethod
     def nombre_actividad(etiqueta):
+        return ACTIVIDADES.get(
+            int(etiqueta),
+            f"Clase {etiqueta}"
+        )
 
-        return ACTIVIDADES.get(int(etiqueta),f"Clase {etiqueta}")
+
+def predecir_csv(ruta_csv):
+    """
+    Flujo completo:
+
+        CSV
+         ↓
+        HARConverter
+         ↓
+        (N, 561)
+         ↓
+        CNN + MLP
+         ↓
+        predicciones
+    """
+    converter = HARConverter(sampling_rate=50)
+
+    print("\n[1/3] Convirtiendo CSV a características UCI HAR...")
+
+    features = converter.transformar_csv(ruta_csv)
+
+    print(
+        f"      Características generadas: {features.shape}"
+    )
+
+    predictor = ActividadPredictor()
+
+    print("[2/3] Ejecutando modelos...")
+
+    predicciones = predictor.predict(features)
+
+    print("[3/3] Resultados:\n")
+
+    for i in range(len(features)):
+        print(f"Ventana {i + 1}:")
+
+        for modelo, valores in predicciones.items():
+            etiqueta = valores[i]
+            actividad = predictor.nombre_actividad(etiqueta)
+
+            print(
+                f"  {modelo}: {etiqueta} -> {actividad}"
+            )
+
+        print()
+
+    return features, predicciones
+
+
+def main():
+    if len(sys.argv) >= 2:
+        ruta_csv = Path(sys.argv[1])
+    else:
+        ruta_csv = Path(
+            input("Ruta del CSV a predecir: ").strip()
+        )
+
+    if not ruta_csv.is_file():
+        print(
+            f"\nError: no existe el archivo:\n{ruta_csv}"
+        )
+        sys.exit(1)
+
+    try:
+        predecir_csv(ruta_csv)
+
+    except Exception as error:
+        print(
+            "\nERROR durante la predicción:"
+        )
+        print(f"  {type(error).__name__}: {error}")
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
