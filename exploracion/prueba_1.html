@@ -3,10 +3,11 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Prueba 1 · Dibujos de Gato y Perro</title>
+        <title>Prueba 1 · Reconocimiento en Tiempo Real: Gato vs. Perro</title>
 
         <link rel="icon" type="image/png" href="../assets/icons/logo.png">
         <link rel="stylesheet" href="../css/style.css">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
     </head>
 
     <body>
@@ -14,10 +15,10 @@
             <button onclick="location.href='pruebas.html'" class="btn">
                 ← Volver a selección de pruebas
             </button>
-            <p class="eyebrow" style="margin-top: 16px;">Prueba interactiva · Imágenes (28 × 28 px)</p>
-            <h1>Prueba 1: Gato vs. Perro</h1>
+            <p class="eyebrow" style="margin-top: 16px;">Prueba interactiva · Cámara en Tiempo Real (Physical Viz Toolkit) y Lienzo (28 × 28 px)</p>
+            <h1>Prueba 1: Gato vs. Perro en Tiempo Real</h1>
             <p class="mensaje">
-                Dibuja un <strong>gato</strong> o un <strong>perro</strong> en el recuadro, indica qué dibujaste y guarda <strong>al menos 5 dibujos</strong>. Los modelos (<strong>CNN</strong> y <strong>MLP</strong>) solo verán los píxeles de tu dibujo para predecirlo, y al final se comparará su predicción con tu etiqueta para calcular su rendimiento general.
+                Usa la <strong>cámara de tu teléfono como sensor</strong> (o la cámara de este dispositivo) para mostrar el dibujo en papel de un <strong>gato</strong> o un <strong>perro</strong>, o dibújalo en el lienzo. Los modelos (<strong>CNN</strong> y <strong>MLP</strong>) interpretarán los trazos en <strong>tiempo real</strong> indicando qué animal ven y su nivel de confianza, y podrás guardar <strong>al menos 5 muestras</strong> para evaluar su rendimiento general.
             </p>
         </header>
 
@@ -25,19 +26,204 @@
             <section class="panel" aria-labelledby="titulo-area-dibujo">
                 <div class="panel-cabecera">
                     <div>
-                        <h2 id="titulo-area-dibujo">1. Dibuja y guarda tu imagen</h2>
-                        <p class="ayuda">Realiza tu dibujo en el lienzo, selecciona qué animal dibujaste y presiona «Guardar imagen».</p>
+                        <h2 id="titulo-area-dibujo">1. Captura o dibuja un Gato o Perro</h2>
+                        <p class="ayuda">Elige usar la cámara en tiempo real (teléfono como sensor o cámara local) o dibujar directamente en el lienzo.</p>
                     </div>
-                    <span id="contador-guardados" class="insignia-contador">0 / 5 imágenes mínimas</span>
+                    <div class="estado-cabecera-derecha">
+                        <span id="insignia-fuente-activa" class="insignia-sensor">📱 Modo Cámara Activo</span>
+                        <span id="contador-guardados" class="insignia-contador">0 / 5 imágenes mínimas</span>
+                    </div>
                 </div>
 
-                <div class="zona-dibujo">
-                    <canvas id="canvas-dibujo" width="280" height="280"></canvas>
+                <!-- Pestañas de modo: Cámara en Tiempo Real vs Lienzo -->
+                <div class="selector-modo-entrada" role="tablist" aria-label="Modo de entrada del dibujo">
+                    <button type="button" id="tab-modo-camara" class="btn-modo-entrada activo" role="tab" aria-selected="true">
+                        📱 Cámara en Tiempo Real (Teléfono / Sensor)
+                    </button>
+                    <button type="button" id="tab-modo-lienzo" class="btn-modo-entrada" role="tab" aria-selected="false">
+                        ✏️ Dibujar en Lienzo
+                    </button>
                 </div>
 
-                <div class="controles-prueba">
-                    <div class="grupo-etiquetas" role="group" aria-label="Seleccionar qué animal dibujaste">
-                        <span class="etiqueta-titulo">¿Qué dibujaste?:</span>
+                <!-- Panel desplegable para conectar el teléfono mediante QR (Protobject / WiFi Local) -->
+                <div id="tarjeta-conexion-qr" class="tarjeta-qr-sensor">
+                    <div class="qr-columna-info">
+                        <div class="qr-titulo-fila">
+                            <span id="punto-conexion-remota" class="punto-sensor desconectado"></span>
+                            <strong id="estado-conexion-remota">Conecta tu teléfono como sensor de cámara</strong>
+                        </div>
+                        <p class="ayuda" style="margin: 4px 0 8px;">
+                            Escanea el código QR con tu teléfono (en la misma red WiFi) para abrir el sensor móvil y apuntar a tus dibujos en papel. Si el navegador móvil muestra advertencia de certificado local HTTPS, pulsa <em>«Opciones avanzadas → Continuar»</em> para habilitar el video continuo.
+                        </p>
+                        <div class="enlaces-sensor-movil">
+                            <a id="enlace-sensor-https" href="sensor_camara.html" target="_blank" rel="noopener" class="codigo-url-sensor">
+                                Cargando dirección local del sensor...
+                            </a>
+                            <button type="button" id="btn-copiar-url-sensor" class="btn btn-pequeno">
+                                📋 Copiar enlace
+                            </button>
+                            <button type="button" id="btn-abrir-protobject" class="btn btn-pequeno">
+                                🔗 QR Protobject WebRTC
+                            </button>
+                        </div>
+                    </div>
+                    <div class="qr-columna-imagen">
+                        <img id="img-qr-sensor" alt="Código QR para conectar cámara del teléfono" width="136" height="136">
+                        <small>Escanear con el teléfono</small>
+                    </div>
+                </div>
+
+                <!-- Grilla principal: Entrada (Cámara o Lienzo) + Interpretación en Tiempo Real -->
+                <div class="grilla-tiempo-real">
+                    <!-- Columna izquierda: Entrada visual -->
+                    <div class="columna-entrada">
+                        <!-- Vista Modo Cámara -->
+                        <div id="contenedor-modo-camara" class="bloque-modo-camara">
+                            <div class="botones-fuente-camara">
+                                <button type="button" id="btn-toggle-qr" class="btn">
+                                    📲 Ocultar / Ver QR del teléfono
+                                </button>
+                                <button type="button" id="btn-camara-local" class="btn">
+                                    🎥 Usar cámara de este dispositivo
+                                </button>
+                                <button type="button" id="btn-cambiar-camara-local" class="btn" hidden>
+                                    🔄 Cambiar lente
+                                </button>
+                                <button type="button" id="btn-congelar-local" class="btn" hidden>
+                                    ⏸️ Congelar
+                                </button>
+                                <button type="button" id="btn-subir-foto-local" class="btn">
+                                    📷 Subir / Tomar foto
+                                </button>
+                                <input type="file" id="input-foto-local" accept="image/*" capture="environment" hidden>
+                            </div>
+
+                            <div class="visores-camara-grid">
+                                <!-- Visor de cámara local / estado del sensor remoto -->
+                                <div class="visor-principal-camara">
+                                    <video id="video-local" autoplay playsinline muted hidden></video>
+                                    <img id="img-foto-local" alt="Foto de dibujo cargada" hidden>
+                                    <div id="overlay-recuadro-local" class="guia-recuadro-local" hidden>
+                                        <span>Centra el dibujo aquí</span>
+                                    </div>
+                                    <div id="placeholder-sensor-remoto" class="placeholder-sensor">
+                                        <div class="icono-grande-sensor">📱</div>
+                                        <strong id="titulo-placeholder-sensor">Esperando señal de la cámara...</strong>
+                                        <p id="subtitulo-placeholder-sensor">
+                                            Escanea el código QR con tu teléfono para enviar video en vivo, o presiona <strong>«🎥 Usar cámara de este dispositivo»</strong> / <strong>«📷 Subir / Tomar foto»</strong>.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <!-- Visor 28x28 en vivo (lo que ven las redes neuronales) -->
+                                <div class="visor-28x28-vivo">
+                                    <span class="etiqueta-visor-28">Entrada IA (28 × 28 px)</span>
+                                    <canvas id="canvas-vista-28" width="28" height="28"></canvas>
+                                    <small id="estado-deteccion-trazo" class="estado-trazo">Sin trazos detectados</small>
+                                </div>
+                            </div>
+
+                            <!-- Controles de umbral adaptativo para cámara local / foto -->
+                            <div id="controles-umbral-local" class="barra-ajuste-camara">
+                                <label for="slider-umbral-local">
+                                    <span>Contraste del trazo en papel: <strong id="valor-umbral-local">18</strong></span>
+                                </label>
+                                <input type="range" id="slider-umbral-local" min="6" max="48" value="18">
+                                <button type="button" id="btn-calibrar-local" class="btn btn-pequeno" title="Compensa sombras del papel blanco">
+                                    ☀️ Calibrar papel
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Vista Modo Lienzo Tradicional -->
+                        <div id="contenedor-modo-lienzo" class="bloque-modo-lienzo" hidden>
+                            <div class="zona-dibujo">
+                                <canvas id="canvas-dibujo" width="280" height="280"></canvas>
+                            </div>
+                            <p class="ayuda" style="text-align: center; margin-top: 8px;">
+                                Mientras dibujas en el recuadro, los modelos <strong>CNN</strong> y <strong>MLP</strong> actualizan su predicción en tiempo real a la derecha.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Columna derecha: Interpretación en Tiempo Real (CNN vs MLP) -->
+                    <div class="columna-prediccion-viva" aria-live="polite">
+                        <div class="cabecera-prediccion-viva">
+                            <div>
+                                <h3>Interpretación en Tiempo Real</h3>
+                                <p class="ayuda">Respuesta instantánea de cada red neuronal al dibujo actual.</p>
+                            </div>
+                            <button type="button" id="btn-audio-tiempo-real" class="btn btn-pequeno" aria-pressed="false">
+                                🔇 Audio / Voz: Off
+                            </button>
+                        </div>
+
+                        <!-- Banner de veredicto combinado -->
+                        <div id="banner-veredicto-vivo" class="banner-veredicto esperando">
+                            <span id="icono-veredicto-vivo" class="icono-veredicto">🔍</span>
+                            <div>
+                                <strong id="titulo-veredicto-vivo">Mostrando espera de dibujo...</strong>
+                                <p id="detalle-veredicto-vivo">Muestra un dibujo frente a la cámara o traza en el lienzo para ver si es un gato o un perro.</p>
+                            </div>
+                        </div>
+
+                        <!-- Tarjetas en vivo por modelo -->
+                        <div class="tarjetas-vivo-modelos">
+                            <!-- Tarjeta CNN -->
+                            <article class="tarjeta-vivo-modelo" id="tarjeta-vivo-cnn">
+                                <div class="cabecera-vivo-modelo">
+                                    <span class="nombre-vivo-modelo">
+                                        <span class="muestra-modelo" style="background:#2a78d6"></span>
+                                        Red Convolucional (CNN)
+                                    </span>
+                                    <span id="confianza-vivo-cnn" class="badge-confianza">—</span>
+                                </div>
+                                <div class="cuerpo-vivo-modelo">
+                                    <img id="img-animal-cnn" src="../assets/images/gato.svg" alt="" class="icono-animal-vivo" hidden>
+                                    <span id="etiqueta-vivo-cnn" class="etiqueta-animal-vivo">Esperando dibujo…</span>
+                                </div>
+                                <div class="medidor-dual">
+                                    <div class="medidor-etiquetas">
+                                        <span>🐱 Gato (<span id="prob-gato-cnn">50%</span>)</span>
+                                        <span>🐶 Perro (<span id="prob-perro-cnn">50%</span>)</span>
+                                    </div>
+                                    <div class="barra-dual-fondo">
+                                        <div id="barra-perro-cnn" class="barra-dual-relleno" style="width: 50%; background: #2a78d6;"></div>
+                                    </div>
+                                </div>
+                            </article>
+
+                            <!-- Tarjeta MLP -->
+                            <article class="tarjeta-vivo-modelo" id="tarjeta-vivo-mlp">
+                                <div class="cabecera-vivo-modelo">
+                                    <span class="nombre-vivo-modelo">
+                                        <span class="muestra-modelo" style="background:#1baf7a"></span>
+                                        Perceptrón Multicapa (MLP)
+                                    </span>
+                                    <span id="confianza-vivo-mlp" class="badge-confianza">—</span>
+                                </div>
+                                <div class="cuerpo-vivo-modelo">
+                                    <img id="img-animal-mlp" src="../assets/images/perro.svg" alt="" class="icono-animal-vivo" hidden>
+                                    <span id="etiqueta-vivo-mlp" class="etiqueta-animal-vivo">Esperando dibujo…</span>
+                                </div>
+                                <div class="medidor-dual">
+                                    <div class="medidor-etiquetas">
+                                        <span>🐱 Gato (<span id="prob-gato-mlp">50%</span>)</span>
+                                        <span>🐶 Perro (<span id="prob-perro-mlp">50%</span>)</span>
+                                    </div>
+                                    <div class="barra-dual-fondo">
+                                        <div id="barra-perro-mlp" class="barra-dual-relleno" style="width: 50%; background: #1baf7a;"></div>
+                                    </div>
+                                </div>
+                            </article>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Controles para etiquetar y guardar en la evaluación de 5+ dibujos -->
+                <div class="controles-prueba" style="margin-top: 20px;">
+                    <div class="grupo-etiquetas" role="group" aria-label="Seleccionar qué animal es realmente">
+                        <span class="etiqueta-titulo">¿Qué animal es realmente tu dibujo?:</span>
                         <div class="botones-etiqueta">
                             <button type="button" id="btn-etiqueta-gato" class="btn btn-etiqueta" data-etiqueta="0">
                                 <img src="../assets/images/gato.svg" alt="" class="icono-etiqueta">
@@ -52,13 +238,13 @@
 
                     <div class="botones-accion">
                         <button type="button" id="btn-limpiar" class="btn">
-                            Limpiar dibujo
+                            Limpiar / Reiniciar vista
                         </button>
                         <button type="button" id="btn-guardar" class="btn btn-primario">
-                            Guardar imagen
+                            📸 Guardar imagen en la prueba
                         </button>
                         <button type="button" id="btn-predecir" class="btn btn-primario" disabled>
-                            Predecir con modelos (0/5)
+                            Evaluar lote con modelos (0/5)
                         </button>
                     </div>
 
@@ -70,7 +256,7 @@
                 <div class="panel-cabecera">
                     <div>
                         <h2 id="titulo-guardados">2. Imágenes y etiquetas guardadas</h2>
-                        <p class="ayuda">Vista previa en 28 × 28 píxeles tal como se enviarán a la API de Python.</p>
+                        <p class="ayuda">Vista previa en 28 × 28 píxeles capturadas desde la cámara o el lienzo para la evaluación general.</p>
                     </div>
                     <button type="button" id="btn-vaciar" class="btn" disabled>
                         Vaciar lista
@@ -78,15 +264,15 @@
                 </div>
 
                 <div id="lista-guardados" class="galeria-guardados">
-                    <p class="texto-vacio">Aún no has guardado ningún dibujo. Guarda al menos 5 para habilitar la predicción.</p>
+                    <p class="texto-vacio">Aún no has guardado ningún dibujo. Puedes capturarlos con la cámara o dibujarlos en el lienzo (mínimo 5 para la evaluación completa).</p>
                 </div>
             </section>
 
             <section id="panel-resultados" class="panel" aria-labelledby="titulo-resultados" hidden>
                 <div class="panel-cabecera">
                     <div>
-                        <h2 id="titulo-resultados">3. Resultados de la prueba</h2>
-                        <p class="ayuda">Predicciones de cada modelo sobre tus dibujos y su rendimiento general entregado por la API.</p>
+                        <h2 id="titulo-resultados">3. Resultados de la evaluación por lote</h2>
+                        <p class="ayuda">Comparación de las predicciones de cada modelo sobre tus dibujos guardados y sus métricas globales.</p>
                     </div>
                     <button type="button" id="btn-nueva-prueba" class="btn">
                         Nueva prueba
@@ -118,6 +304,9 @@
             </section>
         </main>
 
+        <script src="../js/modelos_audio.js"></script>
+        <script src="https://app.protobject.com/framework/p.js"></script>
+        <script src="config.js"></script>
         <script src="../js/dibujos.js"></script>
     </body>
 </html>
