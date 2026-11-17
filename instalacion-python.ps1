@@ -153,9 +153,19 @@ foreach ($Candidato in $Candidatos) {
 
     Write-Host "`nVerificando bibliotecas..."
 
-    & $VenvPython -c "import tensorflow, keras, sklearn, fastapi; print('TensorFlow:', tensorflow.__version__); print('Keras:', keras.__version__); print('Scikit-learn:', sklearn.__version__); print('FastAPI:', fastapi.__version__)"
+    # TensorFlow escribe avisos informativos en stderr (oneDNN, absl). Con
+    # ErrorActionPreference = "Stop", PowerShell 5.1 los trataría como errores
+    # fatales; se silencian y se confia solo en el codigo de salida.
+    $env:TF_CPP_MIN_LOG_LEVEL = "3"
+    $env:TF_ENABLE_ONEDNN_OPTS = "0"
+    $PreferenciaAnterior = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
 
-    if ($LASTEXITCODE -ne 0) {
+    & $VenvPython -c "import tensorflow, keras, sklearn, fastapi; print('TensorFlow:', tensorflow.__version__); print('Keras:', keras.__version__); print('Scikit-learn:', sklearn.__version__); print('FastAPI:', fastapi.__version__)"
+    $CodigoVerificacion = $LASTEXITCODE
+    $ErrorActionPreference = $PreferenciaAnterior
+
+    if ($CodigoVerificacion -ne 0) {
         Write-Host "La verificacion de bibliotecas fallo."
 
         if ($Candidato.Existente) {

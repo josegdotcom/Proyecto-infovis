@@ -102,7 +102,17 @@ let pixelesActuales = new Array(784).fill(0);
 let hayDibujoActual = false;
 let ultimasPrediccionesVivas = null;
 let ultimoTimestampRemoto = 0;
-let ultimoIdCapturaRemota = 0;
+let ultimoIdCapturaRemota = null; // null = aún no sincronizado con el servidor
+// IDs de capturas ya guardadas: el teléfono envía cada captura por Protobject
+// y por la API local; así se guarda una sola vez aunque lleguen por ambos.
+const capturasRecibidas = new Set();
+
+function registrarCapturaNueva(idCaptura) {
+    if (idCaptura === undefined || idCaptura === null) return true;
+    if (capturasRecibidas.has(idCaptura)) return false;
+    capturasRecibidas.add(idCaptura);
+    return true;
+}
 let streamLocal = null;
 let usandoCamaraFrontalLocal = false;
 let camaraLocalCongelada = false;
@@ -167,20 +177,36 @@ btnToggleQr.addEventListener("click", () => {
 // 2. Configuración de QR y enlace para conectar el teléfono
 // ---------------------------------------------------------------
 
-async function inicializarConexionSensorMovil() {
-    let urlSensor = new URL("sensor_camara.html", window.location.href).href;
+function esOrigenLocal(hostname) {
+    return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1" || hostname === "[::1]";
+}
 
-    try {
-        const resp = await fetch("/api/info");
-        if (resp.ok) {
-            const info = await resp.json();
-            if (info.ip_local) {
-                const puertoHttps = info.puerto_https || 8443;
-                urlSensor = `https://${info.ip_local}:${puertoHttps}/exploracion/sensor_camara.html`;
+async function inicializarConexionSensorMovil() {
+    // location.search conserva el ?ptjuid=... que Protobject necesita para emparejar
+    // el teléfono con esta pantalla (ver exploracion/config.js).
+    const urlMismoOrigen = new URL("sensor_camara.html", window.location.href);
+    urlMismoOrigen.search = window.location.search;
+    let urlSensor = urlMismoOrigen.href;
+
+    // Si la pantalla está en localhost, el teléfono no puede abrir esa dirección:
+    // se le entrega la IP de la red local por HTTPS (requerido para usar la cámara).
+    // En ese caso la conexión va por el puente de Python, no por WebRTC.
+    if (esOrigenLocal(window.location.hostname)) {
+        try {
+            const resp = await fetch("/api/info");
+            if (resp.ok) {
+                const info = await resp.json();
+                if (info.ip_local) {
+                    const protocolo = info.puerto_https ? "https" : "http";
+                    const puerto = info.puerto_https || info.puerto_http || window.location.port;
+                    const urlLan = new URL(`${protocolo}://${info.ip_local}:${puerto}/exploracion/sensor_camara.html`);
+                    urlLan.search = window.location.search;
+                    urlSensor = urlLan.href;
+                }
             }
+        } catch (e) {
+            // Sin backend local: se mantiene la URL del mismo origen.
         }
-    } catch (e) {
-        // Si se ejecuta en GitHub Pages o sin backend local, usar URL relativa actual
     }
 
     enlaceSensorHttps.href = urlSensor;
@@ -196,11 +222,24 @@ async function inicializarConexionSensorMovil() {
         }
     });
 
-    btnAbrirProtobject.addEventListener("click", () => {
-        if (typeof Protobject !== "undefined" && Protobject.Core && Protobject.Core.connect) {
-            Protobject.Core.connect();
+    // Protobject no expone un método "connect": la página principal escucha sola
+    // y agrega un botón "+" que muestra su propio QR. Este botón lo abre.
+    btnAbrirProtobject.addEventListener("click", (evento) => {
+        const botonProtobject = document.getElementById("ProtobjectPlusButton");
+        if (botonProtobject) {
+            evento.stopPropagation();
+            botonProtobject.click();
+            if (esOrigenLocal(window.location.hostname)) {
+                mostrarMensaje(
+                    "El QR de Protobject apunta a localhost y el teléfono no puede abrirlo. Usa el QR de esta tarjeta, o abre esta página con la IP de la red local.",
+                    "info"
+                );
+            }
         } else {
-            mostrarMensaje("Protobject está listo. Escanea el código QR mostrado en pantalla.", "info");
+            mostrarMensaje(
+                "Protobject no se cargó (¿sin internet?). El teléfono igual se conecta por el puente local usando el QR de esta tarjeta.",
+                "info"
+            );
         }
     });
 }
@@ -822,7 +861,12 @@ if (typeof Protobject !== "undefined" && Protobject.Core && Protobject.Core.onRe
             actualizarPanelTiempoReal(null, false);
         }
 
-        if (mensaje.capturar && hayDibujoActual && (mensaje.etiqueta === 0 || mensaje.etiqueta === 1)) {
+        if (
+            mensaje.capturar &&
+            hayDibujoActual &&
+            (mensaje.etiqueta === 0 || mensaje.etiqueta === 1) &&
+            registrarCapturaNueva(mensaje.id_captura)
+        ) {
             guardarMuestraEnLista(pixelesActuales, Number(mensaje.etiqueta), "Captura desde teléfono");
         }
     });
@@ -849,18 +893,27 @@ async function sincronizarEstadoCamaraRemota() {
             actualizarPanelTiempoReal(estado.predicciones, hayDibujoActual);
         }
 
+        // Primera sincronización: ignorar capturas hechas antes de abrir esta página.
+        if (ultimoIdCapturaRemota === null) {
+            ultimoIdCapturaRemota = estado.captura_seq || 0;
+            return;
+        }
+
+        const captura = estado.ultima_captura;
         if (
-            estado.solicitud_captura &&
-            estado.solicitud_captura > ultimoIdCapturaRemota &&
-            estado.tiene_dibujo &&
-            (estado.etiqueta_captura === 0 || estado.etiqueta_captura === 1)
+            captura &&
+            estado.captura_seq > ultimoIdCapturaRemota &&
+            (captura.etiqueta === 0 || captura.etiqueta === 1)
         ) {
-            ultimoIdCapturaRemota = estado.solicitud_captura;
-            guardarMuestraEnLista(
-                estado.pixeles,
-                Number(estado.etiqueta_captura),
-                "Captura desde teléfono"
-            );
+            ultimoIdCapturaRemota = estado.captura_seq;
+            // Se usan los píxeles de la captura (no los del último frame en vivo).
+            if (registrarCapturaNueva(captura.id_captura)) {
+                guardarMuestraEnLista(
+                    captura.pixeles,
+                    Number(captura.etiqueta),
+                    "Captura desde teléfono"
+                );
+            }
         }
     } catch (e) {
         // Sin servidor local activo

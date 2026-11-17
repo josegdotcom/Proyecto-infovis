@@ -41,11 +41,16 @@ deactivate
 Una vez dentro del entorno y en la carpeta raiz
 ```bash
 python -m api.main
-
-python -m http.server 8000
 ```
 
-Abrir `http://localhost:8000`. También es posible usar cualquier servidor estático, como Live Server.
+Este único comando levanta la API **y** sirve las páginas (no hace falta `python -m http.server`, y ambos usarían el puerto 8000). Abrir `http://localhost:8000`.
+
+- **Prueba 1 (dibujos):** `http://localhost:8000/exploracion/prueba_1.html`.
+- **Cámara del teléfono:** el teléfono debe estar en la misma red WiFi. Escanea el QR de la Prueba 1 y acepta la advertencia del certificado local (*Opciones avanzadas → Continuar*). La cámara necesita HTTPS: el servidor abre el puerto 8443 con un certificado autofirmado creado con `openssl` (viene con Git para Windows).
+- **Protobject (WebRTC):** solo empareja páginas del mismo origen y con el mismo `?ptjuid=`. Si la pantalla se abre en `localhost`, el teléfono se conecta por el puente local de Python, que funciona igual. Para usar también WebRTC, abre la pantalla en la dirección `https://<IP>:8443/exploracion/prueba_1.html` que imprime el servidor.
+- Si Windows pregunta, permite el acceso de Python a **redes privadas** en el firewall; si no, el teléfono no llegará al servidor.
+
+Las páginas que no usan modelos (`index.html`, la galería) también funcionan con cualquier servidor estático, como Live Server.
 
 
 ## Publicar en GitHub Pages

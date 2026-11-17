@@ -760,7 +760,12 @@
                             pixeles,
                             tiene_dibujo: tieneDibujo,
                             capturar,
-                            etiqueta: etiquetaRemota
+                            etiqueta: etiquetaRemota,
+                            // Mismo ID por ambos canales (Protobject y API) para que
+                            // la pantalla principal guarde la captura una sola vez.
+                            id_captura: capturar
+                                ? `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+                                : null
                         };
 
                         // 1. Enviar por Protobject (WebRTC) si está disponible

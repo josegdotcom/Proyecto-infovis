@@ -1,4 +1,5 @@
 import json
+import os
 import shutil
 import socket
 import ssl
@@ -214,6 +215,7 @@ def procesar_frame_camara(payload):
                 "timestamp": ahora,
                 "pixeles": pixeles_limpios,
                 "etiqueta": None if etiqueta is None else int(etiqueta),
+                "id_captura": payload.get("id_captura"),
                 "modelos": modelos_res,
             }
 
@@ -721,6 +723,10 @@ def _generar_certificado_https(ip_local):
     )
 
     if not openssl_bin:
+        print(
+            "[HTTPS] No se encontró openssl (instala Git para Windows); "
+            "la cámara del teléfono no funcionará sin HTTPS."
+        )
         return None
 
     cert_dir = Path(tempfile.gettempdir()) / "infovis_camara_ssl"
@@ -750,15 +756,40 @@ def _generar_certificado_https(ip_local):
         f"subjectAltName=IP:{ip_local},IP:127.0.0.1,DNS:localhost",
     ]
 
+    # Algunos programas (p. ej. PostgreSQL/psqlODBC) dejan OPENSSL_CONF
+    # apuntando a un archivo que no existe y openssl falla al leerlo.
+    # Se usa la configuración que trae el propio openssl (la de Git) o ninguna.
+    entorno = os.environ.copy()
+    conf_actual = entorno.get("OPENSSL_CONF")
+    if conf_actual and not Path(conf_actual).is_file():
+        entorno.pop("OPENSSL_CONF", None)
+        raiz_git = Path(openssl_bin).resolve().parents[2]
+        for conf in (
+            raiz_git / "usr" / "ssl" / "openssl.cnf",
+            raiz_git / "mingw64" / "etc" / "ssl" / "openssl.cnf",
+            raiz_git / "mingw64" / "ssl" / "openssl.cnf",
+        ):
+            if conf.is_file():
+                entorno["OPENSSL_CONF"] = str(conf)
+                break
+
     try:
         subprocess.run(
             cmd,
             check=True,
             stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
+            stderr=subprocess.PIPE,
+            env=entorno
         )
         return cert_file, key_file
-    except Exception:
+    except Exception as err:
+        detalle = getattr(err, "stderr", b"") or b""
+        if isinstance(detalle, bytes):
+            detalle = detalle.decode("utf-8", errors="replace")
+        print(
+            "[HTTPS] No se pudo generar el certificado local; la cámara del "
+            f"teléfono no funcionará sin HTTPS.\n        {detalle.strip()[:300] or err}"
+        )
         return None
 
 
@@ -827,6 +858,11 @@ def iniciar_servidor(host="0.0.0.0", port=8000):
             "Sensor de cámara para teléfono (WiFi): "
             f"https://{ip_local}:{_puerto_https_activo}"
             "/exploracion/sensor_camara.html"
+        )
+        print(
+            "Para usar también Protobject (WebRTC), abre la pantalla en: "
+            f"https://{ip_local}:{_puerto_https_activo}"
+            "/exploracion/prueba_1.html y escanea su QR"
         )
     else:
         print(
