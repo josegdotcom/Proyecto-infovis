@@ -304,6 +304,31 @@
             </section>
         </main>
 
+        <!-- Visor ampliado de un dibujo guardado (se abre al hacer clic en su miniatura) -->
+        <dialog id="visor-dibujo" class="visor-dibujo" aria-labelledby="visor-titulo">
+            <div class="visor-cabecera">
+                <h2 id="visor-titulo">Dibujo</h2>
+                <button type="button" id="btn-cerrar-visor" class="btn-cerrar-visor" aria-label="Cerrar visor">×</button>
+            </div>
+            <div class="visor-cuerpo">
+                <figure id="visor-figura-original" class="visor-figura">
+                    <img id="visor-img-original" alt="">
+                    <figcaption>Dibujo original</figcaption>
+                </figure>
+                <figure class="visor-figura">
+                    <canvas id="visor-canvas-28" width="28" height="28" role="img"
+                        aria-label="Imagen de 28 por 28 píxeles que recibe el modelo"></canvas>
+                    <figcaption>Lo que ve el modelo (28 × 28 px)</figcaption>
+                </figure>
+            </div>
+            <p id="visor-predicciones" class="visor-predicciones"></p>
+            <div class="visor-navegacion">
+                <button type="button" id="btn-visor-anterior" class="btn">← Anterior</button>
+                <span id="visor-posicion" class="visor-posicion"></span>
+                <button type="button" id="btn-visor-siguiente" class="btn">Siguiente →</button>
+            </div>
+        </dialog>
+
         <script src="../js/modelos_audio.js"></script>
         <script src="https://app.protobject.com/framework/p.js"></script>
         <script src="config.js"></script>

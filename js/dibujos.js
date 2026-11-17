@@ -325,6 +325,43 @@ function extraerPixeles28x28() {
 }
 
 // Umbral adaptativo local desde cámara o foto en papel -> 28x28 centrado
+// Fracción central del cuadro de la cámara que se analiza (el recuadro guía).
+const RECORTE_CAMARA = 0.74;
+// Lado en píxeles de la imagen original que se guarda para el visor ampliado.
+const LADO_IMAGEN_ORIGINAL = 320;
+
+// Devuelve un JPEG (data URL) del dibujo tal como se ve, para mostrarlo en grande.
+// Usa el mismo recorte que el modelo, así el visor muestra exactamente lo analizado.
+function capturarImagenOriginal() {
+    try {
+        const L = LADO_IMAGEN_ORIGINAL;
+        const lienzo = document.createElement("canvas");
+        lienzo.width = L;
+        lienzo.height = L;
+        const g = lienzo.getContext("2d");
+        g.fillStyle = "#ffffff";
+        g.fillRect(0, 0, L, L);
+
+        if (modoEntrada === "lienzo") {
+            g.drawImage(canvas, 0, 0, L, L);
+        } else if (fuenteCamara === "local" || fuenteCamara === "foto") {
+            const esFoto = fuenteCamara === "foto";
+            const fuente = esFoto ? imgFotoLocal : videoLocal;
+            const vw = esFoto ? imgFotoLocal.naturalWidth : videoLocal.videoWidth;
+            const vh = esFoto ? imgFotoLocal.naturalHeight : videoLocal.videoHeight;
+            if (!vw || !vh) return null;
+            const lado = Math.min(vw, vh) * RECORTE_CAMARA;
+            g.drawImage(fuente, (vw - lado) / 2, (vh - lado) / 2, lado, lado, 0, 0, L, L);
+        } else {
+            return null; // La cámara del teléfono envía su propia imagen original.
+        }
+
+        return lienzo.toDataURL("image/jpeg", 0.85);
+    } catch (e) {
+        return null;
+    }
+}
+
 function extraer28x28DesdeCamaraLocal(calibrarPapel = false) {
     const esFoto = fuenteCamara === "foto";
     const fuente = esFoto ? imgFotoLocal : videoLocal;
@@ -335,7 +372,7 @@ function extraer28x28DesdeCamaraLocal(calibrarPapel = false) {
         return { pixeles: new Array(784).fill(0), tieneDibujo: false };
     }
 
-    const lado = Math.min(vw, vh) * 0.74;
+    const lado = Math.min(vw, vh) * RECORTE_CAMARA;
     const sx = (vw - lado) / 2;
     const sy = (vh - lado) / 2;
 
@@ -804,10 +841,14 @@ function marcarTelefonoConectado(activo) {
     }
 }
 
-function guardarMuestraEnLista(pixeles, etiqueta, origenTexto = "Imagen") {
+function guardarMuestraEnLista(pixeles, etiqueta, origenTexto = "Imagen", imagenOriginal = null) {
     muestrasGuardadas.push({
         pixeles: [...pixeles],
         etiqueta,
+        origen: origenTexto,
+        imagenOriginal: typeof imagenOriginal === "string" && imagenOriginal.startsWith("data:image/")
+            ? imagenOriginal
+            : null,
         prediccionesVivas: ultimasPrediccionesVivas ? JSON.parse(JSON.stringify(ultimasPrediccionesVivas)) : null
     });
     actualizarInterfazGuardados();
@@ -867,7 +908,12 @@ if (typeof Protobject !== "undefined" && Protobject.Core && Protobject.Core.onRe
             (mensaje.etiqueta === 0 || mensaje.etiqueta === 1) &&
             registrarCapturaNueva(mensaje.id_captura)
         ) {
-            guardarMuestraEnLista(pixelesActuales, Number(mensaje.etiqueta), "Captura desde teléfono");
+            guardarMuestraEnLista(
+                pixelesActuales,
+                Number(mensaje.etiqueta),
+                "Captura desde teléfono",
+                mensaje.imagen_original
+            );
         }
     });
 }
@@ -911,7 +957,8 @@ async function sincronizarEstadoCamaraRemota() {
                 guardarMuestraEnLista(
                     captura.pixeles,
                     Number(captura.etiqueta),
-                    "Captura desde teléfono"
+                    "Captura desde teléfono",
+                    captura.imagen_original
                 );
             }
         }
@@ -1075,7 +1122,106 @@ function mostrarMensaje(texto, tipo = "info") {
     mensajeEstado.dataset.tipo = tipo;
 }
 
+// ---------------------------------------------------------------
+// Visor ampliado de un dibujo guardado
+// ---------------------------------------------------------------
+
+const visorDibujo = document.getElementById("visor-dibujo");
+const visorTitulo = document.getElementById("visor-titulo");
+const visorFiguraOriginal = document.getElementById("visor-figura-original");
+const visorImgOriginal = document.getElementById("visor-img-original");
+const visorCanvas28 = document.getElementById("visor-canvas-28");
+const visorPredicciones = document.getElementById("visor-predicciones");
+const visorPosicion = document.getElementById("visor-posicion");
+const btnVisorAnterior = document.getElementById("btn-visor-anterior");
+const btnVisorSiguiente = document.getElementById("btn-visor-siguiente");
+const btnCerrarVisor = document.getElementById("btn-cerrar-visor");
+let indiceVisor = -1;
+
+function textoPrediccionesVivas(predicciones) {
+    if (!predicciones) return "";
+    const partes = ["CNN", "MLP"]
+        .filter((modelo) => predicciones[modelo])
+        .map((modelo) => {
+            const p = predicciones[modelo];
+            const pct = Math.round((p.confianza || 0) * 100);
+            return `${modelo}: ${p.etiqueta} (${pct}%)`;
+        });
+    return partes.length ? `Al guardarlo, en vivo: ${partes.join(" · ")}` : "";
+}
+
+function mostrarDibujoEnVisor(indice) {
+    const muestra = muestrasGuardadas[indice];
+    if (!muestra) return;
+    indiceVisor = indice;
+
+    const total = muestrasGuardadas.length;
+    visorTitulo.textContent = `Dibujo #${indice + 1} · ${ETIQUETAS[muestra.etiqueta]}`;
+    visorPosicion.textContent = `${indice + 1} de ${total}${muestra.origen ? ` · ${muestra.origen}` : ""}`;
+
+    if (muestra.imagenOriginal) {
+        visorImgOriginal.src = muestra.imagenOriginal;
+        visorImgOriginal.alt = `Dibujo #${indice + 1} original, etiquetado como ${ETIQUETAS[muestra.etiqueta]}`;
+        visorFiguraOriginal.hidden = false;
+    } else {
+        visorImgOriginal.removeAttribute("src");
+        visorFiguraOriginal.hidden = true;
+    }
+
+    pintarMiniatura28x28(visorCanvas28, muestra.pixeles);
+    visorPredicciones.textContent = textoPrediccionesVivas(muestra.prediccionesVivas);
+
+    btnVisorAnterior.disabled = indice === 0;
+    btnVisorSiguiente.disabled = indice === total - 1;
+}
+
+function abrirVisorDibujo(indice) {
+    mostrarDibujoEnVisor(indice);
+    if (!visorDibujo.open) {
+        if (typeof visorDibujo.showModal === "function") {
+            visorDibujo.showModal();
+        } else {
+            visorDibujo.setAttribute("open", ""); // Navegadores sin <dialog>
+        }
+    }
+}
+
+function cerrarVisorDibujo() {
+    if (typeof visorDibujo.close === "function") {
+        visorDibujo.close();
+    } else {
+        visorDibujo.removeAttribute("open");
+    }
+}
+
+btnCerrarVisor.addEventListener("click", cerrarVisorDibujo);
+btnVisorAnterior.addEventListener("click", () => mostrarDibujoEnVisor(indiceVisor - 1));
+btnVisorSiguiente.addEventListener("click", () => mostrarDibujoEnVisor(indiceVisor + 1));
+
+// Clic fuera de la tarjeta (sobre el fondo oscuro) cierra el visor.
+visorDibujo.addEventListener("click", (evento) => {
+    if (evento.target === visorDibujo) cerrarVisorDibujo();
+});
+
+// Flechas para recorrer los dibujos (Esc ya lo maneja <dialog>).
+visorDibujo.addEventListener("keydown", (evento) => {
+    if (evento.key === "ArrowLeft" && indiceVisor > 0) {
+        mostrarDibujoEnVisor(indiceVisor - 1);
+    } else if (evento.key === "ArrowRight" && indiceVisor < muestrasGuardadas.length - 1) {
+        mostrarDibujoEnVisor(indiceVisor + 1);
+    }
+});
+
 function actualizarInterfazGuardados() {
+    // Si la lista cambia con el visor abierto (p. ej. llega una captura), mantenerlo coherente.
+    if (visorDibujo && visorDibujo.open) {
+        if (muestrasGuardadas.length === 0) {
+            cerrarVisorDibujo();
+        } else {
+            mostrarDibujoEnVisor(Math.min(indiceVisor, muestrasGuardadas.length - 1));
+        }
+    }
+
     const total = muestrasGuardadas.length;
     const listo = total >= MINIMO_IMAGENES;
 
@@ -1103,8 +1249,23 @@ function actualizarInterfazGuardados() {
         const tarjeta = document.createElement("div");
         tarjeta.className = "item-guardado";
 
-        const miniatura = document.createElement("canvas");
-        pintarMiniatura28x28(miniatura, muestra.pixeles);
+        // La miniatura es un botón: al hacer clic abre el dibujo en grande.
+        const miniatura = document.createElement("button");
+        miniatura.type = "button";
+        miniatura.className = "btn-ver-dibujo";
+        miniatura.title = `Ver dibujo #${indice + 1} en grande`;
+        miniatura.setAttribute("aria-label", `Ver dibujo #${indice + 1} (${ETIQUETAS[muestra.etiqueta]}) en grande`);
+        if (muestra.imagenOriginal) {
+            const img = document.createElement("img");
+            img.src = muestra.imagenOriginal;
+            img.alt = "";
+            miniatura.appendChild(img);
+        } else {
+            const lienzoMini = document.createElement("canvas");
+            pintarMiniatura28x28(lienzoMini, muestra.pixeles);
+            miniatura.appendChild(lienzoMini);
+        }
+        miniatura.addEventListener("click", () => abrirVisorDibujo(indice));
 
         const info = document.createElement("div");
         info.className = "item-guardado-info";
@@ -1155,7 +1316,8 @@ btnGuardar.addEventListener("click", () => {
     guardarMuestraEnLista(
         pixelesAGuardar,
         etiquetaSeleccionada,
-        modoEntrada === "camara" ? "Captura de cámara" : "Imagen"
+        modoEntrada === "camara" ? "Captura de cámara" : "Imagen",
+        capturarImagenOriginal()
     );
 
     if (modoEntrada === "lienzo") {

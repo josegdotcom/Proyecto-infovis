@@ -863,6 +863,29 @@
                     estadoCaptura.dataset.tipo = "exito";
                 });
 
+                // Imagen original (JPEG) del recuadro analizado, para verla en grande
+                // en la pantalla principal. Solo se envía al capturar: pesa ~15 KB.
+                function capturarImagenOriginal() {
+                    try {
+                        const fuente = usandoImagenFija ? imgFija : video;
+                        const vw = usandoImagenFija ? imgFija.naturalWidth : video.videoWidth;
+                        const vh = usandoImagenFija ? imgFija.naturalHeight : video.videoHeight;
+                        if (!vw || !vh) return null;
+                        const L = 320;
+                        const lado = Math.min(vw, vh) * 0.74; // mismo recorte que extraer28x28DesdeFuente
+                        const lienzo = document.createElement("canvas");
+                        lienzo.width = L;
+                        lienzo.height = L;
+                        const g = lienzo.getContext("2d");
+                        g.fillStyle = "#ffffff";
+                        g.fillRect(0, 0, L, L);
+                        g.drawImage(fuente, (vw - lado) / 2, (vh - lado) / 2, lado, lado, 0, 0, L, L);
+                        return lienzo.toDataURL("image/jpeg", 0.8);
+                    } catch (e) {
+                        return null;
+                    }
+                }
+
                 async function procesarYEnviarFrame(capturar = false) {
                     if (enviandoFrame && !capturar) return;
                     enviandoFrame = true;
@@ -887,7 +910,8 @@
                             // la pantalla principal guarde la captura una sola vez.
                             id_captura: capturar
                                 ? `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-                                : null
+                                : null,
+                            imagen_original: capturar ? capturarImagenOriginal() : null
                         };
 
                         // 1. Enviar por Protobject (WebRTC) si está disponible

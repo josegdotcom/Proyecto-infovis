@@ -179,6 +179,18 @@ def procesar_prediccion_dibujo(payload):
     }
 
 
+_MAX_IMAGEN_ORIGINAL = 400_000  # ~300 KB en base64; un JPEG de 320 px pesa ~15-40 KB
+
+
+def _imagen_original_valida(valor):
+    """Acepta solo una data URL JPEG/PNG de tamaño razonable; si no, None."""
+    if not isinstance(valor, str) or len(valor) > _MAX_IMAGEN_ORIGINAL:
+        return None
+    if not valor.startswith(("data:image/jpeg;base64,", "data:image/png;base64,")):
+        return None
+    return valor
+
+
 def procesar_frame_camara(payload):
     """Recibe un frame 28x28 desde la cámara del teléfono, predice en tiempo real y sincroniza con el PC."""
     global _estado_camara
@@ -216,6 +228,9 @@ def procesar_frame_camara(payload):
                 "pixeles": pixeles_limpios,
                 "etiqueta": None if etiqueta is None else int(etiqueta),
                 "id_captura": payload.get("id_captura"),
+                "imagen_original": _imagen_original_valida(
+                    payload.get("imagen_original")
+                ),
                 "modelos": modelos_res,
             }
 
@@ -497,6 +512,25 @@ def procesar_sensor_prueba_2(payload):
         >= _estado_grabacion_prueba_2["total_ventanas"]
     ):
         finalizar_grabacion_prueba_2()
+
+
+class ServidorExclusivo(ThreadingHTTPServer):
+    """
+    En Windows, SO_REUSEADDR (activado por HTTPServer) permite que DOS procesos
+    escuchen en el mismo puerto y se repartan las peticiones en silencio
+    (p. ej. si se ejecuta `python -m api.main` dos veces). Aquí se pide el
+    puerto en exclusiva para que el segundo falle con un error claro.
+    """
+
+    if sys.platform == "win32":
+        allow_reuse_address = False
+
+        def server_bind(self):
+            if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+                self.socket.setsockopt(
+                    socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1
+                )
+            super().server_bind()
 
 
 class APIRequestHandler(SimpleHTTPRequestHandler):
@@ -801,10 +835,19 @@ def iniciar_servidor(host="0.0.0.0", port=8000):
     obtener_predictor_test_1()
     ip_local = obtener_ip_local()
 
-    servidor = ThreadingHTTPServer(
-        (host, port),
-        APIRequestHandler
-    )
+    try:
+        servidor = ServidorExclusivo(
+            (host, port),
+            APIRequestHandler
+        )
+    except OSError as err:
+        print(
+            f"\nNo se pudo abrir el puerto {port}: ya está en uso "
+            "(¿hay otro `python -m api.main` abierto?).\n"
+            f"Ciérralo o usa otro puerto: python -m api.main {port + 1}\n"
+            f"Detalle: {err}"
+        )
+        sys.exit(1)
 
     # Levantar también un puerto HTTPS (port + 443, ej. 8443)
     # para que iOS/Android permitan getUserMedia en WiFi.
@@ -814,7 +857,7 @@ def iniciar_servidor(host="0.0.0.0", port=8000):
         puerto_https = port + 443
 
         try:
-            servidor_https = ThreadingHTTPServer(
+            servidor_https = ServidorExclusivo(
                 (host, puerto_https),
                 APIRequestHandler
             )
@@ -841,8 +884,12 @@ def iniciar_servidor(host="0.0.0.0", port=8000):
             hilo_https.start()
             _puerto_https_activo = puerto_https
 
-        except Exception:
+        except Exception as err:
             _puerto_https_activo = None
+            print(
+                f"[HTTPS] No se pudo abrir el puerto {puerto_https} ({err}); "
+                "la cámara del teléfono no funcionará sin HTTPS."
+            )
 
     print(
         f"Servidor API local activo en http://localhost:{port}"
