@@ -146,12 +146,166 @@ class ActividadPredictor(BasePredictor):
             "MLP": pred_mlp.tolist(),
         }
 
+    def evaluar(self, data, etiquetas):
+        X = self.preprocess(data)
+        y_real = np.asarray(etiquetas, dtype=int).reshape(-1)
+
+        if len(X) != len(y_real):
+            raise ValueError(
+                "La cantidad de muestras y etiquetas debe coincidir."
+            )
+
+        predicciones = self.predict(X)
+
+        metricas = {
+            nombre: {
+                metrica: float(valor)
+                for metrica, valor in self.calcular_metricas(y_real, pred).items()
+            }
+            for nombre, pred in predicciones.items()
+        }
+
+        return {
+            "cantidad": len(X),
+            "etiquetas_reales": y_real.tolist(),
+            "predicciones": predicciones,
+            "metricas": metricas,
+        }
+
     @staticmethod
     def nombre_actividad(etiqueta):
         return ACTIVIDADES.get(
             int(etiqueta),
             f"Clase {etiqueta}"
         )
+
+
+_predictores = {}
+
+
+def obtener_predictor(model_dir=None):
+    """Carga los modelos una sola vez por carpeta y los reutiliza."""
+    clave = str(model_dir or ROOT_DIR / "data" / "modelos")
+
+    if clave not in _predictores:
+        _predictores[clave] = ActividadPredictor(model_dir=clave)
+
+    return _predictores[clave]
+
+
+def votacion_mayoritaria(predictor, predicciones):
+    """Resume las predicciones por ventana en una sola actividad por modelo."""
+    resultados = {}
+
+    for modelo, valores in predicciones.items():
+        conteo = Counter(int(v) for v in valores)
+        etiqueta, votos = conteo.most_common(1)[0]
+        total = len(valores)
+
+        resultados[modelo] = {
+            "etiqueta": etiqueta,
+            "actividad": predictor.nombre_actividad(etiqueta),
+            "votos": votos,
+            "total": total,
+            "porcentaje": 100.0 * votos / total,
+        }
+
+    return resultados
+
+
+def procesar_test_2(datos, model_dir=None, sampling_rate=50):
+    """
+    Endpoint /api/test_2: recibe acelerómetro y giroscopio del teléfono
+    (listas de {x, y, z}) y la etiqueta real (1-6), predice con CNN y MLP
+    y evalúa contra la etiqueta.
+    """
+    if not isinstance(datos, dict):
+        raise ValueError("El cuerpo de la solicitud debe ser un objeto JSON.")
+
+    acelerometro = datos.get("accelerometer")
+    giroscopio = datos.get("gyroscope")
+    etiqueta_real = datos.get("etiqueta_real")
+
+    if acelerometro is None or giroscopio is None:
+        raise ValueError("Se requieren los datos de accelerometer y gyroscope.")
+
+    if etiqueta_real is None:
+        raise ValueError("Se requiere la etiqueta real de la actividad.")
+
+    try:
+        etiqueta_real = int(etiqueta_real)
+    except (TypeError, ValueError):
+        raise ValueError("La etiqueta real debe ser un entero entre 1 y 6.")
+
+    if etiqueta_real not in ACTIVIDADES:
+        raise ValueError("La etiqueta real debe estar entre 1 y 6.")
+
+    if not isinstance(acelerometro, list) or not isinstance(giroscopio, list):
+        raise ValueError("Los sensores deben enviarse como listas de muestras.")
+
+    if len(acelerometro) == 0 or len(giroscopio) == 0:
+        raise ValueError("No hay datos del acelerómetro o del giroscopio.")
+
+    if len(acelerometro) != len(giroscopio):
+        raise ValueError(
+            "Acelerómetro y giroscopio deben tener la misma cantidad de muestras."
+        )
+
+    def convertir_sensor(nombre, muestras):
+        valores = []
+
+        for i, muestra in enumerate(muestras):
+            if not isinstance(muestra, dict):
+                raise ValueError(f"{nombre}[{i}] no es un objeto válido.")
+            try:
+                valores.append([
+                    float(muestra["x"]),
+                    float(muestra["y"]),
+                    float(muestra["z"]),
+                ])
+            except (KeyError, TypeError, ValueError):
+                raise ValueError(f"{nombre}[{i}] debe contener (x, y, z).")
+
+        array = np.asarray(valores, dtype=np.float64)
+
+        if not np.isfinite(array).all():
+            raise ValueError(f"{nombre} contiene valores NaN o infinitos.")
+
+        return array
+
+    acc = convertir_sensor("accelerometer", acelerometro)
+    gyro = convertir_sensor("gyroscope", giroscopio)
+
+    converter = HARConverter(sampling_rate=sampling_rate)
+    features = converter.transformar(acc, gyro)
+
+    if features.ndim != 2 or features.shape[1] != 561:
+        raise ValueError(
+            f"El conversor produjo una forma inesperada: {features.shape}."
+        )
+
+    predictor = obtener_predictor(model_dir)
+    resultados = predictor.evaluar(features, [etiqueta_real] * len(features))
+
+    actividades = {
+        modelo: [predictor.nombre_actividad(p) for p in preds]
+        for modelo, preds in resultados["predicciones"].items()
+    }
+
+    return {
+        "muestras": len(acc),
+        "sampling_rate": sampling_rate,
+        "ventanas": len(features),
+        "caracteristicas": int(features.shape[1]),
+        "etiqueta_real": etiqueta_real,
+        "actividad_real": ACTIVIDADES[etiqueta_real],
+        "predicciones": resultados["predicciones"],
+        "actividades": actividades,
+        "resultado_final": votacion_mayoritaria(
+            predictor, resultados["predicciones"]
+        ),
+        "metricas": resultados["metricas"],
+    }
 
 
 def predecir_csv(ruta_csv):

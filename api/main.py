@@ -612,6 +612,10 @@ class APIRequestHandler(SimpleHTTPRequestHandler):
             "/api/prueba_2/sensor",
             "/api/prueba_2/iniciar"
         }
+        rutas_test_2 = {
+            "/api/test_2",
+            "/api/prueba_2/evaluar"
+        }
 
         ruta = self.path.split("?")[0].rstrip("/")
 
@@ -620,6 +624,7 @@ class APIRequestHandler(SimpleHTTPRequestHandler):
             and ruta not in rutas_individual
             and ruta not in rutas_camara
             and ruta not in rutas_prueba_2
+            and ruta not in rutas_test_2
         ):
             self._responder_json(
                 404,
@@ -664,6 +669,12 @@ class APIRequestHandler(SimpleHTTPRequestHandler):
                     resultados = {
                         "ok": True
                     }
+
+            elif ruta in rutas_test_2:
+                # Import diferido: TensorFlow solo se carga al usar la prueba 2.
+                from api.services.test_2 import procesar_test_2
+
+                resultados = procesar_test_2(payload, model_dir=MODEL_DIR)
 
             else:
                 resultados = procesar_evaluacion_test_1(payload)
