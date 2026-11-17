@@ -8,7 +8,6 @@ import sys
 import tempfile
 import threading
 import time
-import csv
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -17,6 +16,7 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 from api.services.test_1 import GatosPerrosPredictor
+from api.services.sesion_prueba_2 import SesionPrueba2
 
 MODEL_DIR = ROOT_DIR / "data" / "modelos"
 ETIQUETAS_CLASE = {0: "Gato", 1: "Perro"}
@@ -39,28 +39,38 @@ _estado_camara = {
 }
 
 # =====================================================
-# PRUEBA 2 - ESTADO DEL SENSOR
+# PRUEBA 2 - SESIÓN (teléfono <-> pantalla <-> modelos)
 # =====================================================
+# La lógica vive en api/services/sesion_prueba_2.py. TensorFlow y el pipeline
+# del teléfono se cargan solo la primera vez que se analiza una grabación.
 
-_estado_prueba_2 = {
-    "timestamp": 0,
-    "ax": 0,
-    "ay": 0,
-    "az": 0,
-    "gx": 0,
-    "gy": 0,
-    "gz": 0,
-    "conectado": False,
-}
+_predictor_test_2 = None
+_pipeline_test_2 = None
+_carga_test_2_lock = threading.Lock()
 
-_buffer_sensor_prueba_2 = []
 
-# Carpeta donde se guardarán las grabaciones individuales
-CARPETA_GRABACIONES_PRUEBA_2 = ROOT_DIR / "grabaciones"
-CARPETA_GRABACIONES_PRUEBA_2.mkdir(parents=True, exist_ok=True)
+def obtener_predictor_test_2():
+    global _predictor_test_2
+    with _carga_test_2_lock:
+        if _predictor_test_2 is None:
+            from api.services.test_2 import ActividadPredictor
+            _predictor_test_2 = ActividadPredictor(model_dir=MODEL_DIR)
+    return _predictor_test_2
 
-# Archivo correspondiente a la grabación actualmente activa
-ARCHIVO_GRABACION_PRUEBA_2 = None
+
+def obtener_pipeline_test_2():
+    global _pipeline_test_2
+    with _carga_test_2_lock:
+        if _pipeline_test_2 is None:
+            from api.services.sensor_har import PipelineTelefono
+            _pipeline_test_2 = PipelineTelefono()
+    return _pipeline_test_2
+
+
+sesion_prueba_2 = SesionPrueba2(
+    obtener_predictor=obtener_predictor_test_2,
+    obtener_pipeline=obtener_pipeline_test_2,
+)
 
 
 def obtener_ip_local():
@@ -248,272 +258,6 @@ def procesar_frame_camara(payload):
     return respuesta
 
 
-# =====================================================
-# PRUEBA 2 - GRABACIÓN
-# =====================================================
-
-_estado_grabacion_prueba_2 = {
-    "grabando": False,
-    "ventanas": 0,
-    "total_ventanas": 5,
-}
-
-
-def iniciar_grabacion_prueba_2():
-    global _estado_grabacion_prueba_2
-    global _buffer_sensor_prueba_2
-    global ARCHIVO_GRABACION_PRUEBA_2
-
-    # Limpiar cualquier muestra anterior
-    _buffer_sensor_prueba_2 = []
-
-    # Crear un archivo nuevo para ESTA grabación
-    ahora = time.strftime("%Y-%m-%d_%H-%M-%S")
-    ARCHIVO_GRABACION_PRUEBA_2 = (
-        CARPETA_GRABACIONES_PRUEBA_2
-        / f"grabacion_{ahora}.csv"
-    )
-
-    _estado_grabacion_prueba_2["grabando"] = True
-    _estado_grabacion_prueba_2["ventanas"] = 0
-
-    print()
-    print("=" * 60)
-    print("GRABACIÓN PRUEBA 2 INICIADA")
-    print(f"Archivo: {ARCHIVO_GRABACION_PRUEBA_2}")
-    print(
-        "Objetivo: 5 ventanas × 128 muestras a 50 Hz = 640 muestras"
-    )
-    print("=" * 60)
-
-
-def finalizar_grabacion_prueba_2():
-    global _estado_grabacion_prueba_2
-    global _buffer_sensor_prueba_2
-    global ARCHIVO_GRABACION_PRUEBA_2
-
-    _estado_grabacion_prueba_2["grabando"] = False
-
-    # Eliminar cualquier muestra sobrante
-    _buffer_sensor_prueba_2 = []
-
-    if ARCHIVO_GRABACION_PRUEBA_2 is not None:
-        print()
-        print("=" * 60)
-        print("GRABACIÓN PRUEBA 2 FINALIZADA")
-        print(
-            f"Ventanas: "
-            f"{_estado_grabacion_prueba_2['ventanas']}/5"
-        )
-        print(f"Archivo: {ARCHIVO_GRABACION_PRUEBA_2}")
-        print("=" * 60)
-
-    ARCHIVO_GRABACION_PRUEBA_2 = None
-
-
-_ultimo_contacto_prueba_2 = 0.0
-def remuestrear_50hz(muestras):
-    """
-    Convierte una ventana temporal de muestras (~60 Hz) a exactamente
-    128 muestras a 50 Hz mediante interpolación lineal.
-
-    UCI HAR utiliza 50 Hz y ventanas de 128 muestras, por lo que la
-    salida cubre 2,56 segundos con timestamps separados por 20 ms.
-
-    Entrada:
-        lista de diccionarios con:
-        timestamp, ax, ay, az, gx, gy, gz
-
-    Salida:
-        lista de exactamente 128 muestras, o [] si no hay suficiente
-        duración temporal para construir la ventana completa.
-    """
-
-    if len(muestras) < 2:
-        return []
-
-    # Ordenar por timestamp por seguridad.
-    muestras = sorted(
-        muestras,
-        key=lambda m: float(m.get("timestamp", 0))
-    )
-
-    tiempos = [
-        float(m["timestamp"]) / 1000.0
-        for m in muestras
-    ]
-
-    # El primer timestamp es el origen temporal de esta ventana.
-    t0 = tiempos[0]
-    tiempos_relativos = [t - t0 for t in tiempos]
-
-    # 128 muestras a 50 Hz:
-    # 0.00, 0.02, ..., 2.54 segundos.
-    tiempos_nuevos = [
-        i / 50.0
-        for i in range(128)
-    ]
-
-    # Necesitamos que la ventana cruda cubra al menos 2,54 s.
-    if tiempos_relativos[-1] < tiempos_nuevos[-1]:
-        return []
-
-    columnas = ["ax", "ay", "az", "gx", "gy", "gz"]
-    resultado = []
-
-    indice = 0
-
-    for t in tiempos_nuevos:
-
-        while (
-            indice < len(tiempos_relativos) - 2
-            and tiempos_relativos[indice + 1] < t
-        ):
-            indice += 1
-
-        t1 = tiempos_relativos[indice]
-        t2 = tiempos_relativos[indice + 1]
-
-        if t2 == t1:
-            alpha = 0.0
-        else:
-            alpha = (t - t1) / (t2 - t1)
-
-        muestra = {
-            "timestamp": int(round((t0 + t) * 1000))
-        }
-
-        for columna in columnas:
-            v1 = float(muestras[indice].get(columna, 0))
-            v2 = float(muestras[indice + 1].get(columna, 0))
-
-            muestra[columna] = v1 + alpha * (v2 - v1)
-
-        resultado.append(muestra)
-
-    return resultado
-
-def procesar_sensor_prueba_2(payload):
-    global _ultimo_contacto_prueba_2
-    global ARCHIVO_GRABACION_PRUEBA_2
-
-    muestras = payload.get("muestras", [])
-
-    if not muestras:
-        return
-
-    # El servidor mide el momento real de recepción del mensaje.
-    # Esto se utiliza para determinar si el teléfono sigue conectado.
-    _ultimo_contacto_prueba_2 = time.time()
-
-    # =================================================
-    # ACTUALIZAR SIEMPRE EL ÚLTIMO SENSOR
-    # =================================================
-
-    ultima_muestra = muestras[-1]
-
-    _estado_prueba_2.update({
-        "timestamp": ultima_muestra.get("timestamp", 0),
-        "ax": ultima_muestra.get("ax", 0),
-        "ay": ultima_muestra.get("ay", 0),
-        "az": ultima_muestra.get("az", 0),
-        "gx": ultima_muestra.get("gx", 0),
-        "gy": ultima_muestra.get("gy", 0),
-        "gz": ultima_muestra.get("gz", 0),
-        "conectado": True,
-    })
-
-    # =================================================
-    # HEARTBEAT
-    # =================================================
-
-    # El heartbeat mantiene la conexión viva y actualiza los valores
-    # mostrados en el PC, pero NUNCA entra a la grabación.
-    if payload.get("tipo") == "heartbeat":
-        return
-
-    # =================================================
-    # SOLO PROCESAR VENTANAS DE DATOS
-    # =================================================
-
-    if payload.get("tipo") != "ventana":
-        return
-
-    if not _estado_grabacion_prueba_2["grabando"]:
-        return
-
-    if ARCHIVO_GRABACION_PRUEBA_2 is None:
-        return
-
-    # =================================================
-    # REMUESTREO A 50 Hz
-    # =================================================
-
-    # El teléfono entrega aproximadamente 60 Hz. La ventana recibida
-    # cubre ~2,56 s y puede contener ~154 muestras crudas.
-    # Aquí la convertimos a exactamente 128 muestras a 50 Hz.
-    ventana_50hz = remuestrear_50hz(muestras)
-
-    if len(ventana_50hz) != 128:
-        print(
-            "[PRUEBA 2] Ventana descartada: "
-            "no cubre suficiente tiempo para obtener "
-            "128 muestras a 50 Hz."
-        )
-        return
-
-    # =================================================
-    # GUARDAR VENTANA
-    # =================================================
-
-    archivo_nuevo = not ARCHIVO_GRABACION_PRUEBA_2.exists()
-
-    with open(
-        ARCHIVO_GRABACION_PRUEBA_2,
-        "a",
-        newline="",
-        encoding="utf-8"
-    ) as f:
-
-        escritor = csv.DictWriter(
-            f,
-            fieldnames=[
-                "timestamp",
-                "ax", "ay", "az",
-                "gx", "gy", "gz"
-            ]
-        )
-
-        if archivo_nuevo:
-            escritor.writeheader()
-
-        escritor.writerows(ventana_50hz)
-
-    # =================================================
-    # CONTAR VENTANA
-    # =================================================
-
-    _estado_grabacion_prueba_2["ventanas"] += 1
-
-    numero_ventana = _estado_grabacion_prueba_2["ventanas"]
-
-    print(
-        f"Ventana {numero_ventana}/"
-        f"{_estado_grabacion_prueba_2['total_ventanas']} "
-        f"guardada: 128 muestras a 50 Hz"
-    )
-
-    # =================================================
-    # TERMINAR AL COMPLETAR LAS 5 VENTANAS
-    # =================================================
-
-    if (
-        numero_ventana
-        >= _estado_grabacion_prueba_2["total_ventanas"]
-    ):
-        finalizar_grabacion_prueba_2()
-
-
 class ServidorExclusivo(ThreadingHTTPServer):
     """
     En Windows, SO_REUSEADDR (activado por HTTPServer) permite que DOS procesos
@@ -543,6 +287,7 @@ class APIRequestHandler(SimpleHTTPRequestHandler):
             self.path.startswith("/api/camara")
             or self.path.startswith("/api/test_1/predecir")
             or self.path.startswith("/api/prueba_2/estado")
+            or self.path.startswith("/api/prueba_2/sensor")
         ):
             return
 
@@ -591,20 +336,7 @@ class APIRequestHandler(SimpleHTTPRequestHandler):
             return
 
         if ruta == "/api/prueba_2/estado":
-            conectado = (
-                _ultimo_contacto_prueba_2 > 0
-                and (time.time() - _ultimo_contacto_prueba_2) < 3.0
-            )
-
-            estado = {
-                **_estado_prueba_2,
-                "conectado": conectado,
-                "grabando": _estado_grabacion_prueba_2["grabando"],
-                "ventanas": _estado_grabacion_prueba_2["ventanas"],
-                "total_ventanas": _estado_grabacion_prueba_2["total_ventanas"],
-            }
-
-            self._responder_json(200, estado)
+            self._responder_json(200, sesion_prueba_2.estado())
             return
 
         if ruta == "/api/prueba_2/url":
@@ -644,13 +376,19 @@ class APIRequestHandler(SimpleHTTPRequestHandler):
         rutas_camara = {
             "/api/camara/frame"
         }
+        # Prueba 2: cada ruta llama a un método de la sesión compartida.
         rutas_prueba_2 = {
-            "/api/prueba_2/sensor",
-            "/api/prueba_2/iniciar"
+            "/api/prueba_2/sensor": lambda p: sesion_prueba_2.recibir(p),
+            "/api/prueba_2/iniciar": lambda p: sesion_prueba_2.iniciar(
+                p.get("actividad"), p.get("cuenta_regresiva", 5)
+            ),
+            "/api/prueba_2/cancelar": lambda p: sesion_prueba_2.cancelar(),
+            "/api/prueba_2/eliminar": lambda p: sesion_prueba_2.eliminar(p.get("id")),
+            "/api/prueba_2/reiniciar": lambda p: sesion_prueba_2.reiniciar(),
+            "/api/prueba_2/metricas": lambda p: sesion_prueba_2.metricas(),
         }
         rutas_test_2 = {
             "/api/test_2",
-            "/api/prueba_2/evaluar"
         }
 
         ruta = self.path.split("?")[0].rstrip("/")
@@ -688,25 +426,12 @@ class APIRequestHandler(SimpleHTTPRequestHandler):
                 resultados = procesar_frame_camara(payload)
 
             elif ruta in rutas_prueba_2:
-
-                if ruta == "/api/prueba_2/iniciar":
-
-                    iniciar_grabacion_prueba_2()
-
-                    resultados = {
-                        "ok": True,
-                        "ventanas": _estado_grabacion_prueba_2["total_ventanas"],
-                    }
-
-                elif ruta == "/api/prueba_2/sensor":
-
-                    procesar_sensor_prueba_2(payload)
-
-                    resultados = {
-                        "ok": True
-                    }
+                if not isinstance(payload, dict):
+                    raise ValueError("El cuerpo debe ser un objeto JSON.")
+                resultados = rutas_prueba_2[ruta](payload)
 
             elif ruta in rutas_test_2:
+                # Evaluación directa (sin sesión): sensores + etiqueta -> predicción.
                 # Import diferido: TensorFlow solo se carga al usar la prueba 2.
                 from api.services.test_2 import procesar_test_2
 
@@ -910,6 +635,10 @@ def iniciar_servidor(host="0.0.0.0", port=8000):
             "Para usar también Protobject (WebRTC), abre la pantalla en: "
             f"https://{ip_local}:{_puerto_https_activo}"
             "/exploracion/prueba_1.html y escanea su QR"
+        )
+        print(
+            f"Prueba 2 (actividades): http://localhost:{port}"
+            "/exploracion/prueba_2.html"
         )
     else:
         print(

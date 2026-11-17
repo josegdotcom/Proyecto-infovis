@@ -50,6 +50,18 @@ Este único comando levanta la API **y** sirve las páginas (no hace falta `pyth
 - **Protobject (WebRTC):** solo empareja páginas del mismo origen y con el mismo `?ptjuid=`. Si la pantalla se abre en `localhost`, el teléfono se conecta por el puente local de Python, que funciona igual. Para usar también WebRTC, abre la pantalla en la dirección `https://<IP>:8443/exploracion/prueba_1.html` que imprime el servidor.
 - Si Windows pregunta, permite el acceso de Python a **redes privadas** en el firewall; si no, el teléfono no llegará al servidor.
 
+### Prueba 2 (actividades con el teléfono)
+
+`http://localhost:8000/exploracion/prueba_2.html`
+
+1. Escanea el QR con el teléfono (misma WiFi), acepta el certificado local y toca **Activar sensores**.
+2. Elige la actividad (en la pantalla o en el teléfono) y pulsa **Grabar**. Hay 5 s de cuenta regresiva con voz y pitidos para colocar el teléfono **vertical en la cintura, con la pantalla hacia afuera** (así se grabó UCI HAR). Luego graba 10 s.
+3. Los modelos clasifican 7 ventanas de 2,56 s y gana la actividad con más votos. Con 5 o más intentos se calculan las métricas.
+
+El pipeline del teléfono (`api/services/sensor_har.py`) replica el preprocesamiento de UCI HAR (50 Hz, filtros, separación de gravedad, 561 características) y usa `data/modelos/har_normalizacion.npz`. Si cambias el pipeline, regenera ese archivo con `python data/calibrar_har.py "ruta/a/UCI HAR Dataset"` (instrucciones dentro del script). Con teléfono simulado a partir de UCI test, la MLP acierta el 92 % de las grabaciones. La CNN siempre responde «Acostado», igual que en el entrenamiento (18 %).
+
+Cada grabación se guarda en `grabaciones/` (ignorada por git). Para reanalizar una: `python api/services/test_2.py grabaciones/<archivo>.csv`.
+
 Las páginas que no usan modelos (`index.html`, la galería) también funcionan con cualquier servidor estático, como Live Server.
 
 

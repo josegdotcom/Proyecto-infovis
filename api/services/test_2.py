@@ -14,7 +14,6 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 from api.models.base_predictor import BasePredictor
-from api.services.uci_har_recovery import HARConverter
 
 
 ACTIVIDADES = {
@@ -59,6 +58,22 @@ class ActividadPredictor(BasePredictor):
             "CNN": load_model(cnn_path),
             "MLP": joblib.load(mlp_path),
         }
+
+        # La CNN se entrenó con X estandarizado (StandardScaler de X_train,
+        # ver data/Prueba_2.ipynb); la MLP con X sin estandarizar.
+        self.cnn_media = None
+        self.cnn_escala = None
+        ruta_norm = self.model_dir / "har_normalizacion.npz"
+        if ruta_norm.is_file():
+            datos = np.load(ruta_norm)
+            if "cnn_media" in datos.files and "cnn_escala" in datos.files:
+                self.cnn_media = np.asarray(datos["cnn_media"], dtype=np.float32)
+                self.cnn_escala = np.asarray(datos["cnn_escala"], dtype=np.float32)
+
+    def _estandarizar_cnn(self, X):
+        if self.cnn_media is None:
+            return X
+        return (X - self.cnn_media) / np.where(self.cnn_escala > 0, self.cnn_escala, 1.0)
 
     def preprocess(self, data):
         X = np.asarray(data, dtype=np.float32)
@@ -110,7 +125,7 @@ class ActividadPredictor(BasePredictor):
         # CNN
         cnn_input = self._adaptar_entrada_cnn(
             self.models["CNN"],
-            X
+            self._estandarizar_cnn(X)
         )
 
         cnn_output = np.asarray(
@@ -276,8 +291,19 @@ def procesar_test_2(datos, model_dir=None, sampling_rate=50):
     acc = convertir_sensor("accelerometer", acelerometro)
     gyro = convertir_sensor("gyroscope", giroscopio)
 
-    converter = HARConverter(sampling_rate=sampling_rate)
-    features = converter.transformar(acc, gyro)
+    # Tiempos en ms: si no vienen, se asume muestreo uniforme a `sampling_rate`.
+    tiempos = datos.get("timestamps")
+    if tiempos is None:
+        tiempos = np.arange(len(acc)) * (1000.0 / float(sampling_rate))
+    tiempos = np.asarray(tiempos, dtype=np.float64).reshape(-1)
+    if len(tiempos) != len(acc) or not np.isfinite(tiempos).all():
+        raise ValueError("'timestamps' debe tener un tiempo (ms) por muestra.")
+
+    # Mismo pipeline validado que usa la sesión del teléfono (ejes, unidades,
+    # filtros de UCI y normalización calibrada).
+    from api.services.sensor_har import PipelineTelefono
+
+    features = PipelineTelefono().caracteristicas(tiempos, acc, gyro)
 
     if features.ndim != 2 or features.shape[1] != 561:
         raise ValueError(
@@ -310,11 +336,11 @@ def procesar_test_2(datos, model_dir=None, sampling_rate=50):
 
 def predecir_csv(ruta_csv):
     """
-    Flujo completo:
+    Reanaliza una grabación guardada por la Prueba 2 (carpeta grabaciones/).
 
-        CSV
+        CSV (t_ms, ax..az m/s², gx..gz °/s; líneas '#' = metadatos)
          ↓
-        HARConverter
+        PipelineTelefono  (50 Hz, ejes UCI, filtros, normalización)
          ↓
         (N, 561)
          ↓
@@ -322,11 +348,22 @@ def predecir_csv(ruta_csv):
          ↓
         predicciones
     """
-    converter = HARConverter(sampling_rate=50)
+    from api.services.sensor_har import PipelineTelefono
 
     print("\n[1/3] Convirtiendo CSV a características UCI HAR...")
 
-    features = converter.transformar_csv(ruta_csv)
+    filas = []
+    with open(ruta_csv, encoding="utf-8") as f:
+        for linea in f:
+            linea = linea.strip()
+            if not linea or linea.startswith("#") or linea.startswith("t_ms"):
+                continue
+            filas.append([float(v) for v in linea.split(",")[:7]])
+    datos = np.asarray(filas, dtype=np.float64)
+    if datos.ndim != 2 or datos.shape[1] != 7:
+        raise ValueError("El CSV debe tener 7 columnas: t_ms, ax, ay, az, gx, gy, gz.")
+
+    features = PipelineTelefono().caracteristicas(datos[:, 0], datos[:, 1:4], datos[:, 4:7])
 
     print(
         f"      Características generadas: {features.shape}"
