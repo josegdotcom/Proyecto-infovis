@@ -45,10 +45,10 @@ python -m api.main
 
 Este único comando levanta la API **y** sirve las páginas (no hace falta `python -m http.server`, y ambos usarían el puerto 8000). Abrir `http://localhost:8000`.
 
-La página principal (`index.html`) tiene solo dos partes:
+La página principal (`index.html`) muestra, para cada prueba: a la izquierda los aciertos esperados (Entrega 1, `exploracion/datos.js`), al centro los aciertos de tu prueba, que se actualizan con cada intento (✓/✗), y a la derecha el QR para hacerla con el teléfono (`js/principal.js`).
 
-1. **Haz las pruebas:** pestañas con la Prueba 1 y la Prueba 2 (cada una se carga en un `iframe`; `#prueba-2` en la URL abre directo la segunda).
-2. **Lo esperado frente a tus pruebas:** los gráficos de la Entrega 1 (barras de aciertos y matrices de confusión) con lo esperado (`exploracion/datos.js`) junto a los resultados de tus pruebas. Se completan al pulsar *Evaluar* en cada prueba (`js/embebido.js` envía los resultados y los guarda en el navegador, así que siguen al recargar).
+- **Prueba 1:** en el teléfono elige Gato o Perro y pulsa *Capturar*; cada captura cuenta como un intento (se guardan en el navegador, *Reiniciar* los borra).
+- **Prueba 2:** en el teléfono elige la actividad y graba; los intentos los guarda el servidor.
 
 Las pruebas también se pueden abrir solas:
 

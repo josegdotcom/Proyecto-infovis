@@ -1329,6 +1329,3 @@ h3 {
     border-radius: 999px;
     transition: width 0.22s ease;
 }
-
-/* Pruebas cargadas dentro de la página principal (js/embebido.js) */
-.embebido .btn-volver { display: none; }

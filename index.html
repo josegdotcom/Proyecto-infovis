@@ -9,78 +9,31 @@
 
     <link rel="icon" type="image/png" href="assets/icons/logo.png">
 
-    <link rel="stylesheet" href="css/style.css?v=16">
-    <link rel="stylesheet" href="css/comparacion.css?v=13">
-    <link rel="stylesheet" href="css/contraste.css?v=1">
+    <link rel="stylesheet" href="css/style.css?v=17">
+    <link rel="stylesheet" href="css/principal.css?v=1">
+    <!-- QR generado en el navegador: la dirección local no sale a servicios externos -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 
 <body>
 
     <header class="cabecera centrada">
-        <p class="eyebrow">Grupo 11 · Visualización de Información</p>
         <h1>Las redes neuronales no son tan universales</h1>
-        <p class="mensaje">
-            Pon a prueba la CNN y la MLP con tus propios dibujos y movimientos, y compara lo que obtienen con lo que se esperaba de ellas.
-        </p>
+        <p class="mensaje">Escanea el QR con tu teléfono, haz la prueba y compara lo esperado con lo que obtienen la CNN y la MLP.</p>
+        <ul class="leyenda" aria-label="Colores de los modelos">
+            <li><span class="muestra" style="background:var(--modelo-cnn)"></span>CNN (convolucional)</li>
+            <li><span class="muestra" style="background:var(--modelo-mlp)"></span>MLP (red densa)</li>
+        </ul>
     </header>
 
-    <main>
+    <main id="pruebas"></main>
 
-        <!-- 1. Correr las pruebas -->
-        <section class="tarjeta seccion-pruebas" aria-labelledby="titulo-pruebas">
-            <div class="cabecera-seccion">
-                <h2 id="titulo-pruebas">1. Haz las pruebas</h2>
-                <div class="pestanas" role="tablist" aria-label="Pruebas">
-                    <button type="button" class="pestana" role="tab" id="pestana-1" aria-controls="panel-prueba-1" aria-selected="true" data-prueba="1">
-                        Prueba 1 · Dibujos
-                    </button>
-                    <button type="button" class="pestana" role="tab" id="pestana-2" aria-controls="panel-prueba-2" aria-selected="false" data-prueba="2">
-                        Prueba 2 · Actividades
-                    </button>
-                </div>
-            </div>
-
-            <p id="aviso-servidor" class="aviso-servidor" role="status" hidden>
-                Las pruebas usan los modelos en Python. Inícialos en la carpeta del proyecto con
-                <code>python -m api.main</code> y abre <code>http://localhost:8000</code>.
-            </p>
-
-            <!-- Cada prueba se carga en su iframe la primera vez que se abre su pestaña -->
-            <div id="panel-prueba-1" class="panel-prueba" role="tabpanel" aria-labelledby="pestana-1">
-                <iframe title="Prueba 1: gato o perro en dibujos" data-src="exploracion/prueba_1.html"
-                    allow="camera; microphone; autoplay; clipboard-write; fullscreen"></iframe>
-            </div>
-            <div id="panel-prueba-2" class="panel-prueba" role="tabpanel" aria-labelledby="pestana-2" hidden>
-                <iframe title="Prueba 2: reconocer actividades con el teléfono" data-src="exploracion/prueba_2.html"
-                    allow="camera; microphone; autoplay; clipboard-write; fullscreen"></iframe>
-            </div>
-        </section>
-
-        <!-- 2. Contraste entre lo esperado (Entrega 1) y los resultados de las pruebas -->
-        <section class="tarjeta seccion-contraste" aria-labelledby="titulo-contraste">
-            <div class="cabecera-seccion">
-                <div>
-                    <h2 id="titulo-contraste">2. Lo esperado frente a tus pruebas</h2>
-                    <p class="bajada">
-                        «Esperado» son los resultados de la Entrega 1 con los datos de prueba de cada conjunto.
-                        «Tu prueba» se completa al evaluar cada prueba (mínimo 5 dibujos o 5 intentos).
-                    </p>
-                </div>
-            </div>
-            <div id="contraste"></div>
-        </section>
-
-    </main>
-
-    <footer class="fuentes">
-        Datos: dibujos de <a href="https://quickdraw.withgoogle.com/data" target="_blank" rel="noopener">Quick, Draw!</a>
-        y registros de sensores de
-        <a href="https://archive.ics.uci.edu/dataset/240/human+activity+recognition+using+smartphones" target="_blank"
-            rel="noopener">Human Activity Recognition Using Smartphones</a>.
-    </footer>
+    <p id="aviso-servidor" class="aviso-servidor" role="status" hidden>
+        Sin servidor de Python: inícialo con <code>python -m api.main</code> y abre <code>http://localhost:8000</code>.
+    </p>
 
     <script src="exploracion/datos.js"></script>
-    <script src="js/contraste.js?v=1"></script>
+    <script src="js/principal.js?v=1"></script>
 
 </body>
 

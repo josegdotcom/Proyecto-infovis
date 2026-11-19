@@ -1520,8 +1520,6 @@ btnPredecir.addEventListener("click", async () => {
     try {
         const resultados = await enviarAPythonAPI(imagenes, etiquetas);
         renderizarResultados(resultados);
-        // Envía los resultados a la página principal para compararlos con lo esperado
-        if (window.publicarResultados) window.publicarResultados(1, resultados);
         mostrarMensaje("Evaluación por lote completada con éxito.", "exito");
     } catch (error) {
         console.error("Error al predecir:", error);

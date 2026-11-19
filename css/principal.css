@@ -1,0 +1,71 @@
+/* Página principal: por prueba, lo esperado | tu prueba (en vivo) | QR del teléfono. */
+
+.cabecera.centrada { padding: 14px 0 18px; }
+.leyenda { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 28px; margin: 10px 0 0; padding: 0; list-style: none; font-size: 17px; }
+.muestra { display: inline-block; width: 16px; height: 16px; margin-right: 8px; border-radius: 4px; vertical-align: -2px; }
+
+.principal main { display: grid; gap: 18px; }
+
+.prueba {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 230px;
+    gap: 14px 30px;
+    padding: 16px 22px 20px;
+    background: var(--superficie);
+    border: 1px solid var(--borde);
+    border-radius: 14px;
+}
+.titulo-prueba { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 16px; }
+.titulo-prueba h2 { margin: 0; font-size: clamp(22px, 1.9vw, 28px); letter-spacing: -.8px; }
+.titulo-prueba p { margin: 0; font-size: 17px; color: #555; }
+
+.bloque { min-width: 0; }
+.bloque h3 { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 10px; margin: 0; padding-bottom: 6px; border-bottom: 2px solid #000; font-size: 22px; letter-spacing: -.5px; }
+.bloque h3 span { font-size: 15px; font-weight: 400; color: #555; letter-spacing: 0; }
+
+/* Barras (misma escala 0–100 % en lo esperado y en tu prueba) */
+.barras { display: grid; grid-template-columns: 52px minmax(0, 1fr) 76px; align-items: center; gap: 6px 12px; margin: 22px 0 0; }
+.barras dt, .barras dd { margin: 0; }
+.barras dt { font-size: 20px; font-weight: 650; }
+.pista { height: 30px; background: var(--pista); border-radius: 5px; overflow: hidden; }
+.pista i { display: block; height: 100%; border-radius: 5px; transition: width .5s ease; }
+.pista.vacia { background: repeating-linear-gradient(-45deg, var(--pista) 0 6px, #d4dbea 6px 7px); }
+.pista.nuevo { animation: destello 1s ease; }
+@keyframes destello { 0% { box-shadow: 0 0 0 0 rgba(0, 0, 0, .45); } 100% { box-shadow: 0 0 0 8px rgba(0, 0, 0, 0); } }
+.valor { font-size: 24px; line-height: 1; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.valor small { display: block; margin-top: 3px; font-size: 13px; color: #555; }
+.marcas { grid-column: 2 / -1; display: flex; flex-wrap: wrap; gap: 3px; min-height: 18px; margin-bottom: 8px; }
+.marcas span { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 4px; color: #fff; font-size: 12px; font-weight: 700; }
+.marcas .bien { background: var(--bien); }
+.marcas .mal { background: var(--mal); }
+
+.pie-bloque { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; }
+.ultimo { margin: 0; font-size: 15px; line-height: 1.4; }
+.ultimo .bien { color: #07800a; font-weight: 650; }
+.ultimo .mal { color: #c02a2a; font-weight: 650; }
+.btn-reiniciar { padding: 4px 12px; font-size: 14px; }
+
+/* QR */
+.bloque-qr { display: grid; justify-items: center; align-content: start; gap: 8px; text-align: center; }
+.qr { display: grid; place-items: center; width: 184px; height: 184px; padding: 8px; background: #fff; border: 1px solid var(--borde); border-radius: 10px; }
+.qr img, .qr canvas { display: block; }
+.estado { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 14px; font-weight: 600; }
+.instruccion { margin: 0; font-size: 14px; line-height: 1.4; color: #333; }
+.enlace { max-width: 100%; font-size: 12px; color: #555; overflow-wrap: anywhere; }
+
+.aviso-servidor { max-width: 1540px; margin: 16px auto 0; padding: 10px 14px; border-radius: 9px; background: #fff6d9; font-size: 16px; text-align: center; }
+.aviso-servidor code { padding: 1px 6px; border-radius: 5px; background: #ffffffc0; }
+
+@media (max-width: 1000px) {
+    .prueba { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .bloque-qr { grid-column: 1 / -1; grid-template-columns: auto minmax(0, 260px); justify-content: center; justify-items: start; text-align: left; }
+    .bloque-qr .qr { grid-row: span 3; }
+}
+@media (max-width: 640px) {
+    .prueba { grid-template-columns: minmax(0, 1fr); padding: 14px; }
+    .bloque-qr { grid-template-columns: minmax(0, 1fr); justify-items: center; text-align: center; }
+    .bloque-qr .qr { grid-row: auto; }
+    .barras { grid-template-columns: 44px minmax(0, 1fr) 64px; }
+    .valor { font-size: 20px; }
+    .leyenda { font-size: 15px; }
+}
