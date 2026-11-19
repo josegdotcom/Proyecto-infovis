@@ -324,6 +324,8 @@
         try {
             const r = await api("/api/prueba_2/metricas", {});
             pintarMetricas(r);
+            // Envía los resultados a la página principal para compararlos con lo esperado
+            if (window.publicarResultados) window.publicarResultados(2, r);
         } catch (err) {
             mostrarMensaje(err.message, "error");
         }

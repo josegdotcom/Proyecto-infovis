@@ -9,63 +9,66 @@
 
     <link rel="icon" type="image/png" href="assets/icons/logo.png">
 
-    <link rel="stylesheet" href="css/style.css?v=15">
-    <link rel="stylesheet" href="css/comparacion.css?v=12">
+    <link rel="stylesheet" href="css/style.css?v=16">
+    <link rel="stylesheet" href="css/comparacion.css?v=13">
+    <link rel="stylesheet" href="css/contraste.css?v=1">
 </head>
 
 <body>
 
-    <!-- 1. La conclusion y su contexto -->
     <header class="cabecera centrada">
-        <p class="eyebrow">Grupo 11 · Visualización de Información · Entrega 1</p>
+        <p class="eyebrow">Grupo 11 · Visualización de Información</p>
         <h1>Las redes neuronales no son tan universales</h1>
         <p class="mensaje">
-            Su rendimiento depende del problema: la CNN destaca en dibujos, pero la MLP es más rápida y rinde mejor en actividades.
+            Pon a prueba la CNN y la MLP con tus propios dibujos y movimientos, y compara lo que obtienen con lo que se esperaba de ellas.
         </p>
     </header>
 
     <main>
 
-        <!-- 2. Explicacion de cada modelo antes de comparar los resultados -->
-        <section class="modelos-info" aria-labelledby="titulo-modelos">
-            <h2 id="titulo-modelos">Los dos modelos</h2>
+        <!-- 1. Correr las pruebas -->
+        <section class="tarjeta seccion-pruebas" aria-labelledby="titulo-pruebas">
+            <div class="cabecera-seccion">
+                <h2 id="titulo-pruebas">1. Haz las pruebas</h2>
+                <div class="pestanas" role="tablist" aria-label="Pruebas">
+                    <button type="button" class="pestana" role="tab" id="pestana-1" aria-controls="panel-prueba-1" aria-selected="true" data-prueba="1">
+                        Prueba 1 · Dibujos
+                    </button>
+                    <button type="button" class="pestana" role="tab" id="pestana-2" aria-controls="panel-prueba-2" aria-selected="false" data-prueba="2">
+                        Prueba 2 · Actividades
+                    </button>
+                </div>
+            </div>
 
-            <div class="modelos-lista">
-                <article class="modelo-item">
-                    <svg class="diagrama" viewBox="0 0 360 150" role="img" aria-label="Diagrama de una red neuronal: neuronas en capas, todas conectadas con las de la capa siguiente">
-                        <path class="dg-conexion" d="M60 34.5L140 21M60 34.5L140 48M60 34.5L140 75M60 34.5L140 102M60 34.5L140 129M60 61.5L140 21M60 61.5L140 48M60 61.5L140 75M60 61.5L140 102M60 61.5L140 129M60 88.5L140 21M60 88.5L140 48M60 88.5L140 75M60 88.5L140 102M60 88.5L140 129M60 115.5L140 21M60 115.5L140 48M60 115.5L140 75M60 115.5L140 102M60 115.5L140 129M140 21L220 21M140 21L220 48M140 21L220 75M140 21L220 102M140 21L220 129M140 48L220 21M140 48L220 48M140 48L220 75M140 48L220 102M140 48L220 129M140 75L220 21M140 75L220 48M140 75L220 75M140 75L220 102M140 75L220 129M140 102L220 21M140 102L220 48M140 102L220 75M140 102L220 102M140 102L220 129M140 129L220 21M140 129L220 48M140 129L220 75M140 129L220 102M140 129L220 129M220 21L300 61.5M220 21L300 88.5M220 48L300 61.5M220 48L300 88.5M220 75L300 61.5M220 75L300 88.5M220 102L300 61.5M220 102L300 88.5M220 129L300 61.5M220 129L300 88.5"/>
-                        <g class="dg-mlp"><circle cx="60" cy="34.5" r="8"/><circle cx="60" cy="61.5" r="8"/><circle cx="60" cy="88.5" r="8"/><circle cx="60" cy="115.5" r="8"/><circle cx="140" cy="21" r="8"/><circle cx="140" cy="48" r="8"/><circle cx="140" cy="75" r="8"/><circle cx="140" cy="102" r="8"/><circle cx="140" cy="129" r="8"/><circle cx="220" cy="21" r="8"/><circle cx="220" cy="48" r="8"/><circle cx="220" cy="75" r="8"/><circle cx="220" cy="102" r="8"/><circle cx="220" cy="129" r="8"/><circle cx="300" cy="61.5" r="8"/><circle cx="300" cy="88.5" r="8"/></g>
-                    </svg>
-                    <div>
-                        <h3><span class="muestra" style="background:var(--modelo-mlp)"></span>Red neuronal (MLP)</h3>
-                        <p>Una red neuronal es un modelo de machine learning que apila "neuronas" simples en capas
-                            y aprende a reconocer patrones a partir de datos para asignar entradas a outputs.</p>
-                    </div>
-                </article>
+            <p id="aviso-servidor" class="aviso-servidor" role="status" hidden>
+                Las pruebas usan los modelos en Python. Inícialos en la carpeta del proyecto con
+                <code>python -m api.main</code> y abre <code>http://localhost:8000</code>.
+            </p>
 
-                <article class="modelo-item">
-                    <svg class="diagrama" viewBox="0 0 360 150" role="img" aria-label="Diagrama de una red convolucional: un filtro recorre la imagen y genera mapas de características">
-                        <path class="dg-conexion" d="M22 33V117M22 33H106M36 33V117M22 47H106M50 33V117M22 61H106M64 33V117M22 75H106M78 33V117M22 89H106M92 33V117M22 103H106M106 33V117M22 117H106"/>
-                        <rect class="dg-cnn-suave" x="36" y="47" width="42" height="42"/>
-                        <path class="dg-cnn-guia" d="M78 47L164 65M78 89L164 75"/>
-                        <g class="dg-cnn-suave"><rect x="162" y="39" width="50" height="50" rx="2"/><rect x="156" y="45" width="50" height="50" rx="2"/><rect x="150" y="51" width="50" height="50" rx="2"/></g>
-                        <rect class="dg-cnn" x="164" y="65" width="10" height="10"/>
-                        <path class="dg-conexion" d="M216 75H234M229 71L234 75L229 79M282 75L328 57M282 75L328 93"/>
-                        <g class="dg-cnn-suave"><rect x="252" y="51" width="28" height="28" rx="2"/><rect x="247" y="56" width="28" height="28" rx="2"/><rect x="242" y="61" width="28" height="28" rx="2"/></g>
-                        <g class="dg-cnn"><circle cx="328" cy="57" r="8"/><circle cx="328" cy="93" r="8"/></g>
-                    </svg>
-                    <div>
-                        <h3><span class="muestra" style="background:var(--modelo-cnn)"></span>Red convolucional (CNN)</h3>
-                        <p>Las redes neuronales convolucionales son un tipo de red neuronal diseñada especialmente
-                            para analizar imágenes y otros datos con estructura espacial, como videos o mapas.</p>
-                    </div>
-                </article>
+            <!-- Cada prueba se carga en su iframe la primera vez que se abre su pestaña -->
+            <div id="panel-prueba-1" class="panel-prueba" role="tabpanel" aria-labelledby="pestana-1">
+                <iframe title="Prueba 1: gato o perro en dibujos" data-src="exploracion/prueba_1.html"
+                    allow="camera; microphone; autoplay; clipboard-write; fullscreen"></iframe>
+            </div>
+            <div id="panel-prueba-2" class="panel-prueba" role="tabpanel" aria-labelledby="pestana-2" hidden>
+                <iframe title="Prueba 2: reconocer actividades con el teléfono" data-src="exploracion/prueba_2.html"
+                    allow="camera; microphone; autoplay; clipboard-write; fullscreen"></iframe>
             </div>
         </section>
 
-        <!-- 3. Comparacion y controles de sonido -->
-        <section class="tarjeta" id="grafico"
-            aria-label="Aciertos y tiempo de entrenamiento de la CNN y la MLP en las dos pruebas"></section>
+        <!-- 2. Contraste entre lo esperado (Entrega 1) y los resultados de las pruebas -->
+        <section class="tarjeta seccion-contraste" aria-labelledby="titulo-contraste">
+            <div class="cabecera-seccion">
+                <div>
+                    <h2 id="titulo-contraste">2. Lo esperado frente a tus pruebas</h2>
+                    <p class="bajada">
+                        «Esperado» son los resultados de la Entrega 1 con los datos de prueba de cada conjunto.
+                        «Tu prueba» se completa al evaluar cada prueba (mínimo 5 dibujos o 5 intentos).
+                    </p>
+                </div>
+            </div>
+            <div id="contraste"></div>
+        </section>
 
     </main>
 
@@ -76,12 +79,8 @@
             rel="noopener">Human Activity Recognition Using Smartphones</a>.
     </footer>
 
-    <script src="https://cdn.jsdelivr.net/npm/tone@15.0.4/build/Tone.js"></script>
     <script src="exploracion/datos.js"></script>
-    <script src="js/modelos_audio.js"></script>
-    <script src="exploracion/comparacion.js?v=6"></script>
-
-    <button onclick="location.href='exploracion/pruebas.html'">Pruebalo tu mismo</button>
+    <script src="js/contraste.js?v=1"></script>
 
 </body>
 

@@ -1,0 +1,83 @@
+/* Página principal: pruebas en pestañas + contraste entre lo esperado y tus pruebas.
+   Reutiliza las clases del gráfico de la Entrega 1 (css/comparacion.css). */
+
+.solo-lectores { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+.principal main { display: grid; gap: 22px; }
+.cabecera-seccion { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 24px; padding: 0 6px 12px; }
+.cabecera-seccion h2 { margin: 0; font-size: 28px; letter-spacing: -1px; line-height: 1.3; }
+.bajada { margin: 2px 0 0; max-width: 80ch; font-size: 17px; line-height: 1.4; color: var(--texto-secundario); }
+.seccion-pruebas, .seccion-contraste { padding-bottom: 16px; scroll-margin-top: 12px; }
+
+/* Pestañas */
+.pestanas { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px; background: var(--pista); border-radius: 10px; }
+.pestana { padding: 9px 18px; font: inherit; font-size: 17px; font-weight: 600; color: var(--texto-primario); background: transparent; border: 0; border-radius: 7px; cursor: pointer; }
+.pestana:hover { background: #ffffffa0; }
+.pestana[aria-selected="true"] { background: #ffffff; box-shadow: 0 1px 3px rgba(0, 0, 0, .14); }
+.pestana:focus-visible { outline: 3px solid var(--texto-primario); outline-offset: 2px; }
+
+.aviso-servidor { margin: 0 6px 12px; padding: 10px 14px; border-radius: 9px; background: #fff6d9; font-size: 16px; line-height: 1.45; }
+.aviso-servidor code { padding: 1px 6px; border-radius: 5px; background: #ffffffc0; font-size: .95em; }
+
+.panel-prueba iframe { display: block; width: 100%; height: min(88vh, 1100px); min-height: 560px; border: 1px solid var(--borde); border-radius: 10px; background: var(--superficie); }
+
+/* Contraste */
+.fila-contraste { padding: 14px 0 8px; border-top: 1px solid var(--borde); }
+.fila-resumen { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 26px; align-items: stretch; }
+.clases.clases-2 { flex-wrap: wrap; gap: 8px 18px; margin: 6px 0; }
+.clases.clases-1 img { width: 72px; height: 64px; }
+.ir-prueba { padding: 5px 14px; font-size: 15px; }
+
+/* Barras dobles: arriba lo esperado (claro), abajo tu prueba (sólido) */
+.barras.barras-dobles { grid-template-columns: 58px minmax(0, 1fr) 72px; margin-top: 24px; }
+.pista.doble { display: grid; grid-template-rows: 1fr 1fr; gap: 3px; height: 44px; padding: 4px; cursor: default; }
+.pista.doble i { height: 100%; border-radius: 3px; }
+.pista.doble i.esperado { opacity: .35; }
+.pista.doble i.vacio { width: 100%; background: repeating-linear-gradient(-45deg, transparent 0 6px, #c9d1e3 6px 7px); }
+.barras-dobles .valor { display: grid; gap: 2px; font-size: 18px; line-height: 1.15; }
+.valor-esperado { color: var(--texto-tenue); opacity: .6; }
+.valor-obtenido { font-weight: 750; }
+.clave-barras { display: flex; gap: 18px; margin: 12px 0 0 70px; font-size: 14px; color: var(--texto-secundario); }
+.clave { display: inline-block; width: 26px; height: 10px; margin-right: 7px; border-radius: 2px; background: #6b7280; vertical-align: 0; }
+.clave.esperado { opacity: .35; }
+.lectura { margin: 10px 6px 0; font-size: 17px; line-height: 1.45; }
+
+/* Matrices de confusión */
+.bloque-matrices { margin-top: 16px; }
+.bloque-matrices .encabezado { min-height: 0; margin-bottom: 12px; }
+.matrices-modelos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 32px; }
+.matrices-modelo h4 { margin: 0 0 6px; font-size: 18px; }
+.matrices-modelo .muestra { width: 14px; height: 14px; margin-right: 8px; }
+.par-matrices { display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: flex-start; }
+.matriz { margin: 0; }
+.matriz figcaption { margin-bottom: 4px; font-size: 14px; color: var(--texto-secundario); }
+.matriz table { border-collapse: separate; border-spacing: 2px; font-variant-numeric: tabular-nums; }
+.matriz th { padding: 0 4px; font-size: 13px; font-weight: 500; text-align: right; white-space: nowrap; }
+.matriz thead th { text-align: center; }
+.icono-clase { display: inline-flex; }
+.icono-clase img { width: 30px; height: 26px; }
+.icono-clase svg { width: 22px; height: 22px; }
+.matriz td { width: 32px; height: 30px; padding: 0; border-radius: 4px; text-align: center; font-size: 13px; }
+.celda-matriz { background: color-mix(in srgb, var(--color) calc(var(--parte) * 100%), #f2f4f8); }
+.celda-matriz.oscuro { color: #ffffff; font-weight: 650; }
+.matriz td.diagonal { box-shadow: inset 0 0 0 2px #000000; }
+.sin-datos { background: #fafafa; color: #b5b5b5; }
+.matriz-vacia { display: grid; place-items: center; min-width: 150px; min-height: 110px; padding: 10px; border: 1px dashed #c9d1e3; border-radius: 8px; }
+.matriz-vacia p { margin: 0; font-size: 14px; color: var(--texto-secundario); }
+
+@media (max-width: 1100px) {
+    .matrices-modelos { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 900px) {
+    .fila-resumen { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+}
+@media (max-width: 600px) {
+    .cabecera-seccion h2 { font-size: 22px; }
+    .pestana { padding: 8px 12px; font-size: 15px; }
+    .panel-prueba iframe { height: 82vh; min-height: 480px; }
+    .barras.barras-dobles { grid-template-columns: 42px minmax(0, 1fr) 56px; }
+    .clave-barras { margin-left: 0; }
+    .matriz td { width: 26px; height: 26px; font-size: 12px; }
+    .icono-clase svg { width: 18px; height: 18px; }
+    .lectura, .bajada { font-size: 15px; }
+}
