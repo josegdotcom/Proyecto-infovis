@@ -10,39 +10,189 @@
     <link rel="icon" type="image/png" href="assets/icons/logo.png">
 
     <link rel="stylesheet" href="css/style.css?v=17">
-    <link rel="stylesheet" href="css/principal.css?v=4">
+    <link rel="stylesheet" href="css/principal.css?v=5">
     <!-- QR generado en el navegador: la dirección local no sale a servicios externos -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 
 <body>
 
-    <!-- Pensada para pantalla de computador: todo cabe en la ventana, sin desplazamiento -->
-    <header class="encabezado-pantalla">
-        <div class="titulo-pantalla">
-            <h1>¿Qué robot adivina mejor?</h1>
-            <p class="mensaje">Dos robots que aprenden de ejemplos compiten en dos juegos. Escanea el QR, juega con tu teléfono y mira quién gana.</p>
-        </div>
-        <section class="personajes" id="personajes" aria-label="Los dos robots"></section>
+    <!-- Flujo de 4 pasos: una vista visible a la vez, sin recargar la página.
+         Pensado para la pantalla del computador: cada paso cabe en la ventana. -->
+    <header class="barra-pasos">
+        <p class="marca">¿Qué robot adivina mejor?</p>
+        <nav aria-label="Pasos">
+            <ol class="indicador-pasos">
+                <li><button type="button" class="paso-boton" data-paso="1"><span class="numero">1</span>Conoce a los robots</button></li>
+                <li><button type="button" class="paso-boton" data-paso="2"><span class="numero">2</span>Prueba 1</button></li>
+                <li><button type="button" class="paso-boton" data-paso="3"><span class="numero">3</span>Prueba 2</button></li>
+                <li><button type="button" class="paso-boton" data-paso="4"><span class="numero">4</span>Resultados</button></li>
+            </ol>
+        </nav>
     </header>
 
-    <main class="cuerpo-pantalla">
-        <div id="pruebas" class="lista-pruebas"></div>
-        <section class="tablero" id="tablero" aria-live="polite"></section>
+    <main class="vistas">
+
+        <!-- ============ Paso 1 · Conoce a los robots ============ -->
+        <section class="vista vista-robots" id="paso-1" data-paso="1" aria-labelledby="titulo-paso-1">
+            <div class="cabecera-vista">
+                <h1 id="titulo-paso-1">Conoce a los robots</h1>
+                <p>Los dos aprenden mirando muchos ejemplos, pero <strong>leen los datos de forma distinta</strong>.</p>
+            </div>
+
+            <div class="robots-animados">
+                <article class="robot-animado" style="--color:var(--modelo-cnn)">
+                    <header>
+                        <span class="cara" data-robot="CNN"></span>
+                        <div>
+                            <h2>Robo-Lupa <small>CNN · red convolucional</small></h2>
+                            <p>Mira el dibujo <strong>por pedacitos</strong> con su lupa y busca formas: orejas, bigotes, cola.</p>
+                        </div>
+                    </header>
+                    <div class="escena escena-lupa" id="escena-lupa" role="img"
+                        aria-label="Animación: una lupa de 2 por 2 casillas recorre un dibujo pixelado de un gato y anota cuánta tinta encuentra en cada pedacito"></div>
+                </article>
+
+                <article class="robot-animado" style="--color:var(--modelo-mlp)">
+                    <header>
+                        <span class="cara" data-robot="MLP"></span>
+                        <div>
+                            <h2>Robo-Lista <small>MLP · red densa</small></h2>
+                            <p>Convierte el dibujo en <strong>una fila larga de números</strong> y busca patrones en ella.</p>
+                        </div>
+                    </header>
+                    <div class="escena escena-lista" id="escena-lista" role="img"
+                        aria-label="Animación: el mismo dibujo se lee fila por fila y se convierte en una fila larga de números"></div>
+                </article>
+            </div>
+
+            <div class="pie-vista">
+                <p class="nota-vista">En las dos pruebas verás cuál de los dos adivina mejor.</p>
+                <button type="button" class="btn-siguiente" data-ir="2">Siguiente: Prueba 1 →</button>
+            </div>
+        </section>
+
+        <!-- ============ Paso 2 · Prueba 1 ============ -->
+        <section class="vista vista-prueba" id="paso-2" data-paso="2" aria-labelledby="titulo-paso-2" hidden>
+            <div class="cabecera-vista">
+                <h1 id="titulo-paso-2"><span aria-hidden="true">🖍️</span> Prueba 1 · ¿Es un gato o un perro?</h1>
+                <p>La cámara del teléfono mira la pizarra. Dibuja y los robots tratarán de adivinar.</p>
+            </div>
+
+            <div class="grilla-prueba-1">
+                <figure class="camara-grande">
+                    <img id="camara-vivo" alt="Cámara del teléfono en vivo" hidden>
+                    <canvas id="camara-28" width="28" height="28" hidden aria-label="Lo que ve la cámara, en 28 por 28 puntos"></canvas>
+                    <div class="camara-espera" id="camara-espera">
+                        <strong>Esperando la cámara del teléfono…</strong>
+                        <span>Escanea el QR y apunta el teléfono a la pizarra.</span>
+                    </div>
+                    <figcaption><span class="punto-sensor desconectado" id="punto-1"></span><span id="estado-1">Esperando teléfono…</span></figcaption>
+                </figure>
+
+                <div class="columna-instrucciones">
+                    <div class="tarjeta-dibujo" id="tarjeta-dibujo" aria-live="polite"></div>
+                    <ol class="instrucciones">
+                        <li>Mira la <strong>tarjeta</strong> y elige en el teléfono <strong>Gato</strong> o <strong>Perro</strong>.</li>
+                        <li><strong>Dibuja</strong> en la pizarra frente a la cámara.</li>
+                        <li>Pulsa <strong>Capturar</strong> en el teléfono.</li>
+                    </ol>
+                    <div class="conexion">
+                        <div class="qr" id="qr-1" role="img" aria-label="Código QR para conectar la cámara del teléfono"></div>
+                        <p>Escanea con el teléfono para conectar la cámara.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pie-vista">
+                <div class="espacios">
+                    <p class="titulo-espacios">Dibuja <span class="intentos-total"></span> veces <b id="contador-1" class="contador">0 de 5</b></p>
+                    <ol class="lista-espacios" id="espacios-1" aria-label="Dibujos capturados"></ol>
+                </div>
+                <button type="button" class="btn-siguiente" data-ir="3">Siguiente: Prueba 2 →</button>
+            </div>
+        </section>
+
+        <!-- ============ Paso 3 · Prueba 2 ============ -->
+        <section class="vista vista-prueba" id="paso-3" data-paso="3" aria-labelledby="titulo-paso-3" hidden>
+            <div class="cabecera-vista">
+                <h1 id="titulo-paso-3"><span aria-hidden="true">🏃</span> Prueba 2 · ¿Qué estás haciendo?</h1>
+                <p>El teléfono en tu cintura siente cómo te mueves.</p>
+            </div>
+
+            <div class="grilla-prueba-2">
+                <div class="panel-sensor">
+                    <h2>Acelerómetro en vivo <small>m/s²</small></h2>
+                    <dl class="ejes">
+                        <div class="eje-x"><dt>X</dt><dd id="valor-x">—</dd></div>
+                        <div class="eje-y"><dt>Y</dt><dd id="valor-y">—</dd></div>
+                        <div class="eje-z"><dt>Z</dt><dd id="valor-z">—</dd></div>
+                    </dl>
+                    <canvas id="grafico-ejes" class="grafico-ejes" role="img" aria-label="Gráfico de líneas de X, Y y Z en los últimos segundos"></canvas>
+                    <p class="estado-sensor"><span class="punto-sensor desconectado" id="punto-2"></span><span id="estado-2">Esperando teléfono…</span></p>
+                    <div class="progreso-grabacion" id="progreso-2" hidden><i id="barra-progreso-2"></i></div>
+                </div>
+
+                <div class="panel-tabla">
+                    <h2>Tu movimiento se convierte en una tabla</h2>
+                    <p>Cada fila es una lectura del teléfono. Esta <strong>tabla de datos</strong> es lo que reciben los robots: con ella adivinan qué estabas haciendo.</p>
+                    <div class="tabla-envoltura">
+                        <table class="tabla-lecturas">
+                            <thead><tr><th scope="col">Tiempo</th><th scope="col">X</th><th scope="col">Y</th><th scope="col">Z</th></tr></thead>
+                            <tbody id="cuerpo-lecturas"><tr><td colspan="4" class="vacio">Sin lecturas todavía</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="columna-instrucciones">
+                    <ol class="instrucciones">
+                        <li>Elige la <strong>actividad</strong> en el teléfono.</li>
+                        <li>Ponlo <strong>vertical en tu cintura</strong>, con la pantalla hacia afuera.</li>
+                        <li>Pulsa <strong>Grabar</strong> y haz la actividad 10 segundos.</li>
+                    </ol>
+                    <div class="conexion">
+                        <div class="qr" id="qr-2" role="img" aria-label="Código QR para conectar los sensores del teléfono"></div>
+                        <p>Escanea con el teléfono y toca «Activar sensores».</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pie-vista">
+                <div class="espacios">
+                    <p class="titulo-espacios">Graba <span class="intentos-total"></span> veces <b id="contador-2" class="contador">0 de 5</b></p>
+                    <ol class="lista-espacios" id="espacios-2" aria-label="Grabaciones"></ol>
+                </div>
+                <button type="button" class="btn-siguiente" data-ir="4">Siguiente: Resultados →</button>
+            </div>
+        </section>
+
+        <!-- ============ Paso 4 · Resultados ============ -->
+        <section class="vista vista-resultados" id="paso-4" data-paso="4" aria-labelledby="titulo-paso-4" hidden>
+            <div class="cabecera-vista">
+                <h1 id="titulo-paso-4">¿Qué robot adivinó mejor?</h1>
+                <p>Cada barra cuenta los aciertos. La <strong>raya negra</strong> marca lo que el robot prometió.</p>
+            </div>
+
+            <div class="resultados" id="resultados" aria-live="polite"></div>
+
+            <div class="pie-vista">
+                <p class="mensaje-final">Cada robot es bueno en cosas distintas: no hay una red neuronal que sirva para todo.</p>
+                <button type="button" class="btn-siguiente" id="btn-jugar-de-nuevo">↺ Jugar de nuevo</button>
+            </div>
+        </section>
+
     </main>
 
-    <footer class="fuentes">
-        <span id="aviso-servidor" class="aviso-servidor" role="status" hidden>
-            Sin servidor de Python: inícialo con <code>python -m api.main</code>.
-        </span>
-        Robo-Lupa es una red convolucional (CNN) y Robo-Lista una red densa (MLP).
-        «Lo que prometió» son sus aciertos con los datos de prueba de
-        <a href="https://quickdraw.withgoogle.com/data" target="_blank" rel="noopener">Quick, Draw!</a> y
-        <a href="https://archive.ics.uci.edu/dataset/240/human+activity+recognition+using+smartphones" target="_blank" rel="noopener">Human Activity Recognition Using Smartphones</a>.
-    </footer>
+    <p id="aviso-servidor" class="aviso-servidor" role="status" hidden>
+        Sin servidor de Python: inícialo con <code>python -m api.main</code>.
+    </p>
 
     <script src="exploracion/datos.js"></script>
-    <script src="js/principal.js?v=5"></script>
+    <script src="js/principal.js?v=6"></script>
+    <script src="js/robots_animacion.js?v=1"></script>
+    <script src="js/paso_prueba_1.js?v=1"></script>
+    <script src="js/paso_prueba_2.js?v=1"></script>
+    <script src="js/paso_resultados.js?v=1"></script>
 
 </body>
 
