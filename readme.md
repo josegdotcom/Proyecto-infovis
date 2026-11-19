@@ -45,10 +45,20 @@ python -m api.main
 
 Este único comando levanta la API **y** sirve las páginas (no hace falta `python -m http.server`, y ambos usarían el puerto 8000). Abrir `http://localhost:8000`.
 
-La página principal (`index.html`, `js/principal.js`) está pensada para niños y jóvenes: «¿Qué robot adivina mejor?». La CNN es **Robo-Lupa** y la MLP **Robo-Lista**. Para cada prueba (una debajo de la otra, con las columnas alineadas) muestra «Lo que prometió» (aciertos de la Entrega 1 en 10 casillas, `exploracion/datos.js`), «Lo que logró contigo» (una casilla ✓/✗ por intento, en vivo) y el QR para jugar con el teléfono. Al final, un tablero muestra quién ganó cada prueba.
+### Página principal: 4 pasos
 
-- **Prueba 1:** en el teléfono elige Gato o Perro y pulsa *Capturar*; cada captura cuenta como un intento (se guardan en el navegador, *Reiniciar* los borra).
-- **Prueba 2:** en el teléfono elige la actividad y graba; los intentos los guarda el servidor.
+La página principal (`index.html`) es un recorrido de 4 pantallas para niños y jóvenes, «¿Qué robot adivina mejor?». La CNN es **Robo-Lupa** (azul) y la MLP **Robo-Lista** (verde). Se ve una pantalla a la vez, sin recargar la página. Se avanza con **Siguiente** o con el indicador de pasos de arriba, y `#paso-N` en la URL abre directo un paso. Está pensada para la pantalla del computador: cada paso cabe sin desplazamiento (probado a 1440×900 y 1280×720).
+
+| Paso | Qué muestra | Archivo |
+|---|---|---|
+| 1 · Conoce a los robots | Animación de cómo leen los datos: Robo-Lupa recorre un dibujo pixelado con una lupa de 2×2; Robo-Lista lo convierte en una fila de 100 números. | `js/robots_animacion.js` |
+| 2 · Prueba 1 | Cámara del teléfono en vivo, tarjeta con lo que hay que dibujar, instrucciones, QR y 5 espacios con la miniatura de cada captura. Sin resultados. | `js/paso_prueba_1.js` |
+| 3 · Prueba 2 | X, Y, Z del acelerómetro en vivo, gráfico de los últimos 10 s, tabla con las lecturas más recientes (lo que reciben los robots), instrucciones, QR y 5 espacios de grabación. Sin resultados. | `js/paso_prueba_2.js` |
+| 4 · Resultados | Por prueba, una barra por robot con sus aciertos «de 5» y una raya negra con lo que prometió (aciertos de la Entrega 1, `exploracion/datos.js`). *Jugar de nuevo* borra los intentos y vuelve al paso 1. | `js/paso_resultados.js` |
+
+- `js/principal.js` tiene lo compartido: `INTENTOS_POR_PRUEBA = 5` (cámbiala ahí), los robots, la conexión con la API, los QR y la navegación. Los estilos están en `css/principal.css`.
+- **Prueba 1:** el teléfono (`sensor_camara.html`) envía con cada cuadro una vista previa pequeña que la página muestra con `GET /api/camara/vista`. Cada *Capturar* con Gato o Perro elegido cuenta como un intento; se guardan en el navegador. La página principal usa el puente local de Python; Protobject sigue funcionando en `exploracion/prueba_1.html`.
+- **Prueba 2:** usa los mismos endpoints que `exploracion/prueba_2.html` (`/api/prueba_2/estado` y `/api/prueba_2/reiniciar`). Los intentos los guarda el servidor.
 
 Las pruebas también se pueden abrir solas:
 
