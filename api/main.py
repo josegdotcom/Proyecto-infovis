@@ -1,3 +1,4 @@
+import base64
 import json
 import os
 import shutil
@@ -27,6 +28,9 @@ _puerto_https_activo = None
 
 # Estado compartido en tiempo real cuando el teléfono actúa como sensor de cámara
 _estado_camara_lock = threading.Lock()
+# Última vista previa (JPEG pequeño) que envía el teléfono con cada frame, para mostrar
+# la cámara en vivo en la página principal (/api/camara/vista).
+_vista_camara = {"jpeg": None, "timestamp": 0.0}
 _estado_camara = {
     "seq": 0,
     "timestamp": 0.0,
@@ -222,6 +226,16 @@ def procesar_frame_camara(payload):
             tiene_dibujo = False
 
     ahora = time.time()
+    vista = _imagen_original_valida(payload.get("vista_previa"))
+    if vista and vista.startswith("data:image/jpeg;base64,"):
+        try:
+            jpeg = base64.b64decode(vista.split(",", 1)[1], validate=True)
+            with _estado_camara_lock:
+                _vista_camara["jpeg"] = jpeg
+                _vista_camara["timestamp"] = ahora
+        except (ValueError, base64.binascii.Error):
+            pass
+
     with _estado_camara_lock:
         _estado_camara["seq"] += 1
         _estado_camara["timestamp"] = ahora
@@ -333,6 +347,24 @@ class APIRequestHandler(SimpleHTTPRequestHandler):
                     "ultima_captura": ultima_cap,
                 }
             self._responder_json(200, datos)
+            return
+
+        if ruta == "/api/camara/vista":
+            # Cámara del teléfono en vivo: el JPEG más reciente (204 si no hay o es viejo)
+            with _estado_camara_lock:
+                jpeg = _vista_camara["jpeg"]
+                reciente = (time.time() - _vista_camara["timestamp"]) < 6.0
+            if not jpeg or not reciente:
+                self.send_response(204)
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                return
+            self.send_response(200)
+            self.send_header("Content-Type", "image/jpeg")
+            self.send_header("Content-Length", str(len(jpeg)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(jpeg)
             return
 
         if ruta == "/api/prueba_2/estado":

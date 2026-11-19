@@ -865,13 +865,13 @@
 
                 // Imagen original (JPEG) del recuadro analizado, para verla en grande
                 // en la pantalla principal. Solo se envía al capturar: pesa ~15 KB.
-                function capturarImagenOriginal() {
+                // L y calidad más bajos sirven para la vista previa en vivo de la página principal.
+                function capturarImagenOriginal(L = 320, calidad = 0.8) {
                     try {
                         const fuente = usandoImagenFija ? imgFija : video;
                         const vw = usandoImagenFija ? imgFija.naturalWidth : video.videoWidth;
                         const vh = usandoImagenFija ? imgFija.naturalHeight : video.videoHeight;
                         if (!vw || !vh) return null;
-                        const L = 320;
                         const lado = Math.min(vw, vh) * 0.74; // mismo recorte que extraer28x28DesdeFuente
                         const lienzo = document.createElement("canvas");
                         lienzo.width = L;
@@ -880,7 +880,7 @@
                         g.fillStyle = "#ffffff";
                         g.fillRect(0, 0, L, L);
                         g.drawImage(fuente, (vw - lado) / 2, (vh - lado) / 2, lado, lado, 0, 0, L, L);
-                        return lienzo.toDataURL("image/jpeg", 0.8);
+                        return lienzo.toDataURL("image/jpeg", calidad);
                     } catch (e) {
                         return null;
                     }
@@ -923,11 +923,13 @@
                             }
                         }
 
-                        // 2. Enviar al puente local en Python (/api/camara/frame)
+                        // 2. Enviar al puente local en Python (/api/camara/frame).
+                        //    Solo por aquí va además una vista previa pequeña (~10 KB) para
+                        //    mostrar la cámara en vivo en la página principal.
                         const resp = await fetch("/api/camara/frame", {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify(paquete)
+                            body: JSON.stringify({ ...paquete, vista_previa: capturarImagenOriginal(240, 0.6) })
                         });
                         if (resp.ok) {
                             const datos = await resp.json();
