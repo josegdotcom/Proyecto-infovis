@@ -1,5 +1,11 @@
-// Página principal: para cada prueba, lo esperado (Entrega 1), los resultados de la prueba
-// en vivo y el QR para hacerla con el teléfono.
+// Página principal pensada para niños y jóvenes: «¿Qué robot adivina mejor?».
+//
+// Cada modelo es un personaje: Robo-Lupa (CNN) y Robo-Lista (MLP). Para cada prueba:
+//   «Lo que prometió»     -> aciertos esperados (Entrega 1, exploracion/datos.js) en 10 casillas
+//   «Lo que logró contigo» -> una casilla por intento (✓ acertó / ✗ falló), en vivo
+//   QR                     -> abre la prueba en el teléfono
+// Las dos pruebas usan las mismas columnas, así cada robot de la Prueba 2 queda justo
+// debajo del mismo robot en la Prueba 1. Al final, un tablero resume quién ganó cada una.
 //
 // Las pruebas se hacen desde el teléfono; esta página solo consulta al servidor de Python:
 //   Prueba 1: /api/camara/estado. Cada vez que el teléfono pulsa «Capturar» con una
@@ -7,39 +13,80 @@
 //             cada modelo. Aquí se cuentan como intentos y se guardan en el navegador.
 //   Prueba 2: /api/prueba_2/estado. El servidor guarda todos los intentos de la sesión.
 
-const MODELOS = [
-    { clave: "CNN", color: "var(--modelo-cnn)" },
-    { clave: "MLP", color: "var(--modelo-mlp)" }
+const ROBOTS = [
+    {
+        clave: "CNN",
+        nombre: "Robo-Lupa",
+        sigla: "CNN · red convolucional",
+        piensa: "Mira el dibujo por pedacitos con su lupa: orejas, bigotes, cola.",
+        color: "var(--modelo-cnn)",
+        dibujo: `<svg viewBox="0 0 64 64" aria-hidden="true">
+            <path d="M32 6V12" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+            <circle cx="32" cy="5" r="3" fill="currentColor"/>
+            <rect x="12" y="12" width="40" height="30" rx="9" fill="currentColor"/>
+            <circle cx="24" cy="26" r="5" fill="#fff"/><circle cx="40" cy="26" r="5" fill="#fff"/>
+            <circle cx="25" cy="26" r="2.2" fill="#000"/><circle cx="41" cy="26" r="2.2" fill="#000"/>
+            <path d="M25 35Q32 39 39 35" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+            <rect x="18" y="44" width="28" height="16" rx="5" fill="currentColor"/>
+            <circle cx="52" cy="50" r="7" fill="#fff" stroke="#000" stroke-width="2.5"/>
+            <path d="M46.5 55.5L41 61" stroke="#000" stroke-width="3" stroke-linecap="round"/>
+        </svg>`
+    },
+    {
+        clave: "MLP",
+        nombre: "Robo-Lista",
+        sigla: "MLP · red densa",
+        piensa: "Lee una lista larga de números y busca patrones que se repiten.",
+        color: "var(--modelo-mlp)",
+        dibujo: `<svg viewBox="0 0 64 64" aria-hidden="true">
+            <path d="M32 6V12" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+            <circle cx="32" cy="5" r="3" fill="currentColor"/>
+            <rect x="12" y="12" width="40" height="30" rx="9" fill="currentColor"/>
+            <rect x="19" y="22" width="10" height="8" rx="2" fill="#fff"/><rect x="35" y="22" width="10" height="8" rx="2" fill="#fff"/>
+            <path d="M25 35H39" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
+            <rect x="18" y="44" width="28" height="16" rx="5" fill="currentColor"/>
+            <rect x="41" y="40" width="18" height="22" rx="2" fill="#fff" stroke="#000" stroke-width="2"/>
+            <path d="M45 46H55M45 51H55M45 56H51" stroke="#000" stroke-width="2" stroke-linecap="round"/>
+        </svg>`
+    }
 ];
 
 const PRUEBAS = [
     {
         numero: 1,
         datos: DATOS.p1,
-        titulo: "Prueba 1 · ¿Gato o perro?",
-        detalle: "Un dibujo en papel frente a la cámara del teléfono",
+        emoji: "🖍️",
+        titulo: "¿Es un gato o un perro?",
+        detalle: "Muestra un dibujo en papel a la cámara del teléfono",
         pagina: "sensor_camara.html",
-        instruccion: "En el teléfono elige <strong>Gato</strong> o <strong>Perro</strong> y pulsa <strong>Capturar</strong>.",
+        instruccion: "Elige <strong>Gato</strong> o <strong>Perro</strong> en el teléfono y pulsa <strong>Capturar</strong>.",
+        unidad: "dibujos",
         intervalo: 800
     },
     {
         numero: 2,
         datos: DATOS.p2,
-        titulo: "Prueba 2 · ¿Qué estás haciendo?",
-        detalle: "Los sensores del teléfono en la cintura durante 10 s",
+        emoji: "🏃",
+        titulo: "¿Qué estás haciendo?",
+        detalle: "El teléfono en tu cintura siente cómo te mueves",
         pagina: "sensor_prueba_2.html",
-        instruccion: "En el teléfono elige la actividad, ponlo <strong>vertical en la cintura</strong> y graba.",
+        instruccion: "Elige qué harás en el teléfono, ponlo <strong>en tu cintura</strong> y pulsa <strong>Grabar</strong>.",
+        unidad: "movimientos",
         intervalo: 1000
     }
 ];
 
-const MAX_MARCAS = 24;              // intentos visibles como ✓/✗ bajo cada barra
+const CASILLAS = 10;
 const CLAVE_P1 = "infovis:intentos-prueba-1";
 
 // Intentos de cada prueba: { real: "Gato", modelos: { CNN: { dice, correcto }, MLP: {...} } }
 const intentos = { 1: [], 2: [] };
 
 const $ = id => document.getElementById(id);
+
+// ---------------------------------------------------------------
+// API de Python
+// ---------------------------------------------------------------
 
 // La API de Python sirve también las páginas (http://localhost:8000). Si la página se abre
 // desde otro servidor (por ejemplo Live Server en el puerto 5500), se busca la API en el
@@ -85,59 +132,104 @@ async function api(ruta, opciones = { cache: "no-store" }) {
     }
 }
 
-function porcentaje(valor) {
-    return `${Math.round(valor * 100)} %`;
-}
+// ---------------------------------------------------------------
+// Utilidades
+// ---------------------------------------------------------------
 
 function escapar(texto) {
     return String(texto).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function robot(clave) {
+    return ROBOTS.find(r => r.clave === clave);
+}
+
+function nombreConColor(r) {
+    return `<strong class="nombre-robot" style="--color:${r.color}">${r.nombre}</strong>`;
+}
+
+// Pictogramas de las actividades (los mismos de la Entrega 1)
+const ESCALERA = '<path d="M3 26H10V21H17V16H25"/>';
+const PERSONA_ESCALERA = '<circle cx="11" cy="5" r="2.4"/><path d="M11 7.5L12 15M12 15L10.5 21M12 15L16.5 13L17 16M11.3 10L15.5 11.5M11.3 10L8.5 13.5"/>';
+const FIGURAS = {
+    "Camina": '<circle cx="14" cy="5" r="2.4"/><path d="M14 7.5V17M14 17L9.5 25.5M14 17L18 21L19 25.5M14 10.5L9.5 14.5M14 10.5L18.5 14"/>',
+    "Sube": `${ESCALERA}${PERSONA_ESCALERA}<path d="M20 9L25 4M21 4H25V8"/>`,
+    "Baja": `<g transform="translate(28 0) scale(-1 1)">${ESCALERA}${PERSONA_ESCALERA}</g><path d="M3 4L8 9M4 9H8V5"/>`,
+    "Sentado": '<circle cx="12" cy="6" r="2.4"/><path d="M12 8.5V17H19V25.5M12 12L17 14.5"/><path d="M8 9V25.5M8 20H15.5V25.5"/>',
+    "Parado": '<circle cx="14" cy="5" r="2.4"/><path d="M14 7.5V18M14 18L12 26M14 18L16 26M14 10.5L11 17M14 10.5L17 17"/>',
+    "Acostado": '<circle cx="6.5" cy="16.5" r="2.4"/><path d="M9 17.5H25M12 17.5L16 14.5"/><path d="M3 21.5H26M4 21.5V25M25 21.5V25"/>'
+};
+
+// Ícono de la casilla k: en dibujos se alternan gato y perro; en movimientos, las actividades
+function iconoCasilla(prueba, k) {
+    if (prueba.numero === 1) {
+        return `<img src="assets/images/${k % 2 ? "perro" : "gato"}.svg" alt="">`;
+    }
+    const clases = prueba.datos.clases;
+    return `<svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${FIGURAS[clases[k % clases.length]]}</svg>`;
 }
 
 // ---------------------------------------------------------------
 // Estructura de la página
 // ---------------------------------------------------------------
 
-function filaBarra(prueba, modelo, tipo) {
-    const id = `${tipo}-${prueba.numero}-${modelo.clave}`;
-    const esperado = prueba.datos.generales[modelo.clave].accuracy;
+function filaRobot(prueba, r) {
+    const esperado = prueba.datos.generales[r.clave].accuracy;
+    const deDiez = Math.round(esperado * CASILLAS);
+    const casillas = Array.from({ length: CASILLAS }, (_, k) =>
+        `<span class="casilla ${k < deDiez ? "llena" : ""}">${iconoCasilla(prueba, k)}</span>`).join("");
+    const id = `${prueba.numero}-${r.clave}`;
+
     return `
-        <dt>${modelo.clave}</dt>
-        <dd class="pista" id="pista-${id}">
-            <i id="barra-${id}" style="background:${modelo.color};width:${tipo === "esperado" ? esperado * 100 : 0}%"></i>
-        </dd>
-        <dd class="valor" id="valor-${id}">${tipo === "esperado" ? porcentaje(esperado) : "—"}</dd>
-        <dd class="marcas" id="marcas-${id}" aria-hidden="true"></dd>
+        <div class="celda-robot" style="--color:${r.color}">
+            <span class="cara">${r.dibujo}</span>
+            <span><strong>${r.nombre}</strong><small>${r.clave}</small></span>
+        </div>
+        <div class="celda-casillas" data-etiqueta="Prometió" style="--color:${r.color}"
+             title="${r.nombre} (${r.clave}) acertó el ${Math.round(esperado * 100)} % en los datos de prueba de la Entrega 1">
+            <div class="casillas" role="img" aria-label="${r.nombre} prometió acertar ${deDiez} de cada 10">${casillas}</div>
+            <span class="cuenta"><b>${deDiez}</b> de 10</span>
+        </div>
+        <div class="celda-casillas" data-etiqueta="Logró" style="--color:${r.color}">
+            <div class="casillas intentos" id="intentos-${id}" role="img" aria-live="polite"></div>
+            <span class="cuenta" id="cuenta-${id}">—</span>
+        </div>
     `;
 }
 
 function construir() {
+    $("personajes").innerHTML = ROBOTS.map(r => `
+        <article class="personaje" style="--color:${r.color}">
+            <span class="cara">${r.dibujo}</span>
+            <div>
+                <h2>${r.nombre} <small>${r.sigla}</small></h2>
+                <p>${r.piensa}</p>
+            </div>
+        </article>
+    `).join("");
+
     $("pruebas").innerHTML = PRUEBAS.map(p => `
         <section class="prueba" aria-labelledby="titulo-${p.numero}">
-            <div class="titulo-prueba">
-                <h2 id="titulo-${p.numero}">${p.titulo}</h2>
-                <p>${p.detalle}</p>
+            <h2 class="titulo-prueba" id="titulo-${p.numero}">
+                <span aria-hidden="true">${p.emoji}</span> Prueba ${p.numero} · ${p.titulo}
+                <small>${p.detalle}</small>
+            </h2>
+
+            <div class="tabla-robots">
+                <span class="columna"></span>
+                <span class="columna">Lo que prometió <small>de cada 10</small></span>
+                <span class="columna">Lo que logró contigo <small>tus últimos 10 intentos</small></span>
+                ${ROBOTS.map(r => filaRobot(p, r)).join("")}
+                <p class="frase" id="frase-${p.numero}" aria-live="polite"></p>
             </div>
 
-            <div class="bloque">
-                <h3>Esperado <span>aciertos en los datos de prueba (Entrega 1)</span></h3>
-                <dl class="barras">${MODELOS.map(m => filaBarra(p, m, "esperado")).join("")}</dl>
-            </div>
-
-            <div class="bloque">
-                <h3>Tu prueba <span id="contador-${p.numero}">sin intentos</span></h3>
-                <dl class="barras" aria-live="polite">${MODELOS.map(m => filaBarra(p, m, "obtenido")).join("")}</dl>
-                <div class="pie-bloque">
-                    <p class="ultimo" id="ultimo-${p.numero}"></p>
-                    <button type="button" class="btn btn-reiniciar" id="reiniciar-${p.numero}" hidden>Reiniciar</button>
-                </div>
-            </div>
-
-            <div class="bloque bloque-qr">
-                <div class="qr" id="qr-${p.numero}" role="img" aria-label="Código QR para abrir la prueba en el teléfono"></div>
+            <aside class="bloque-qr">
+                <div class="qr" id="qr-${p.numero}" role="img" aria-label="Código QR para jugar con el teléfono"></div>
                 <p class="estado"><span class="punto-sensor desconectado" id="punto-${p.numero}"></span><span id="estado-${p.numero}">Esperando teléfono…</span></p>
                 <p class="instruccion">${p.instruccion}</p>
+                <button type="button" class="btn btn-reiniciar" id="reiniciar-${p.numero}" hidden>Empezar de nuevo</button>
                 <a class="enlace" id="enlace-${p.numero}" href="exploracion/${p.pagina}" target="_blank" rel="noopener"></a>
-            </div>
+            </aside>
         </section>
     `).join("");
 
@@ -148,7 +240,7 @@ function construir() {
     });
 
     $("reiniciar-2").addEventListener("click", async () => {
-        if (!window.confirm("¿Borrar los intentos de la Prueba 2?")) return;
+        if (!window.confirm("¿Borrar los intentos de la prueba de movimiento?")) return;
         try {
             await api("api/prueba_2/reiniciar", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
         } catch (err) {
@@ -158,47 +250,122 @@ function construir() {
 }
 
 // ---------------------------------------------------------------
-// Resultados de la prueba: barras + ✓/✗ de cada intento
+// Resultados en vivo
 // ---------------------------------------------------------------
+
+function ganadorEsperado(prueba) {
+    const [a, b] = ROBOTS.map(r => prueba.datos.generales[r.clave].accuracy);
+    return a >= b ? ROBOTS[0] : ROBOTS[1];
+}
+
+// null si no hay intentos; "empate" si aciertan lo mismo
+function ganadorObtenido(prueba) {
+    const lista = intentos[prueba.numero];
+    if (!lista.length) return null;
+    const [a, b] = ROBOTS.map(r => lista.filter(i => i.modelos[r.clave].correcto).length);
+    if (a === b) return "empate";
+    return a > b ? ROBOTS[0] : ROBOTS[1];
+}
+
+function frase(prueba) {
+    const lista = intentos[prueba.numero];
+    const prometio = ganadorEsperado(prueba);
+    if (!lista.length) {
+        return `Escanea el QR y ¡a jugar! ${nombreConColor(prometio)} promete ganar esta prueba.`;
+    }
+
+    const ganador = ganadorObtenido(prueba);
+    let texto;
+    if (ganador === "empate") {
+        texto = `🤝 ¡Por ahora van empatados! ${nombreConColor(prometio)} prometió ganar.`;
+    } else if (ganador === prometio) {
+        texto = `🏆 Ganó ${nombreConColor(ganador)}, ¡como prometió!`;
+    } else {
+        texto = `😮 ¡Sorpresa! Prometió ganar ${nombreConColor(prometio)}, pero contigo ganó ${nombreConColor(ganador)}.`;
+    }
+
+    // Si un robot responde siempre lo mismo aunque cambie la respuesta correcta, se dice
+    const respuestasReales = new Set(lista.map(i => i.real));
+    if (lista.length >= 3 && respuestasReales.size > 1) {
+        ROBOTS.forEach(r => {
+            const dichas = new Set(lista.map(i => i.modelos[r.clave].dice));
+            if (dichas.size === 1) {
+                texto += ` 🤔 ${nombreConColor(r)} dijo «${escapar([...dichas][0])}» todas las veces… ¡se confundió!`;
+            }
+        });
+    }
+    return texto;
+}
 
 function pintar(prueba) {
     const lista = intentos[prueba.numero];
     const n = lista.length;
 
-    MODELOS.forEach(m => {
-        const id = `obtenido-${prueba.numero}-${m.clave}`;
-        const aciertos = lista.filter(i => i.modelos[m.clave].correcto).length;
-        const parte = n ? aciertos / n : 0;
+    ROBOTS.forEach(r => {
+        const id = `${prueba.numero}-${r.clave}`;
+        const aciertos = lista.filter(i => i.modelos[r.clave].correcto).length;
+        const ultimos = lista.slice(-CASILLAS);
+        const desde = n - ultimos.length;
 
-        $(`barra-${id}`).style.width = `${parte * 100}%`;
-        $(`pista-${id}`).classList.toggle("vacia", n === 0);
-        $(`valor-${id}`).innerHTML = n ? `${porcentaje(parte)}<small>${aciertos}/${n}</small>` : "—";
-        $(`marcas-${id}`).innerHTML = lista.slice(-MAX_MARCAS).map(i => {
-            const r = i.modelos[m.clave];
-            return `<span class="${r.correcto ? "bien" : "mal"}" title="Real: ${escapar(i.real)} · ${m.clave} dijo ${escapar(r.dice)}">${r.correcto ? "✓" : "✗"}</span>`;
+        const casillas = Array.from({ length: CASILLAS }, (_, k) => {
+            const intento = ultimos[k];
+            if (!intento) return `<span class="casilla vacia"></span>`;
+            const respuesta = intento.modelos[r.clave];
+            const nuevo = desde + k === n - 1 ? " nuevo" : "";
+            return `<span class="casilla ${respuesta.correcto ? "acierto" : "error"}${nuevo}"
+                title="Intento ${desde + k + 1}: era ${escapar(intento.real)}, ${r.nombre} dijo ${escapar(respuesta.dice)}">${respuesta.correcto ? "✓" : "✗"}</span>`;
         }).join("");
+
+        const contenedor = $(`intentos-${id}`);
+        contenedor.innerHTML = casillas;
+        contenedor.setAttribute("aria-label", n
+            ? `${r.nombre} acertó ${aciertos} de ${n} intentos`
+            : `${r.nombre} todavía no tiene intentos`);
+        $(`cuenta-${id}`).innerHTML = n ? `<b>${aciertos}</b> de ${n}` : "—";
     });
 
-    $(`contador-${prueba.numero}`).textContent = n === 0 ? "sin intentos" : `${n} ${n === 1 ? "intento" : "intentos"}`;
+    $(`frase-${prueba.numero}`).innerHTML = frase(prueba);
     $(`reiniciar-${prueba.numero}`).hidden = n === 0;
-
-    const ultimo = lista[n - 1];
-    $(`ultimo-${prueba.numero}`).innerHTML = ultimo
-        ? `Último: <strong>${escapar(ultimo.real)}</strong> → ${MODELOS.map(m => {
-            const r = ultimo.modelos[m.clave];
-            return `${m.clave} <span class="${r.correcto ? "bien" : "mal"}">${r.correcto ? "✓" : "✗"} ${escapar(r.dice)}</span>`;
-        }).join(" · ")}`
-        : "";
+    pintarTablero();
 }
 
-// Resalta la barra que acaba de cambiar
-function destacar(prueba) {
-    MODELOS.forEach(m => {
-        const pista = $(`pista-obtenido-${prueba.numero}-${m.clave}`);
-        pista.classList.remove("nuevo");
-        void pista.offsetWidth;
-        pista.classList.add("nuevo");
-    });
+// Tablero final: quién gana cada prueba (en tus intentos, o lo prometido si aún no juegas)
+function pintarTablero() {
+    const filas = ROBOTS.map(r => `
+        <tr>
+            <th scope="row" style="--color:${r.color}"><span class="cara">${r.dibujo}</span>${r.nombre}</th>
+            ${PRUEBAS.map(p => {
+                const ganador = ganadorObtenido(p) ?? ganadorEsperado(p);
+                const jugado = intentos[p.numero].length > 0;
+                const gana = ganador === r || ganador === "empate";
+                const simbolo = ganador === "empate" ? "🤝" : (gana ? "🏆" : "");
+                return `<td class="${jugado ? "" : "prometido"}">${simbolo || "<span class=\"nada\">—</span>"}</td>`;
+            }).join("")}
+        </tr>
+    `).join("");
+
+    const ganadores = PRUEBAS.map(p => ganadorObtenido(p));
+    const ambasJugadas = ganadores.every(g => g && g !== "empate");
+    let mensaje;
+    if (ambasJugadas && ganadores[0] !== ganadores[1]) {
+        mensaje = "¡Lo descubriste! Cada robot es bueno en cosas distintas. Por eso no hay una red neuronal que sirva para todo.";
+    } else if (ambasJugadas) {
+        mensaje = `Contigo ${ganadores[0].nombre} ganó las dos pruebas. ¿Pasará lo mismo si juegas más veces? Lo prometido dice que cada robot es bueno en cosas distintas.`;
+    } else {
+        mensaje = "Cada robot es bueno en cosas distintas. Por eso no hay una red neuronal que sirva para todo. ¡Juega las dos pruebas para comprobarlo!";
+    }
+
+    $("tablero").innerHTML = `
+        <h2>¿Quién ganó cada prueba?</h2>
+        <table>
+            <thead><tr><th scope="col"><span class="solo-lectores">Robot</span></th>
+                ${PRUEBAS.map(p => `<th scope="col"><span aria-hidden="true">${p.emoji}</span> ${p.unidad[0].toUpperCase()}${p.unidad.slice(1)}</th>`).join("")}
+            </tr></thead>
+            <tbody>${filas}</tbody>
+        </table>
+        <p class="nota-tablero">Los trofeos grises son lo prometido; se pintan cuando juegas esa prueba.</p>
+        <p class="mensaje-final">${mensaje}</p>
+    `;
 }
 
 function estado(prueba, conectado, texto) {
@@ -236,6 +403,7 @@ async function consultarP1() {
     const prueba = PRUEBAS[0];
     const e = await api("api/camara/estado");
     const seq = e.captura_seq || 0;
+    const clases = prueba.datos.clases;
 
     // Primera consulta (o servidor reiniciado): no contar capturas anteriores
     if (ultimaCaptura === null || seq < ultimaCaptura) {
@@ -245,27 +413,24 @@ async function consultarP1() {
 
     const c = e.ultima_captura;
     if (seq > ultimaCaptura && c && c.captura_seq === seq && c.etiqueta !== null && c.modelos) {
-        const clases = prueba.datos.clases;
         intentos[1].push({
             real: clases[c.etiqueta],
-            modelos: Object.fromEntries(MODELOS.map(m => [m.clave, {
-                dice: clases[c.modelos[m.clave].prediccion],
-                correcto: c.modelos[m.clave].prediccion === c.etiqueta
+            modelos: Object.fromEntries(ROBOTS.map(r => [r.clave, {
+                dice: clases[c.modelos[r.clave].prediccion],
+                correcto: c.modelos[r.clave].prediccion === c.etiqueta
             }]))
         });
         ultimaCaptura = seq;
         guardarP1();
         pintar(prueba);
-        destacar(prueba);
     }
 
     if (!e.conectado) {
         estado(prueba, false, "Esperando teléfono…");
     } else if (e.tiene_dibujo && e.modelos) {
-        const clases = prueba.datos.clases;
-        estado(prueba, true, `Viendo un dibujo: CNN ${clases[e.modelos.CNN.prediccion]} · MLP ${clases[e.modelos.MLP.prediccion]}`);
+        estado(prueba, true, `Veo un dibujo: Robo-Lupa dice ${clases[e.modelos.CNN.prediccion]}, Robo-Lista dice ${clases[e.modelos.MLP.prediccion]}`);
     } else {
-        estado(prueba, true, "Teléfono conectado");
+        estado(prueba, true, "¡Teléfono listo! Muestra un dibujo");
     }
 }
 
@@ -273,7 +438,7 @@ async function consultarP1() {
 // Prueba 2: el servidor guarda todos los intentos
 // ---------------------------------------------------------------
 
-let firmaP2 = "";
+let firmaP2 = null;
 
 async function consultarP2() {
     const prueba = PRUEBAS[1];
@@ -282,27 +447,25 @@ async function consultarP2() {
 
     const firma = e.intentos.map(i => i.id).join(",");
     if (firma !== firmaP2) {
-        const huboNuevo = e.intentos.length > intentos[2].length && firmaP2 !== "";
         firmaP2 = firma;
         // Las actividades llegan como 1..6, en el mismo orden que DATOS.p2.clases
         intentos[2] = e.intentos.map(i => ({
             real: clases[i.actividad_real - 1],
-            modelos: Object.fromEntries(MODELOS.map(m => [m.clave, {
-                dice: clases[i.modelos[m.clave].prediccion - 1],
-                correcto: i.modelos[m.clave].correcto
+            modelos: Object.fromEntries(ROBOTS.map(r => [r.clave, {
+                dice: clases[i.modelos[r.clave].prediccion - 1],
+                correcto: i.modelos[r.clave].correcto
             }]))
         }));
         pintar(prueba);
-        if (huboNuevo) destacar(prueba);
     }
 
     const actividad = e.actividad ? clases[e.actividad - 1] : "";
     const textos = {
-        cuenta_regresiva: `Ponte en posición: ${actividad} en ${Math.ceil(e.segundos_para_iniciar)} s`,
-        grabando: `Grabando ${actividad}… ${Math.round(e.progreso * 100)} %`,
-        procesando: "Los modelos están analizando…"
+        cuenta_regresiva: `¡Prepárate! ${actividad} en ${Math.ceil(e.segundos_para_iniciar)}…`,
+        grabando: `Grabando: ${actividad} ${Math.round(e.progreso * 100)} %`,
+        procesando: "Los robots están pensando…"
     };
-    estado(prueba, e.conectado, textos[e.fase] || (e.conectado ? "Teléfono conectado" : "Esperando teléfono…"));
+    estado(prueba, e.conectado, textos[e.fase] || (e.conectado ? "¡Teléfono listo!" : "Esperando teléfono…"));
 }
 
 // ---------------------------------------------------------------
@@ -331,7 +494,7 @@ async function prepararQr() {
         const qr = $(`qr-${p.numero}`);
         if (typeof QRCode !== "undefined") {
             qr.innerHTML = "";
-            new QRCode(qr, { text: url, width: 168, height: 168, correctLevel: QRCode.CorrectLevel.M });
+            new QRCode(qr, { text: url, width: 160, height: 160, correctLevel: QRCode.CorrectLevel.M });
         } else {
             qr.textContent = "Abre el enlace en el teléfono.";
         }

@@ -45,7 +45,7 @@ python -m api.main
 
 Este único comando levanta la API **y** sirve las páginas (no hace falta `python -m http.server`, y ambos usarían el puerto 8000). Abrir `http://localhost:8000`.
 
-La página principal (`index.html`) muestra, para cada prueba: a la izquierda los aciertos esperados (Entrega 1, `exploracion/datos.js`), al centro los aciertos de tu prueba, que se actualizan con cada intento (✓/✗), y a la derecha el QR para hacerla con el teléfono (`js/principal.js`).
+La página principal (`index.html`, `js/principal.js`) está pensada para niños y jóvenes: «¿Qué robot adivina mejor?». La CNN es **Robo-Lupa** y la MLP **Robo-Lista**. Para cada prueba (una debajo de la otra, con las columnas alineadas) muestra «Lo que prometió» (aciertos de la Entrega 1 en 10 casillas, `exploracion/datos.js`), «Lo que logró contigo» (una casilla ✓/✗ por intento, en vivo) y el QR para jugar con el teléfono. Al final, un tablero muestra quién ganó cada prueba.
 
 - **Prueba 1:** en el teléfono elige Gato o Perro y pulsa *Capturar*; cada captura cuenta como un intento (se guardan en el navegador, *Reiniciar* los borra).
 - **Prueba 2:** en el teléfono elige la actividad y graba; los intentos los guarda el servidor.

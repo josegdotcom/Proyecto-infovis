@@ -5,12 +5,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>CNN vs. MLP · Las redes neuronales no son tan universales</title>
+    <title>¿Qué robot adivina mejor? · CNN vs. MLP</title>
 
     <link rel="icon" type="image/png" href="assets/icons/logo.png">
 
     <link rel="stylesheet" href="css/style.css?v=17">
-    <link rel="stylesheet" href="css/principal.css?v=1">
+    <link rel="stylesheet" href="css/principal.css?v=2">
     <!-- QR generado en el navegador: la dirección local no sale a servicios externos -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
@@ -18,22 +18,29 @@
 <body>
 
     <header class="cabecera centrada">
-        <h1>Las redes neuronales no son tan universales</h1>
-        <p class="mensaje">Escanea el QR con tu teléfono, haz la prueba y compara lo esperado con lo que obtienen la CNN y la MLP.</p>
-        <ul class="leyenda" aria-label="Colores de los modelos">
-            <li><span class="muestra" style="background:var(--modelo-cnn)"></span>CNN (convolucional)</li>
-            <li><span class="muestra" style="background:var(--modelo-mlp)"></span>MLP (red densa)</li>
-        </ul>
+        <h1>¿Qué robot adivina mejor?</h1>
+        <p class="mensaje">Dos robots que aprenden de ejemplos compiten en dos juegos. Escanea el QR, juega con tu teléfono y mira quién gana.</p>
     </header>
 
-    <main id="pruebas"></main>
+    <main>
+        <section class="personajes" id="personajes" aria-label="Los dos robots"></section>
+        <div id="pruebas" class="lista-pruebas"></div>
+        <section class="tablero" id="tablero" aria-live="polite"></section>
+    </main>
 
     <p id="aviso-servidor" class="aviso-servidor" role="status" hidden>
         Sin servidor de Python: inícialo con <code>python -m api.main</code> y abre <code>http://localhost:8000</code>.
     </p>
 
+    <footer class="fuentes">
+        Robo-Lupa es una red convolucional (CNN) y Robo-Lista una red densa (MLP).
+        «Lo que prometió» son sus aciertos con los datos de prueba de
+        <a href="https://quickdraw.withgoogle.com/data" target="_blank" rel="noopener">Quick, Draw!</a> y
+        <a href="https://archive.ics.uci.edu/dataset/240/human+activity+recognition+using+smartphones" target="_blank" rel="noopener">Human Activity Recognition Using Smartphones</a>.
+    </footer>
+
     <script src="exploracion/datos.js"></script>
-    <script src="js/principal.js?v=1"></script>
+    <script src="js/principal.js?v=2"></script>
 
 </body>
 
