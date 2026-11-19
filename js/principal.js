@@ -304,16 +304,24 @@ function pintar(prueba) {
     ROBOTS.forEach(r => {
         const id = `${prueba.numero}-${r.clave}`;
         const aciertos = lista.filter(i => i.modelos[r.clave].correcto).length;
-        const ultimos = lista.slice(-CASILLAS);
-        const desde = n - ultimos.length;
+        // Efecto de barra: primero todos los aciertos (izquierda), luego los errores y al
+        // final los espacios libres. Dentro de cada grupo se mantiene el orden de los intentos.
+        const ultimos = lista.slice(-CASILLAS).map((intento, k) => ({
+            intento,
+            numero: n - Math.min(n, CASILLAS) + k + 1,
+            respuesta: intento.modelos[r.clave]
+        }));
+        const ordenados = [
+            ...ultimos.filter(u => u.respuesta.correcto),
+            ...ultimos.filter(u => !u.respuesta.correcto)
+        ];
 
         const casillas = Array.from({ length: CASILLAS }, (_, k) => {
-            const intento = ultimos[k];
-            if (!intento) return `<span class="casilla vacia"></span>`;
-            const respuesta = intento.modelos[r.clave];
-            const nuevo = desde + k === n - 1 ? " nuevo" : "";
-            return `<span class="casilla ${respuesta.correcto ? "acierto" : "error"}${nuevo}"
-                title="Intento ${desde + k + 1}: era ${escapar(intento.real)}, ${r.nombre} dijo ${escapar(respuesta.dice)}">${respuesta.correcto ? "✓" : "✗"}</span>`;
+            const u = ordenados[k];
+            if (!u) return `<span class="casilla vacia"></span>`;
+            const nuevo = u.numero === n ? " nuevo" : "";
+            return `<span class="casilla ${u.respuesta.correcto ? "acierto" : "error"}${nuevo}"
+                title="Intento ${u.numero}: era ${escapar(u.intento.real)}, ${r.nombre} dijo ${escapar(u.respuesta.dice)}">${u.respuesta.correcto ? "✓" : "✗"}</span>`;
         }).join("");
 
         const contenedor = $(`intentos-${id}`);
