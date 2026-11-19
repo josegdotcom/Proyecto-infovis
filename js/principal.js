@@ -57,7 +57,6 @@ const PRUEBAS = [
         datos: DATOS.p1,
         emoji: "🖍️",
         titulo: "¿Es un gato o un perro?",
-        detalle: "Muestra un dibujo en papel a la cámara del teléfono",
         pagina: "sensor_camara.html",
         instruccion: "Elige <strong>Gato</strong> o <strong>Perro</strong> en el teléfono y pulsa <strong>Capturar</strong>.",
         unidad: "dibujos",
@@ -68,7 +67,6 @@ const PRUEBAS = [
         datos: DATOS.p2,
         emoji: "🏃",
         titulo: "¿Qué estás haciendo?",
-        detalle: "El teléfono en tu cintura siente cómo te mueves",
         pagina: "sensor_prueba_2.html",
         instruccion: "Elige qué harás en el teléfono, ponlo <strong>en tu cintura</strong> y pulsa <strong>Grabar</strong>.",
         unidad: "movimientos",
@@ -212,13 +210,12 @@ function construir() {
         <section class="prueba" aria-labelledby="titulo-${p.numero}">
             <h2 class="titulo-prueba" id="titulo-${p.numero}">
                 <span aria-hidden="true">${p.emoji}</span> Prueba ${p.numero} · ${p.titulo}
-                <small>${p.detalle}</small>
             </h2>
 
             <div class="tabla-robots">
                 <span class="columna"></span>
-                <span class="columna">Lo que prometió <small>de cada 10</small></span>
-                <span class="columna">Lo que logró contigo <small>tus últimos 10 intentos</small></span>
+                <span class="columna">Lo que prometió</span>
+                <span class="columna">Lo que logró contigo</span>
                 ${ROBOTS.map(r => filaRobot(p, r)).join("")}
                 <p class="frase" id="frase-${p.numero}" aria-live="polite"></p>
             </div>
@@ -228,7 +225,6 @@ function construir() {
                 <p class="estado"><span class="punto-sensor desconectado" id="punto-${p.numero}"></span><span id="estado-${p.numero}">Esperando teléfono…</span></p>
                 <p class="instruccion">${p.instruccion}</p>
                 <button type="button" class="btn btn-reiniciar" id="reiniciar-${p.numero}" hidden>Empezar de nuevo</button>
-                <a class="enlace" id="enlace-${p.numero}" href="exploracion/${p.pagina}" target="_blank" rel="noopener"></a>
             </aside>
         </section>
     `).join("");
@@ -495,16 +491,13 @@ async function prepararQr() {
             url = `${protocolo}://${info.ip_local}:${info.puerto_https || info.puerto_http}/exploracion/${p.pagina}`;
         }
 
-        const enlace = $(`enlace-${p.numero}`);
-        enlace.href = url;
-        enlace.textContent = url.replace(/^https?:\/\//, "");
 
         const qr = $(`qr-${p.numero}`);
         if (typeof QRCode !== "undefined") {
             qr.innerHTML = "";
-            new QRCode(qr, { text: url, width: 160, height: 160, correctLevel: QRCode.CorrectLevel.M });
+            new QRCode(qr, { text: url, width: 256, height: 256, correctLevel: QRCode.CorrectLevel.M });
         } else {
-            qr.textContent = "Abre el enlace en el teléfono.";
+            qr.textContent = url;
         }
     });
 }

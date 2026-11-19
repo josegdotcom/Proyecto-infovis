@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es" class="principal" data-theme="light">
+<html lang="es" class="principal pantalla-completa" data-theme="light">
 
 <head>
     <meta charset="UTF-8">
@@ -10,29 +10,31 @@
     <link rel="icon" type="image/png" href="assets/icons/logo.png">
 
     <link rel="stylesheet" href="css/style.css?v=17">
-    <link rel="stylesheet" href="css/principal.css?v=2">
+    <link rel="stylesheet" href="css/principal.css?v=4">
     <!-- QR generado en el navegador: la dirección local no sale a servicios externos -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 
 <body>
 
-    <header class="cabecera centrada">
-        <h1>¿Qué robot adivina mejor?</h1>
-        <p class="mensaje">Dos robots que aprenden de ejemplos compiten en dos juegos. Escanea el QR, juega con tu teléfono y mira quién gana.</p>
+    <!-- Pensada para pantalla de computador: todo cabe en la ventana, sin desplazamiento -->
+    <header class="encabezado-pantalla">
+        <div class="titulo-pantalla">
+            <h1>¿Qué robot adivina mejor?</h1>
+            <p class="mensaje">Dos robots que aprenden de ejemplos compiten en dos juegos. Escanea el QR, juega con tu teléfono y mira quién gana.</p>
+        </div>
+        <section class="personajes" id="personajes" aria-label="Los dos robots"></section>
     </header>
 
-    <main>
-        <section class="personajes" id="personajes" aria-label="Los dos robots"></section>
+    <main class="cuerpo-pantalla">
         <div id="pruebas" class="lista-pruebas"></div>
         <section class="tablero" id="tablero" aria-live="polite"></section>
     </main>
 
-    <p id="aviso-servidor" class="aviso-servidor" role="status" hidden>
-        Sin servidor de Python: inícialo con <code>python -m api.main</code> y abre <code>http://localhost:8000</code>.
-    </p>
-
     <footer class="fuentes">
+        <span id="aviso-servidor" class="aviso-servidor" role="status" hidden>
+            Sin servidor de Python: inícialo con <code>python -m api.main</code>.
+        </span>
         Robo-Lupa es una red convolucional (CNN) y Robo-Lista una red densa (MLP).
         «Lo que prometió» son sus aciertos con los datos de prueba de
         <a href="https://quickdraw.withgoogle.com/data" target="_blank" rel="noopener">Quick, Draw!</a> y
@@ -40,7 +42,7 @@
     </footer>
 
     <script src="exploracion/datos.js"></script>
-    <script src="js/principal.js?v=3"></script>
+    <script src="js/principal.js?v=5"></script>
 
 </body>
 
