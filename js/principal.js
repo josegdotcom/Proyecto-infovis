@@ -41,6 +41,50 @@ const intentos = { 1: [], 2: [] };
 
 const $ = id => document.getElementById(id);
 
+// La API de Python sirve también las páginas (http://localhost:8000). Si la página se abre
+// desde otro servidor (por ejemplo Live Server en el puerto 5500), se busca la API en el
+// puerto 8000 del mismo equipo; el servidor de Python permite estas consultas (CORS).
+const BASES_API = [
+    new URL("./", window.location.href).href,
+    "http://localhost:8000/",
+    "http://127.0.0.1:8000/"
+];
+let baseApi = null;
+
+async function buscarApi() {
+    for (const base of BASES_API) {
+        try {
+            const r = await fetch(new URL("api/info", base), { cache: "no-store" });
+            if (r.ok) {
+                const info = await r.json();
+                if (info && info.ip_local) {
+                    baseApi = base;
+                    return info;
+                }
+            }
+        } catch (err) {
+            // Probar la siguiente dirección
+        }
+    }
+    baseApi = null;
+    return null;
+}
+
+async function api(ruta, opciones = { cache: "no-store" }) {
+    if (!baseApi) {
+        await buscarApi();
+        if (!baseApi) throw new Error("Sin servidor de Python");
+    }
+    try {
+        const r = await fetch(new URL(ruta, baseApi), opciones);
+        if (!r.ok) throw new Error(String(r.status));
+        return await r.json();
+    } catch (err) {
+        baseApi = null; // volver a buscar en la próxima consulta
+        throw err;
+    }
+}
+
 function porcentaje(valor) {
     return `${Math.round(valor * 100)} %`;
 }
@@ -106,7 +150,7 @@ function construir() {
     $("reiniciar-2").addEventListener("click", async () => {
         if (!window.confirm("¿Borrar los intentos de la Prueba 2?")) return;
         try {
-            await fetch("api/prueba_2/reiniciar", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+            await api("api/prueba_2/reiniciar", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
         } catch (err) {
             // Sin servidor: la próxima consulta lo indicará.
         }
@@ -190,7 +234,7 @@ function cargarP1() {
 
 async function consultarP1() {
     const prueba = PRUEBAS[0];
-    const e = await (await fetch("api/camara/estado", { cache: "no-store" })).json();
+    const e = await api("api/camara/estado");
     const seq = e.captura_seq || 0;
 
     // Primera consulta (o servidor reiniciado): no contar capturas anteriores
@@ -233,7 +277,7 @@ let firmaP2 = "";
 
 async function consultarP2() {
     const prueba = PRUEBAS[1];
-    const e = await (await fetch("api/prueba_2/estado", { cache: "no-store" })).json();
+    const e = await api("api/prueba_2/estado");
     const clases = prueba.datos.clases;
 
     const firma = e.intentos.map(i => i.id).join(",");
@@ -265,13 +309,12 @@ async function consultarP2() {
 // QR y consultas periódicas
 // ---------------------------------------------------------------
 
+let qrConServidor = false;   // el QR ya apunta a la IP local que entrega el servidor
+
 async function prepararQr() {
-    let info = null;
-    try {
-        info = await (await fetch("api/info", { cache: "no-store" })).json();
-    } catch (err) {
-        $("aviso-servidor").hidden = false;
-    }
+    const info = await buscarApi();
+    if (!info) $("aviso-servidor").hidden = false;
+    qrConServidor = Boolean(info);
 
     PRUEBAS.forEach(p => {
         // La cámara y los sensores del teléfono exigen HTTPS: se usa el puerto 8443 del servidor
@@ -302,6 +345,11 @@ function consultarCada(prueba, consultar) {
             await consultar();
             fallos = 0;
             $("aviso-servidor").hidden = true;
+            // Si el servidor se inició después de abrir la página, rehacer el QR
+            if (!qrConServidor) {
+                qrConServidor = true;
+                prepararQr();
+            }
         } catch (err) {
             fallos += 1;
             estado(prueba, false, "Sin servidor de Python");
