@@ -29,7 +29,7 @@ _puerto_https_activo = None
 # Estado compartido en tiempo real cuando el teléfono actúa como sensor de cámara
 _estado_camara_lock = threading.Lock()
 # Última vista previa (JPEG pequeño) que envía el teléfono con cada frame, para mostrar
-# la cámara en vivo en la página principal (/api/camara/vista).
+# la cámara en vivo en la experiencia (experiencia.html) (/api/camara/vista).
 _vista_camara = {"jpeg": None, "timestamp": 0.0}
 _estado_camara = {
     "seq": 0,
@@ -42,7 +42,7 @@ _estado_camara = {
     "ultima_captura": None,
 }
 
-# Intento abierto en la página principal (index.html, paso 2). El teléfono solo captura.
+# Intento abierto en la experiencia (experiencia.html, paso 2). El teléfono solo captura.
 # La prueba es libre: la etiqueta (Gato o Perro) la elige la persona en la pantalla
 # después de la foto, así que aquí suele ser None. numero = None si no hay intento abierto.
 _reto_actual = {"numero": None, "etiqueta": None}
@@ -56,7 +56,7 @@ _giro_camara = {"grados": 90}
 # «fallidas» cuenta las fotos pedidas en que no se vio un dibujo.
 _captura_auto = {"pedidos": 0, "fallidas": 0}
 
-# Ranking de la página principal (paso 3), compartido por todos los visitantes.
+# Ranking de la experiencia (paso 3), compartido por todos los visitantes.
 # Se guarda en grabaciones/ (ignorada por git).
 RANKING_ARCHIVO = ROOT_DIR / "grabaciones" / "ranking.json"
 _ranking_lock = threading.Lock()
@@ -328,7 +328,7 @@ def fijar_giro(payload):
 
 
 def fijar_reto(payload):
-    """La página principal avisa qué intento está abierto (o {} para ninguno).
+    """La experiencia avisa qué intento está abierto (o {} para ninguno).
     La etiqueta es opcional: en la prueba libre se conoce después de la foto."""
     numero = payload.get("numero")
     etiqueta = payload.get("etiqueta")

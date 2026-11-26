@@ -7,7 +7,7 @@ píxeles entre 0 y 1, igual que la API (api/services/test_1.py).
 Uso, desde la carpeta raíz y con el entorno activado:
     python data/reentrenar_mlp_dibujos.py
 
-Después conviene regenerar los datos de la página principal:
+Después conviene regenerar los datos de la experiencia (experiencia.html):
     python data/exportar_retos.py
 """
 

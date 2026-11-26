@@ -1,4 +1,4 @@
-// Sonidos de acierto y error de cada red, compartidos por la página principal (index.html)
+// Sonidos de acierto y error de cada red, compartidos por la experiencia (experiencia.html)
 // y el teléfono (exploracion/telefono_retos.html).
 //
 // Usa los mismos pitidos de exploracion/sensor_prueba_2.html (osciladores de Web Audio):

@@ -1,0 +1,288 @@
+/* Experiencia (experiencia.html) «¿Qué red adivina mejor?»: flujo de 3 pasos para la pantalla del
+   computador. Cada paso ocupa exactamente la ventana (sin desplazamiento) y se escala con
+   ella: las medidas están en rem y el tamaño base depende del ancho y del alto.
+   Pensado para 1440×900 y 1280×720.
+
+   Estructura de cada paso (.vista):  cabecera | contenido (1fr) | pie con el botón  */
+
+html.pantalla-completa { font-size: min(1.05vw, 1.75vh); }
+
+.pantalla-completa [hidden] { display: none !important; }
+.solo-lectores { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+.pantalla-completa body {
+    box-sizing: border-box;
+    height: 100vh;
+    margin: 0;
+    padding: .8rem 1.6rem 1rem;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: .8rem;
+    overflow: hidden;
+    font-size: 1rem;
+}
+
+/* ---------------- Indicador de pasos ---------------- */
+.barra-pasos { display: flex; align-items: center; justify-content: space-between; gap: 1rem 2rem; padding-bottom: .6rem; border-bottom: 1px solid var(--borde); }
+.marca { margin: 0; font-size: 1.15rem; font-weight: 800; letter-spacing: -.02rem; }
+.indicador-pasos { display: flex; gap: .4rem; margin: 0; padding: 0; list-style: none; }
+.paso-boton {
+    display: inline-flex; align-items: center; gap: .55rem;
+    min-height: 44px; padding: .35rem 1rem .35rem .4rem;
+    border: .13rem solid #d9e0f0; border-radius: 999px; background: #fff;
+    font: inherit; font-size: 1rem; font-weight: 600; color: #444; cursor: pointer;
+}
+.paso-boton .numero { display: inline-grid; place-items: center; width: 1.9rem; height: 1.9rem; border-radius: 50%; background: #eef1f6; font-weight: 800; }
+.paso-boton:hover { border-color: #000; }
+.paso-boton.hecho .numero { background: #000; color: #fff; }
+.paso-boton[aria-current="step"] { border-color: #000; background: #000; color: #fff; }
+.paso-boton[aria-current="step"] .numero { background: #fff; color: #000; }
+.paso-boton:focus-visible, .btn-siguiente:focus-visible, .btn-chico:focus-visible, .lista-ranking:focus-visible { outline: .2rem solid #0088ff; outline-offset: .2rem; }
+
+/* ---------------- Estructura de cada vista ---------------- */
+.pantalla-completa .vistas { display: block; max-width: none; margin: 0; min-height: 0; }
+.vista { height: 100%; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 1rem; min-height: 0; }
+.cabecera-vista { display: grid; gap: .5rem; }
+.cabecera-vista h1 { margin: 0; font-size: 2.5rem; letter-spacing: -.07rem; line-height: 1.12; outline: none; }
+.pie-vista { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; }
+.pie-centro { justify-content: center; }
+.cabecera-portada { justify-items: center; gap: .2rem; text-align: center; }
+.cabecera-portada h1 { font-size: 3.3rem; letter-spacing: -.1rem; }
+.bajada { margin: 0; font-size: 1.5rem; font-weight: 600; color: #333; }
+.btn-siguiente {
+    flex: none; min-height: 44px; padding: .8rem 1.8rem;
+    border: 0; border-radius: .8rem; background: #000; color: #fff;
+    font: inherit; font-size: 1.3rem; font-weight: 700; cursor: pointer;
+}
+.btn-siguiente:hover { background: #333; }
+
+/* ---------------- Paso 1 · El truco ---------------- */
+.truco { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: .8rem; min-height: 0; }
+.estado-truco {
+    justify-self: center; margin: 0; padding: .35rem 1.2rem; border-radius: 999px;
+    background: #eef1f6; font-size: 1.3rem; font-weight: 800; transition: background .3s, color .3s;
+}
+.estado-truco[data-fase="movido"] { background: #000; color: #fff; }
+/* Tarjetas angostas y centradas: el contenido conserva su tamaño */
+.dos-redes { display: grid; grid-template-columns: repeat(2, minmax(0, 33rem)); grid-template-rows: minmax(0, 1fr); justify-content: center; gap: 2.4rem; min-height: 0; }
+.tarjeta-red {
+    display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto auto; justify-items: center; gap: .7rem;
+    min-height: 0; padding: 1.1rem 1.4rem; border: .18rem solid var(--color); border-radius: 1.2rem;
+    background: color-mix(in srgb, var(--color) 6%, #fff);
+}
+.tarjeta-red header { justify-self: start; display: flex; align-items: baseline; gap: .8rem; }
+.tarjeta-red h2 { margin: 0; font-size: 2rem; letter-spacing: -.04rem; color: color-mix(in srgb, var(--color) 75%, #000); }
+.tarjeta-red header p { margin: 0; font-size: 1.2rem; color: #333; }
+
+.grilla-truco { position: relative; display: grid; grid-template-columns: repeat(14, 1fr); gap: 2px; height: 100%; max-height: 22rem; aspect-ratio: 1; }
+.grilla-truco i { border-radius: 2px; background: #e9edf4; transition: background .45s; }
+.grilla-truco i.tinta { background: #1d1d1d; }
+.grilla-truco i.cambio { background: #d03b3b; }
+.lupa-truco {
+    position: absolute; z-index: 1;
+    left: calc(var(--x, 1) / var(--n, 14) * 100%); top: calc(var(--y, 1) / var(--n, 14) * 100%);
+    width: calc(2 / var(--n, 14) * 100%); aspect-ratio: 1;
+    box-sizing: border-box; border: .3rem solid var(--color); border-radius: .35rem;
+    box-shadow: 0 0 0 .3rem rgba(255, 255, 255, .85), 0 .3rem .8rem rgba(0, 0, 0, .3);
+    transition: left .45s ease, top .45s ease;
+}
+.globo { margin: 0; padding: .3rem 1.4rem; border: .16rem solid var(--color); border-radius: .9rem; background: #fff; font-size: 2rem; font-weight: 800; }
+.globo.duda { border-style: dashed; }
+.motivo { margin: 0; min-height: 1.4em; font-size: 1.2rem; font-weight: 600; text-align: center; }
+.como-mira { margin: 0; max-width: 31rem; min-height: 2.7em; font-size: 1.15rem; line-height: 1.35; text-align: center; color: #222; }
+/* El desafío: tarjeta centrada con borde rojo y el botón al lado */
+.franja-desafio {
+    justify-self: center; justify-content: center; gap: 2.2rem;
+    padding: .9rem 1rem .9rem 2rem; border: .2rem solid #d03b3b; border-radius: 1.2rem; background: #fff;
+    animation: llama 2.4s ease-in-out infinite;
+}
+@keyframes llama {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(208, 59, 59, 0); }
+    50% { box-shadow: 0 0 0 .45rem rgba(208, 59, 59, .15); }
+}
+.desafio { display: grid; justify-items: center; gap: .45rem; margin: 0; font-size: 1.95rem; font-weight: 600; line-height: 1.2; text-align: center; }
+.desafio strong { font-weight: 900; color: #b42828; }
+.desafio .etiqueta-desafio {
+    padding: .25rem .8rem; border-radius: .5rem; background: #d03b3b; color: #fff;
+    font-size: 1.05rem; font-weight: 900; letter-spacing: .05rem; text-transform: uppercase;
+}
+.btn-desafio {
+    flex: none; min-height: 44px; padding: .9rem 1.8rem; border: 0; border-radius: .8rem;
+    background: #000; color: #fff; font: inherit; font-size: 1.45rem; font-weight: 800; cursor: pointer;
+}
+.btn-desafio:hover { background: #333; }
+.btn-desafio:focus-visible { outline: .2rem solid #0088ff; outline-offset: .2rem; }
+
+/* ---------------- Paso 2 · Los retos ---------------- */
+.instrucciones-cortas { display: flex; flex-wrap: wrap; gap: .4rem 2rem; margin: 0; padding: 0; list-style: none; counter-reset: paso; font-size: 1.2rem; }
+.instrucciones-cortas li { display: flex; align-items: center; gap: .6rem; counter-increment: paso; }
+.instrucciones-cortas li::before {
+    content: counter(paso); display: grid; place-items: center; width: 1.9rem; height: 1.9rem;
+    border-radius: 50%; background: #000; color: #fff; font-weight: 800; font-size: 1rem;
+}
+
+.retos { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); gap: 1.6rem; min-height: 0; }
+.columna-reto { display: grid; grid-template-rows: auto auto minmax(0, 1fr); gap: .8rem; min-height: 0; }
+
+.progreso-retos { display: flex; align-items: center; gap: .5rem; }
+.progreso-retos span {
+    display: grid; place-items: center; width: 2.3rem; height: 2.3rem; border-radius: 50%;
+    border: .15rem solid #d9e0f0; font-weight: 800; color: #777;
+}
+.progreso-retos span.hecho { background: #e9edf4; border-color: #e9edf4; color: #333; }
+.progreso-retos span.punto { background: #d03b3b; border-color: #d03b3b; color: #fff; }
+.progreso-retos span[aria-current="step"] { border-color: #000; color: #000; box-shadow: 0 0 0 .15rem #000; }
+.progreso-retos .puntos { margin-left: auto; font-size: 1.3rem; }
+
+.consigna { display: flex; align-items: center; gap: 1rem; margin: 0; font-size: 2rem; font-weight: 800; line-height: 1.15; letter-spacing: -.03rem; }
+.consigna .iconos { display: flex; flex: none; }
+.consigna img { width: 3.4rem; height: 3.4rem; flex: none; }
+.consigna em { display: block; margin-top: .15rem; font-size: 1.15rem; font-style: normal; font-weight: 600; letter-spacing: 0; color: #444; }
+
+/* ¿Qué dibujaste? (sobre la cámara, después de la foto) */
+.pregunta {
+    position: absolute; z-index: 3; inset: 0; display: grid; place-content: center; justify-items: center; gap: 1.2rem;
+    background: rgba(0, 0, 0, .72); color: #fff; text-align: center;
+}
+.pregunta > strong { font-size: 2.8rem; letter-spacing: -.05rem; }
+.pregunta > div { display: flex; gap: 1.2rem; }
+.pregunta button {
+    display: grid; justify-items: center; gap: .4rem; min-width: 11rem; padding: 1rem 1.4rem;
+    border: 0; border-radius: 1rem; background: #fff; color: #111; font: inherit; font-size: 1.8rem; font-weight: 800; cursor: pointer;
+}
+.pregunta button img { width: 5rem; height: 5rem; }
+.pregunta button:hover { background: #ffe9e9; }
+.pregunta button:focus-visible { outline: .25rem solid #0088ff; outline-offset: .2rem; }
+.pregunta kbd { padding: 0 .45rem; border: 1px solid #c4ccdb; border-radius: .35rem; font: inherit; font-size: .95rem; color: #555; }
+.pregunta > span { font-size: 1.15rem; color: #ddd; }
+.consigna small { display: block; font-size: 1rem; font-weight: 600; letter-spacing: 0; color: #555; }
+
+.camara-grande { position: relative; display: grid; place-items: center; min-height: 0; margin: 0; overflow: hidden; border-radius: 1rem; background: #111; }
+.camara-grande > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.btn-girar {
+    position: absolute; z-index: 1; top: .7rem; right: .7rem; min-height: 44px; padding: .4rem 1rem;
+    border: 0; border-radius: .6rem; background: rgba(255, 255, 255, .92); color: #111;
+    font: inherit; font-size: 1.05rem; font-weight: 700; cursor: pointer;
+}
+.btn-girar:hover { background: #fff; }
+.btn-girar:focus-visible { outline: .2rem solid #0088ff; outline-offset: .15rem; }
+/* Cuenta regresiva sobre la cámara */
+.cuenta { position: absolute; z-index: 2; display: grid; justify-items: center; color: #fff; pointer-events: none; }
+.cuenta.grande { inset: 0; place-content: center; gap: .2rem; background: rgba(0, 0, 0, .55); }
+.cuenta.grande span { font-size: 2rem; font-weight: 800; }
+.cuenta.grande strong { font-size: 9rem; line-height: 1; font-weight: 900; animation: late .9s ease-out; }
+.cuenta.esquina {
+    top: .7rem; left: .7rem; grid-auto-flow: column; align-items: center; gap: .8rem;
+    padding: .4rem .5rem .4rem 1rem; border-radius: .8rem; background: rgba(0, 0, 0, .75);
+}
+.cuenta.esquina span { font-size: 1.4rem; font-weight: 800; }
+.cuenta.esquina strong {
+    display: grid; place-items: center; min-width: 3.2rem; height: 3.2rem; border-radius: .6rem;
+    background: #fff; color: #111; font-size: 2.2rem; font-weight: 900; font-variant-numeric: tabular-nums;
+}
+@keyframes late { from { transform: scale(1.35); opacity: .3; } to { transform: scale(1); opacity: 1; } }
+.barra-tiempo { position: absolute; z-index: 2; left: 0; right: 0; bottom: 0; height: .7rem; background: rgba(255, 255, 255, .25); }
+.barra-tiempo i { display: block; height: 100%; width: 100%; background: #d03b3b; }
+.camara-espera { display: grid; justify-items: center; gap: .3rem; padding: 1rem; color: #fff; text-align: center; font-size: 1.15rem; }
+.camara-espera strong { font-size: 1.4rem; }
+.qr { box-sizing: border-box; display: grid; place-items: center; width: min(13rem, 26vh); aspect-ratio: 1; padding: .5rem; margin-bottom: .4rem; background: #fff; border-radius: .7rem; }
+.qr img, .qr canvas { display: block; width: 100% !important; height: auto !important; }
+
+.columna-respuestas { display: grid; grid-template-rows: 1fr 1fr auto; gap: 1rem; min-height: 0; }
+.respuesta {
+    display: grid; align-content: center; justify-items: center; gap: .3rem; min-height: 0;
+    padding: 1rem; border: .18rem solid var(--color); border-radius: 1.1rem;
+    background: color-mix(in srgb, var(--color) 6%, #fff);
+}
+.respuesta .red { font-size: 1.4rem; font-weight: 800; color: color-mix(in srgb, var(--color) 75%, #000); }
+.respuesta .dice { font-size: 3rem; font-weight: 800; line-height: 1.1; }
+.respuesta .dice.esperando { font-size: 1.3rem; font-weight: 600; color: #777; }
+.marca-resultado { padding: .2rem 1rem; border-radius: 999px; font-size: 1.3rem; font-weight: 800; }
+.respuesta.acerto .marca-resultado { background: #e3f6e3; color: #0a7d0a; }
+.respuesta.fallo .marca-resultado { background: #fbe4e4; color: #b42828; }
+.respuesta.aparece { animation: aparece .45s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes aparece { from { transform: scale(.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.veredicto { margin: 0; padding: .9rem; border: .15rem dashed #c4ccdb; border-radius: 1rem; font-size: 1.5rem; font-weight: 800; text-align: center; }
+.veredicto.con-punto { border: .15rem solid #d03b3b; color: #b42828; }
+.veredicto.con-aviso { border: .15rem solid #e0a100; background: #fff8e1; font-size: 1.25rem; }
+.veredicto[data-cuenta]::after { content: attr(data-cuenta); display: block; margin-top: .2rem; font-size: 1rem; font-weight: 600; color: #555; }
+
+/* ---------------- Paso 3 · Resultados ---------------- */
+.resultados { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.2fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); gap: 1.2rem; min-height: 0; }
+.panel { display: flex; flex-direction: column; gap: .8rem; min-height: 0; padding: 1.1rem 1.3rem; border: 1px solid var(--borde); border-radius: 1rem; }
+.panel h2 { margin: 0; font-size: 1.5rem; letter-spacing: -.03rem; }
+.nota { margin: 0; font-size: 1rem; line-height: 1.35; color: #444; }
+
+.leyenda { display: flex; gap: 1.2rem; margin: 0; font-size: 1rem; }
+.leyenda span { display: inline-flex; align-items: center; gap: .4rem; }
+.leyenda i { width: .9rem; height: .9rem; border-radius: .2rem; }
+.leyenda i.azar { width: 0; height: 1rem; border-radius: 0; border-left: .15rem dashed #555; }
+.grafico { display: grid; align-content: center; gap: 1.2rem; flex: 1; min-height: 0; }
+.fila-grafico { display: grid; gap: .35rem; }
+.nombre-fila { font-size: 1.15rem; font-weight: 700; }
+.barras { position: relative; display: grid; gap: .25rem; }
+.pista { position: relative; display: flex; align-items: center; height: 2.1rem; }
+.pista i { display: block; flex-shrink: 0; height: 100%; border-radius: 0 .3rem .3rem 0; }
+.pista b { flex-shrink: 0; margin-left: .5rem; font-size: 1.15rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* 50 % = adivinar al azar. Las barras ocupan el 85 % del ancho para dejar lugar al número. */
+.pista { width: 85%; }
+.raya-azar { position: absolute; top: -.3rem; bottom: -.3rem; left: calc(85% * .5); border-left: .15rem dashed #555; }
+.tus-aciertos { margin: 0; padding: .6rem .8rem; border-radius: .6rem; background: #f5f6f9; font-size: 1.1rem; font-weight: 600; }
+
+/* ¿Por qué se confunde la MLP? */
+.mancha { display: grid; justify-items: center; align-content: center; gap: .5rem; flex: 1; min-height: 0; margin: 0; }
+.mancha canvas { width: min(15rem, 30vh); aspect-ratio: 1; border: 1px solid var(--borde); border-radius: .6rem; image-rendering: pixelated; }
+.mancha .leyenda { justify-content: center; font-size: .95rem; }
+.leyenda i.verde { background: rgb(0, 185, 130); }
+.leyenda i.negro { background: #111; }
+.tus-dibujos { display: flex; justify-content: center; gap: .4rem; }
+.tus-dibujos button {
+    position: relative; display: grid; padding: .2rem; border: .15rem solid #d9e0f0; border-radius: .5rem;
+    background: #fff; cursor: pointer; font: inherit;
+}
+.tus-dibujos button canvas { width: 2.6rem; height: 2.6rem; image-rendering: pixelated; }
+.tus-dibujos button span { position: absolute; top: .1rem; left: .25rem; font-size: .75rem; font-weight: 800; color: #555; }
+.tus-dibujos button.punto { border-color: #d03b3b; }
+.tus-dibujos button[aria-pressed="true"] { border-color: #000; box-shadow: 0 0 0 .15rem #000; }
+.tus-dibujos button:focus-visible { outline: .2rem solid #0088ff; outline-offset: .15rem; }
+.dato-mancha { margin: 0; padding: .6rem .8rem; border-radius: .6rem; background: #f5f6f9; font-size: 1.05rem; line-height: 1.5; }
+.dato-mancha .si, .dato-mancha .no { display: inline-block; padding: 0 .5rem; border-radius: 999px; font-size: .95rem; font-weight: 800; white-space: nowrap; }
+.dato-mancha .si { background: #e3f6e3; color: #0a7d0a; }
+.dato-mancha .no { background: #fbe4e4; color: #b42828; }
+
+.guardar-ranking { display: flex; gap: .5rem; }
+.guardar-ranking input { flex: 1; min-width: 0; min-height: 44px; padding: .4rem .8rem; border: .13rem solid #c4ccdb; border-radius: .6rem; font: inherit; font-size: 1.1rem; }
+.guardar-ranking input:focus-visible { outline: .2rem solid #0088ff; outline-offset: .1rem; }
+.btn-chico { min-height: 44px; padding: .4rem 1.1rem; border: 0; border-radius: .6rem; background: #000; color: #fff; font: inherit; font-size: 1.1rem; font-weight: 700; cursor: pointer; }
+.btn-chico:disabled, .guardar-ranking input:disabled { opacity: .45; cursor: not-allowed; }
+.lista-ranking { flex: 1; min-height: 0; overflow-y: auto; border-top: 1px solid var(--borde); }
+.lista-ranking table { width: 100%; border-collapse: collapse; font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+.lista-ranking th { position: sticky; top: 0; padding: .4rem .5rem; background: #fff; text-align: left; font-size: .85rem; letter-spacing: .05rem; text-transform: uppercase; color: #555; }
+.lista-ranking td { padding: .45rem .5rem; border-bottom: 1px solid #eef1f6; }
+.lista-ranking td.lugar { width: 2.6rem; font-weight: 800; font-size: 1.3rem; text-align: center; }
+.lista-ranking .num { text-align: right; font-weight: 700; white-space: nowrap; }
+.lista-ranking .num b { display: inline-block; min-width: 1.2rem; font-size: 1.3rem; }
+.bolitas { margin-right: .4rem; font-size: .95rem; letter-spacing: .05rem; color: #d03b3b; }
+.lista-ranking tr.primero td { padding-block: .7rem; background: linear-gradient(90deg, #fff4c7, #fffbea); font-weight: 800; font-size: 1.2rem; }
+.lista-ranking tr.primero td.lugar { font-size: 1.8rem; }
+.corona { display: block; margin-top: .1rem; font-size: .85rem; font-weight: 700; color: #8a6400; }
+.lista-ranking tr.tu td { background: #e6f3ff; font-weight: 800; }
+.lista-ranking tr.primero.tu td { background: linear-gradient(90deg, #fff4c7, #e6f3ff); }
+.lista-ranking tr.nuevo td { animation: brilla 1.2s ease-out 2; }
+@keyframes brilla { 0% { background: #bfe0ff; } 100% { background: #e6f3ff; } }
+.eres-tu { padding: 0 .45rem; border-radius: 999px; background: #0088ff; color: #fff; font-size: .8rem; vertical-align: .1rem; }
+.lista-ranking .vacio { padding-block: 1.5rem; color: #555; font-size: 1.2rem; font-weight: 700; text-align: center; }
+.estado-ranking.campeon { padding: .5rem .7rem; border-radius: .6rem; background: #fff4c7; color: #5c4300; font-weight: 800; }
+
+.mensaje-final { margin: 0; font-size: 1.45rem; font-weight: 800; line-height: 1.3; }
+.panel .mensaje-final { padding-top: .7rem; border-top: 1px solid var(--borde); font-size: 1.1rem; line-height: 1.35; }
+.pie-vista.solo-boton { justify-content: flex-end; }
+
+.aviso-servidor { position: fixed; left: 50%; bottom: .6rem; transform: translateX(-50%); margin: 0; padding: .3rem .9rem; border-radius: .5rem; background: #fff6d9; font-size: .95rem; font-weight: 600; box-shadow: 0 .2rem .6rem rgba(0, 0, 0, .12); }
+.aviso-servidor code { padding: 0 .3rem; border-radius: .3rem; background: #ffffffc0; }
+
+@media (prefers-reduced-motion: reduce) {
+    .grilla-truco i, .lupa-truco, .estado-truco { transition: none; }
+    .respuesta.aparece, .lista-ranking tr.nuevo td, .franja-desafio, .cuenta.grande strong { animation: none; }
+}

@@ -45,9 +45,23 @@ python -m api.main
 
 Este único comando levanta la API **y** sirve las páginas (no hace falta `python -m http.server`, y ambos usarían el puerto 8000). Abrir `http://localhost:8000`.
 
-### Página principal: 3 pasos
+El sitio tiene dos páginas:
 
-La página principal (`index.html`), «¿Qué red adivina mejor?», usa solo la prueba de los dibujos. Mensaje: **la CNN busca formas y la MLP memoriza posiciones**; por eso la CNN sirve para imágenes y la MLP para datos ordenados, como una tabla. Se ve una pantalla a la vez, sin recargar la página, y `#paso-N` en la URL abre directo un paso. Está pensada para la pantalla del computador: cada paso cabe sin desplazamiento (revisado a 1440×900 y 1280×720).
+| Página | Entrega | Abrir |
+|---|---|---|
+| `index.html` · «¿Qué robot adivina mejor?» | Primera entrega | `http://localhost:8000` |
+| `experiencia.html` · «¿Qué red adivina mejor?» | Segunda entrega | `http://localhost:8000/experiencia.html` |
+
+### Página de la primera entrega (`index.html`)
+
+La página principal (`index.html`, `js/principal.js`, `css/principal.css`) está pensada para niños y jóvenes: «¿Qué robot adivina mejor?». La CNN es **Robo-Lupa** y la MLP **Robo-Lista**. Para cada prueba (una debajo de la otra, con las columnas alineadas) muestra «Lo que prometió» (aciertos de la Entrega 1 en 10 casillas, `exploracion/datos.js`), «Lo que logró contigo» (una casilla ✓/✗ por intento, en vivo) y el QR para jugar con el teléfono. Al final, un tablero muestra quién ganó cada prueba.
+
+- **Prueba 1:** en el teléfono elige Gato o Perro y pulsa *Capturar*; cada captura cuenta como un intento (se guardan en el navegador, *Reiniciar* los borra).
+- **Prueba 2:** en el teléfono elige la actividad y graba; los intentos los guarda el servidor.
+
+### Experiencia de la segunda entrega (`experiencia.html`): 3 pasos
+
+La experiencia (`experiencia.html`), «¿Qué red adivina mejor?», usa solo la prueba de los dibujos. Mensaje: **la CNN busca formas y la MLP memoriza posiciones**; por eso la CNN sirve para imágenes y la MLP para datos ordenados, como una tabla. Se ve una pantalla a la vez, sin recargar la página, y `#paso-N` en la URL abre directo un paso. Está pensada para la pantalla del computador: cada paso cabe sin desplazamiento (revisado a 1440×900 y 1280×720).
 
 | Paso | Qué muestra | Archivo |
 |---|---|---|
@@ -55,7 +69,7 @@ La página principal (`index.html`), «¿Qué red adivina mejor?», usa solo la 
 | 2 · Tus intentos | 5 intentos libres: cada persona elige si dibuja un perro o un gato, y cómo. Gana puntos quien logra que una red acierte y la otra no, es decir, quien mejor entiende cómo mira cada red. Cada intento tiene 3 s de preparación y 10 s para dibujar, con la cuenta sobre la cámara en vivo; al terminar, la foto se toma sola. Luego la pantalla pregunta «¿Qué dibujaste?» (Gato o Perro, con clic o las teclas G y P) y recién ahí muestra lo que dijo cada red y suena su tono de acierto o error. Si en la foto no se ve un dibujo, se repite el intento. | `js/paso_retos.js` |
 | 3 · Resultados | Aciertos de la CNN y la MLP en los 2.999 dibujos de test: en el centro, movidos y pequeños en una esquina. «¿Por qué se confunde la MLP?»: la mancha (promedio de los gatos o perros de entrenamiento) con uno de tus dibujos encima y el % de tu dibujo que cae en ella. El ranking (tarjeta con desplazamiento, medallas; el primer lugar es quien mejor entendió cómo funcionan estas redes). *Jugar de nuevo* borra los retos y vuelve al paso 1. | `js/paso_resultados.js` |
 
-- `js/principal.js` tiene lo compartido: `RETOS_TOTAL = 5`, las redes, la conexión con la API, el QR y la navegación. Los estilos están en `css/principal.css`.
+- `js/experiencia.js` tiene lo compartido: `RETOS_TOTAL = 5`, las redes, la conexión con la API, el QR y la navegación. Los estilos están en `css/experiencia.css`.
 - **Celular** (`exploracion/telefono_retos.html`, se abre con el QR): solo la cámara. Se toca una vez al abrirlo (para activar el sonido) y después queda fijo apuntando a la pizarra: cuando termina el tiempo, la pantalla pide la foto (`POST /api/camara/capturar`) y el celular la toma sola. Al abrir un intento, la pantalla lo avisa al servidor (`POST /api/camara/reto`) para que acepte la foto; la etiqueta (Gato o Perro) la da la persona en la pantalla después de la foto. El celular **no recentra el dibujo**: el recuadro completo pasa a 28×28, para que un dibujo pequeño en una esquina llegue así a las redes. El celular va **de costado**: gira la imagen 90° antes de usarla. Si el dibujo se ve girado en la pantalla, toca **↻ Girar imagen** sobre la cámara hasta que se vea derecho (`POST /api/camara/giro`; el navegador lo recuerda).
 - **Sonidos** (`js/sonidos.js`): suenan en el celular y en el computador, primero la CNN y luego la MLP. Acierto: dos tonos que suben; error: dos tonos que bajan. Los navegadores solo dejan sonar después del primer clic o toque en cada dispositivo.
 - **Ranking:** `GET` y `POST /api/ranking`. Lo comparten todos los visitantes y se guarda en `grabaciones/ranking.json` (ignorada por git). Se entra con los 5 intentos hechos, una vez por partida.
@@ -81,7 +95,7 @@ El pipeline del teléfono (`api/services/sensor_har.py`) replica el preprocesami
 
 Cada grabación se guarda en `grabaciones/` (ignorada por git). Para reanalizar una: `python api/services/test_2.py grabaciones/<archivo>.csv`.
 
-Las páginas que no usan modelos (`index.html`, la galería) también funcionan con cualquier servidor estático, como Live Server.
+Las páginas que no usan modelos (la galería) también funcionan con cualquier servidor estático, como Live Server.
 
 
 ## Publicar en GitHub Pages

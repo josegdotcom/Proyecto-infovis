@@ -1,4 +1,4 @@
-"""Genera exploracion/datos_retos.js para la hoja de resultados de la página principal.
+"""Genera exploracion/datos_retos.js para la hoja de resultados de la experiencia (experiencia.html).
 
 Con los modelos guardados (los mismos que usa la API) calcula cuántos dibujos de test
 aciertan la CNN y la MLP cuando los dibujos:

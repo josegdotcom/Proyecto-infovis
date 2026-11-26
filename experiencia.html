@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es" class="principal pantalla-completa" data-theme="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>¿Qué red adivina mejor? · CNN vs. MLP</title>
+
+    <link rel="icon" type="image/png" href="assets/icons/logo.png">
+
+    <link rel="stylesheet" href="css/style.css?v=17">
+    <link rel="stylesheet" href="css/experiencia.css?v=14">
+    <!-- QR generado en el navegador: la dirección local no sale a servicios externos -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+
+<body>
+
+    <!-- Flujo de 3 pasos: una vista visible a la vez, sin recargar la página.
+         Pensado para la pantalla del computador: cada paso cabe en la ventana. -->
+    <header class="barra-pasos">
+        <nav aria-label="Pasos">
+            <ol class="indicador-pasos">
+                <li><button type="button" class="paso-boton" data-paso="1"><span class="numero">1</span>El truco</button></li>
+                <li><button type="button" class="paso-boton" data-paso="2"><span class="numero">2</span>Tus intentos</button></li>
+                <li><button type="button" class="paso-boton" data-paso="3"><span class="numero">3</span>Resultados</button></li>
+            </ol>
+        </nav>
+    </header>
+
+    <main class="vistas">
+
+        <!-- ============ Paso 1 · El truco ============ -->
+        <section class="vista" id="paso-1" data-paso="1" aria-labelledby="titulo-paso-1">
+            <div class="cabecera-vista cabecera-portada">
+                <h1 id="titulo-paso-1">¿Qué red neuronal adivina mejor?</h1>
+                <p class="bajada">Movemos el dibujo. ¿Lo siguen reconociendo?</p>
+            </div>
+
+            <div class="truco">
+                <p class="estado-truco" id="estado-truco" aria-live="polite">Quieto</p>
+                <div class="dos-redes">
+                    <article class="tarjeta-red" style="--color:var(--modelo-cnn)">
+                        <header>
+                            <h2>CNN</h2>
+                            <p>Busca formas</p>
+                        </header>
+                        <p class="como-mira">Pasa una <strong>lupa</strong> por todo el dibujo buscando partes: orejas, bigotes, cola. Le da igual <em>dónde</em> estén.</p>
+                        <div class="grilla-truco" id="grilla-cnn" role="img"
+                            aria-label="Un gato pixelado. Una lupa encuentra sus orejas aunque el gato se mueva."></div>
+                        <p class="globo" id="globo-cnn">Gato</p>
+                        <p class="motivo" id="motivo-cnn"></p>
+                    </article>
+                    <article class="tarjeta-red" style="--color:var(--modelo-mlp)">
+                        <header>
+                            <h2>MLP</h2>
+                            <p>Memoriza casillas</p>
+                        </header>
+                        <p class="como-mira">Recuerda en qué <strong>casillas</strong> suele haber tinta, una por una. Si el dibujo se mueve, ya no coinciden.</p>
+                        <div class="grilla-truco" id="grilla-mlp" role="img"
+                            aria-label="El mismo gato. Cuando se mueve, se marcan en rojo las casillas que cambiaron."></div>
+                        <p class="globo" id="globo-mlp">Gato</p>
+                        <p class="motivo" id="motivo-mlp"></p>
+                    </article>
+                </div>
+            </div>
+
+            <div class="pie-vista franja-desafio">
+                <p class="desafio"><span class="etiqueta-desafio"><span aria-hidden="true">🎯</span> Tu desafío · 5 intentos</span><span>Dibuja un perro o un gato de forma que <strong>una red adivine y otra no</strong>.</span></p>
+                <button type="button" class="btn-desafio" data-ir="2">Acepto el desafío →</button>
+            </div>
+        </section>
+
+        <!-- ============ Paso 2 · Tus intentos ============ -->
+        <section class="vista" id="paso-2" data-paso="2" aria-labelledby="titulo-paso-2" hidden>
+            <div class="cabecera-vista">
+                <h1 id="titulo-paso-2">Engaña a una red: que una acierte y la otra no</h1>
+                <ol class="instrucciones-cortas">
+                    <li><span>Piensa: ¿perro o gato? (<strong>3 s</strong>)</span></li>
+                    <li><span>Dibújalo en la pizarra como quieras (<strong>10 s</strong>)</span></li>
+                    <li>La foto se toma sola: dinos qué dibujaste</li>
+                </ol>
+            </div>
+
+            <div class="retos">
+                <div class="columna-reto">
+                    <div class="progreso-retos" id="progreso-retos" aria-label="Retos"></div>
+                    <p class="consigna" id="consigna" aria-live="polite"></p>
+                    <figure class="camara-grande">
+                        <img id="camara-vivo" alt="Lo que ve la cámara del celular" hidden>
+                        <button type="button" class="btn-girar" id="btn-girar" hidden
+                            title="El celular va de costado: gira la imagen hasta que el dibujo se vea derecho">↻ Girar imagen</button>
+                        <div class="cuenta" id="cuenta" aria-live="assertive" hidden></div>
+                        <div class="barra-tiempo" id="barra-tiempo" hidden><i></i></div>
+                        <div class="pregunta" id="pregunta" role="group" aria-labelledby="pregunta-titulo" hidden>
+                            <strong id="pregunta-titulo">¿Qué dibujaste?</strong>
+                            <div>
+                                <button type="button" data-etiqueta="0"><img src="assets/images/gato.svg" alt="">Gato <kbd>G</kbd></button>
+                                <button type="button" data-etiqueta="1"><img src="assets/images/perro.svg" alt="">Perro <kbd>P</kbd></button>
+                            </div>
+                            <span>Las redes ya respondieron: lo verás al elegir.</span>
+                        </div>
+                        <div class="camara-espera" id="camara-espera">
+                            <div class="qr" id="qr-1" role="img" aria-label="Código QR para conectar el celular"></div>
+                            <strong>Escanea con el celular</strong>
+                            <span>y acepta la cámara</span>
+                        </div>
+                    </figure>
+                </div>
+
+                <div class="columna-respuestas">
+                    <div class="respuesta" id="respuesta-cnn" style="--color:var(--modelo-cnn)"></div>
+                    <div class="respuesta" id="respuesta-mlp" style="--color:var(--modelo-mlp)"></div>
+                    <p class="veredicto" id="veredicto" aria-live="polite"></p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ Paso 3 · Resultados ============ -->
+        <section class="vista" id="paso-3" data-paso="3" aria-labelledby="titulo-paso-3" hidden>
+            <div class="cabecera-vista">
+                <h1 id="titulo-paso-3">Hicimos tu truco con <span id="n-dibujos">2.999</span> dibujos</h1>
+            </div>
+
+            <div class="resultados">
+                <article class="panel">
+                    <h2>Aciertos al mover los dibujos</h2>
+                    <p class="leyenda" aria-hidden="true">
+                        <span><i style="background:var(--modelo-cnn)"></i>CNN</span>
+                        <span><i style="background:var(--modelo-mlp)"></i>MLP</span>
+                        <span><i class="azar"></i>Azar</span>
+                    </p>
+                    <div class="grafico" id="grafico"></div>
+                    <p class="tus-aciertos" id="tus-aciertos"></p>
+                </article>
+
+                <article class="panel">
+                    <h2>¿Por qué se confunde la MLP?</h2>
+                    <p class="nota" id="nota-promedio"></p>
+                    <figure class="mancha">
+                        <canvas id="mancha" width="28" height="28" role="img" aria-describedby="dato-mancha"></canvas>
+                        <figcaption class="leyenda">
+                            <span><i class="verde"></i>Donde suele haber tinta</span>
+                            <span><i class="negro"></i>Tu dibujo</span>
+                        </figcaption>
+                    </figure>
+                    <div class="tus-dibujos" id="tus-dibujos" role="group" aria-label="Elige uno de tus dibujos"></div>
+                    <p class="dato-mancha" id="dato-mancha" aria-live="polite"></p>
+                    <p class="mensaje-final">La CNN busca formas: sirve para imágenes. La MLP memoriza posiciones: sirve para datos ordenados, como una tabla.</p>
+                </article>
+
+                <article class="panel panel-ranking">
+                    <h2>🏆 Ranking</h2>
+                    <p class="nota">Gana quien más veces logra que una red acierte y la otra no: quien mejor entiende cómo miran.</p>
+                    <form class="guardar-ranking" id="form-ranking">
+                        <label for="apodo" class="solo-lectores">Tu apodo</label>
+                        <input id="apodo" maxlength="18" placeholder="Tu apodo" autocomplete="off">
+                        <button type="submit" class="btn-chico" id="btn-guardar">Guardar</button>
+                    </form>
+                    <p class="nota" id="estado-ranking" aria-live="polite"></p>
+                    <div class="lista-ranking" tabindex="0" aria-label="Ranking de puntos">
+                        <table>
+                            <thead><tr><th scope="col">Lugar</th><th scope="col">Apodo</th><th scope="col" class="num">Puntos</th></tr></thead>
+                            <tbody id="ranking"></tbody>
+                        </table>
+                    </div>
+                </article>
+            </div>
+
+            <div class="pie-vista solo-boton">
+                <button type="button" class="btn-siguiente" id="btn-jugar-de-nuevo">↺ Jugar de nuevo</button>
+            </div>
+        </section>
+
+    </main>
+
+    <p id="aviso-servidor" class="aviso-servidor" role="status" hidden>
+        Sin servidor de Python: inícialo con <code>python -m api.main</code>.
+    </p>
+
+    <script src="exploracion/datos_retos.js?v=2"></script>
+    <script src="js/sonidos.js?v=2"></script>
+    <script src="js/experiencia.js?v=7"></script>
+    <script src="js/paso_truco.js?v=2"></script>
+    <script src="js/paso_retos.js?v=5"></script>
+    <script src="js/paso_resultados.js?v=4"></script>
+
+</body>
+
+</html>
