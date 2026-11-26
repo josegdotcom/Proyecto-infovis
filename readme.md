@@ -45,20 +45,22 @@ python -m api.main
 
 Este único comando levanta la API **y** sirve las páginas (no hace falta `python -m http.server`, y ambos usarían el puerto 8000). Abrir `http://localhost:8000`.
 
-### Página principal: 4 pasos
+### Página principal: 3 pasos
 
-La página principal (`index.html`) es un recorrido de 4 pantallas para niños y jóvenes, «¿Qué robot adivina mejor?». La CNN es **Robo-Lupa** (azul) y la MLP **Robo-Lista** (verde). Se ve una pantalla a la vez, sin recargar la página. Se avanza con **Siguiente** o con el indicador de pasos de arriba, y `#paso-N` en la URL abre directo un paso. Está pensada para la pantalla del computador: cada paso cabe sin desplazamiento (probado a 1440×900 y 1280×720).
+La página principal (`index.html`), «¿Qué red adivina mejor?», usa solo la prueba de los dibujos. Mensaje: **la CNN busca formas y la MLP memoriza posiciones**; por eso la CNN sirve para imágenes y la MLP para datos ordenados, como una tabla. Se ve una pantalla a la vez, sin recargar la página, y `#paso-N` en la URL abre directo un paso. Está pensada para la pantalla del computador: cada paso cabe sin desplazamiento (revisado a 1440×900 y 1280×720).
 
 | Paso | Qué muestra | Archivo |
 |---|---|---|
-| 1 · Conoce a los robots | Animación de cómo leen los datos: Robo-Lupa recorre un dibujo pixelado con una lupa de 2×2; Robo-Lista lo convierte en una fila de 100 números. | `js/robots_animacion.js` |
-| 2 · Prueba 1 | Cámara del teléfono en vivo, tarjeta con lo que hay que dibujar, instrucciones, QR y 5 espacios con la miniatura de cada captura. Sin resultados. | `js/paso_prueba_1.js` |
-| 3 · Prueba 2 | X, Y, Z del acelerómetro en vivo, gráfico de los últimos 10 s, tabla con las lecturas más recientes (lo que reciben los robots), instrucciones, QR y 5 espacios de grabación. Sin resultados. | `js/paso_prueba_2.js` |
-| 4 · Resultados | Por prueba, una barra por robot con sus aciertos «de 5» y una raya negra con lo que prometió (aciertos de la Entrega 1, `exploracion/datos.js`). *Jugar de nuevo* borra los intentos y vuelve al paso 1. | `js/paso_resultados.js` |
+| 1 · El truco | Cómo mira cada red (la CNN pasa una lupa buscando partes; la MLP recuerda casillas) y una animación en ciclo: un gato pixelado quieto y luego movido 2 casillas. La lupa de la CNN encuentra las orejas igual; en la MLP se marcan en rojo las casillas que cambiaron y deja de reconocerlo. Abajo, el desafío: que una red adivine y la otra no. | `js/paso_truco.js` |
+| 2 · Tus intentos | 5 intentos libres: cada persona elige si dibuja un perro o un gato, y cómo. Gana puntos quien logra que una red acierte y la otra no, es decir, quien mejor entiende cómo mira cada red. Cada intento tiene 3 s de preparación y 10 s para dibujar, con la cuenta sobre la cámara en vivo; al terminar, la foto se toma sola. Luego la pantalla pregunta «¿Qué dibujaste?» (Gato o Perro, con clic o las teclas G y P) y recién ahí muestra lo que dijo cada red y suena su tono de acierto o error. Si en la foto no se ve un dibujo, se repite el intento. | `js/paso_retos.js` |
+| 3 · Resultados | Aciertos de la CNN y la MLP en los 2.999 dibujos de test: en el centro, movidos y pequeños en una esquina. «¿Por qué se confunde la MLP?»: la mancha (promedio de los gatos o perros de entrenamiento) con uno de tus dibujos encima y el % de tu dibujo que cae en ella. El ranking (tarjeta con desplazamiento, medallas; el primer lugar es quien mejor entendió cómo funcionan estas redes). *Jugar de nuevo* borra los retos y vuelve al paso 1. | `js/paso_resultados.js` |
 
-- `js/principal.js` tiene lo compartido: `INTENTOS_POR_PRUEBA = 5` (cámbiala ahí), los robots, la conexión con la API, los QR y la navegación. Los estilos están en `css/principal.css`.
-- **Prueba 1:** el teléfono (`sensor_camara.html`) envía con cada cuadro una vista previa pequeña que la página muestra con `GET /api/camara/vista`. Cada *Capturar* con Gato o Perro elegido cuenta como un intento; se guardan en el navegador. La página principal usa el puente local de Python; Protobject sigue funcionando en `exploracion/prueba_1.html`.
-- **Prueba 2:** usa los mismos endpoints que `exploracion/prueba_2.html` (`/api/prueba_2/estado` y `/api/prueba_2/reiniciar`). Los intentos los guarda el servidor.
+- `js/principal.js` tiene lo compartido: `RETOS_TOTAL = 5`, las redes, la conexión con la API, el QR y la navegación. Los estilos están en `css/principal.css`.
+- **Celular** (`exploracion/telefono_retos.html`, se abre con el QR): solo la cámara. Se toca una vez al abrirlo (para activar el sonido) y después queda fijo apuntando a la pizarra: cuando termina el tiempo, la pantalla pide la foto (`POST /api/camara/capturar`) y el celular la toma sola. Al abrir un intento, la pantalla lo avisa al servidor (`POST /api/camara/reto`) para que acepte la foto; la etiqueta (Gato o Perro) la da la persona en la pantalla después de la foto. El celular **no recentra el dibujo**: el recuadro completo pasa a 28×28, para que un dibujo pequeño en una esquina llegue así a las redes. El celular va **de costado**: gira la imagen 90° antes de usarla. Si el dibujo se ve girado en la pantalla, toca **↻ Girar imagen** sobre la cámara hasta que se vea derecho (`POST /api/camara/giro`; el navegador lo recuerda).
+- **Sonidos** (`js/sonidos.js`): suenan en el celular y en el computador, primero la CNN y luego la MLP. Acierto: dos tonos que suben; error: dos tonos que bajan. Los navegadores solo dejan sonar después del primer clic o toque en cada dispositivo.
+- **Ranking:** `GET` y `POST /api/ranking`. Lo comparten todos los visitantes y se guarda en `grabaciones/ranking.json` (ignorada por git). Se entra con los 5 intentos hechos, una vez por partida.
+- **Datos del paso 3:** `exploracion/datos_retos.js`, generado con `python data/exportar_retos.py` a partir de los modelos guardados.
+- **MLP de los dibujos:** el archivo anterior respondía «Perro» para todos los dibujos. `python data/reentrenar_mlp_dibujos.py` la reentrena con los mismos datos (83 % en test) y la guarda en `data/modelos/test-1_mlp.joblib`. Después, vuelve a correr `data/exportar_retos.py`.
 
 Las pruebas también se pueden abrir solas:
 

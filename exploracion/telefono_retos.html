@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cámara de los retos</title>
+    <link rel="icon" type="image/png" href="../assets/icons/logo.png">
+    <link rel="stylesheet" href="../css/style.css?v=17">
+    <style>
+        /* Teléfono de la página principal: solo la cámara. Se deja fijo apuntando a la
+           pizarra; la foto se toma sola cuando la pantalla del computador la pide.
+           El reto (qué dibujar) y el tiempo se ven en la pantalla del computador. */
+        html, body { height: 100%; }
+        [hidden] { display: none !important; }
+        body {
+            margin: 0;
+            display: grid;
+            grid-template-rows: minmax(0, 1fr) auto;
+            gap: 16px;
+            padding: 16px 16px max(20px, env(safe-area-inset-bottom));
+            background: #111;
+            color: #fff;
+            font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+            overflow: hidden;
+        }
+        .visor {
+            position: relative;
+            align-self: center;
+            justify-self: center;
+            width: min(100%, 70vh);
+            aspect-ratio: 1;
+            border-radius: 18px;
+            overflow: hidden;
+            background: #000;
+        }
+        .visor video { width: 100%; height: 100%; object-fit: cover; display: block; }
+        /* Recuadro = lo que se convierte en la imagen de 28×28 (74 % del lado, centrado) */
+        .recuadro {
+            position: absolute;
+            inset: 13%;
+            border: 3px solid rgba(255, 255, 255, .9);
+            border-radius: 10px;
+            box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .45);
+            pointer-events: none;
+        }
+        .recuadro.con-dibujo { border-color: #3fdc8f; }
+        .resultado {
+            position: absolute;
+            inset: auto 12px 12px;
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+        }
+        .resultado span {
+            padding: 8px 14px;
+            border-radius: 12px;
+            font-weight: 800;
+            font-size: 1.05rem;
+            background: #fff;
+            color: #111;
+        }
+        .resultado .si { box-shadow: inset 0 0 0 3px #0ca30c; }
+        .resultado .no { box-shadow: inset 0 0 0 3px #d03b3b; }
+        .abajo { display: grid; gap: 6px; }
+        .aviso { margin: 0; min-height: 1.4em; text-align: center; font-size: 1.1rem; font-weight: 700; color: #fff; }
+        .nota { margin: 0; text-align: center; font-size: .95rem; color: #aaa; }
+        /* Destello al tomar la foto */
+        .visor.foto::after { content: ""; position: absolute; inset: 0; background: #fff; animation: destello .45s ease-out forwards; }
+        @keyframes destello { from { opacity: .85; } to { opacity: 0; } }
+        /* Un toque al principio para que el celular pueda sonar */
+        .activar {
+            position: fixed; inset: 0; z-index: 2; display: grid; place-content: center; gap: 10px; padding: 24px;
+            border: 0; background: rgba(0, 0, 0, .78); color: #fff; font: inherit; text-align: center; cursor: pointer;
+        }
+        .activar strong { font-size: 1.6rem; }
+        .activar span { font-size: 1.05rem; color: #ddd; }
+    </style>
+</head>
+
+<body>
+    <div class="visor">
+        <video id="video" autoplay playsinline muted></video>
+        <div class="recuadro" id="recuadro"></div>
+        <div class="resultado" id="resultado" aria-live="polite" hidden></div>
+    </div>
+
+    <div class="abajo">
+        <p class="aviso" id="aviso" aria-live="polite">Apunta a la pizarra</p>
+        <p class="nota">La foto se toma sola. No hace falta tocar el celular.</p>
+    </div>
+
+    <button type="button" class="activar" id="activar">
+        <strong>Toca para empezar</strong>
+        <span>Activa el sonido. Después deja el celular fijo, de costado, apuntando a la pizarra.</span>
+    </button>
+
+    <script src="../js/sonidos.js?v=2"></script>
+    <script>
+        (() => {
+            const $ = id => document.getElementById(id);
+            const video = $("video");
+            const N = 112;           // resolución de trabajo antes de bajar a 28×28
+            const RECORTE = 0.74;    // fracción del lado que cubre el recuadro
+            const UMBRAL = 18;       // contraste mínimo del trazo frente al fondo
+
+            const trabajo = document.createElement("canvas");
+            trabajo.width = trabajo.height = N;
+            const gTrabajo = trabajo.getContext("2d", { willReadFrequently: true });
+            const salida = document.createElement("canvas");
+            salida.width = salida.height = 28;
+            const gSalida = salida.getContext("2d", { willReadFrequently: true });
+
+            // El celular va de costado: la imagen se gira antes de usarla. Lo elige la pantalla
+            // (botón «Girar imagen») y llega en cada respuesta del servidor.
+            let giro = 90;
+            let ultimoPedido = null;   // último pedido de foto de la pantalla ya atendido
+            let tieneDibujo = false;
+            let enviando = false;
+            let capturando = false;
+
+            function aviso(texto) { $("aviso").textContent = texto; }
+
+            // ---------------- Cámara ----------------
+            async function iniciarCamara() {
+                if (!window.isSecureContext && location.hostname !== "localhost") {
+                    aviso("Abre esta página con el QR de la pantalla (https)");
+                    return;
+                }
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        audio: false,
+                        video: { facingMode: { ideal: "environment" }, width: { ideal: 480 }, height: { ideal: 480 } }
+                    });
+                    video.srcObject = stream;
+                    await video.play();
+                } catch (e) {
+                    aviso("Permite el uso de la cámara para jugar");
+                }
+            }
+
+            // Dibuja el recuadro (cuadrado y centrado) en un canvas de L×L, girado `giro` grados
+            function dibujarRecuadro(g, L) {
+                const vw = video.videoWidth, vh = video.videoHeight;
+                const lado = Math.min(vw, vh) * RECORTE;
+                g.save();
+                g.translate(L / 2, L / 2);
+                g.rotate(giro * Math.PI / 180);
+                g.drawImage(video, (vw - lado) / 2, (vh - lado) / 2, lado, lado, -L / 2, -L / 2, L, L);
+                g.restore();
+            }
+
+            // ---------------- Recuadro -> 28×28 ----------------
+            // Igual que exploracion/sensor_camara.html (umbral adaptativo y limpieza de puntos),
+            // pero SIN recentrar ni agrandar el dibujo: el recuadro completo pasa a 28×28.
+            // Así un gato pequeño en una esquina llega a las redes pequeño y en la esquina.
+            function extraer28() {
+                const vw = video.videoWidth, vh = video.videoHeight;
+                if (!vw || !vh) return { pixeles: new Array(784).fill(0), tieneDibujo: false };
+
+                dibujarRecuadro(gTrabajo, N);
+                const { data } = gTrabajo.getImageData(0, 0, N, N);
+                const gris = new Float32Array(N * N);
+                for (let i = 0; i < N * N; i++) gris[i] = 0.299 * data[i * 4] + 0.587 * data[i * 4 + 1] + 0.114 * data[i * 4 + 2];
+
+                // Imagen integral para el promedio local (ventana de 17×17)
+                const integral = new Float64Array((N + 1) * (N + 1));
+                for (let y = 0; y < N; y++) {
+                    let fila = 0;
+                    for (let x = 0; x < N; x++) {
+                        fila += gris[y * N + x];
+                        integral[(y + 1) * (N + 1) + x + 1] = integral[y * (N + 1) + x + 1] + fila;
+                    }
+                }
+                const radio = 8, borde = 5;
+                const mascara = new Uint8Array(N * N);
+                for (let y = borde; y < N - borde; y++) {
+                    const y0 = Math.max(0, y - radio), y1 = Math.min(N - 1, y + radio);
+                    for (let x = borde; x < N - borde; x++) {
+                        const x0 = Math.max(0, x - radio), x1 = Math.min(N - 1, x + radio);
+                        const suma = integral[(y1 + 1) * (N + 1) + x1 + 1] - integral[y0 * (N + 1) + x1 + 1]
+                            - integral[(y1 + 1) * (N + 1) + x0] + integral[y0 * (N + 1) + x0];
+                        const diff = suma / ((x1 - x0 + 1) * (y1 - y0 + 1)) - gris[y * N + x];
+                        if (diff > UMBRAL) mascara[y * N + x] = Math.min(255, Math.round((diff - UMBRAL) * 4.2));
+                    }
+                }
+
+                // Quitar puntos sueltos y engrosar el trazo (los dibujos de Quick, Draw! tienen trazo grueso)
+                const limpia = new Uint8Array(N * N);
+                let activos = 0;
+                for (let y = 2; y < N - 2; y++) {
+                    for (let x = 2; x < N - 2; x++) {
+                        let vecinos = 0, maximo = 0;
+                        for (let dy = -1; dy <= 1; dy++) {
+                            for (let dx = -1; dx <= 1; dx++) {
+                                const v = mascara[(y + dy) * N + x + dx];
+                                if (v > 0) vecinos++;
+                                if (v > maximo) maximo = v;
+                            }
+                        }
+                        if (vecinos >= 2) {
+                            limpia[y * N + x] = maximo;
+                            activos++;
+                        }
+                    }
+                }
+                if (activos < 22 || activos / (N * N) > 0.48) return { pixeles: new Array(784).fill(0), tieneDibujo: false };
+
+                const img = gTrabajo.createImageData(N, N);
+                for (let i = 0; i < N * N; i++) img.data.set([255, 255, 255, limpia[i]], i * 4);
+                gTrabajo.putImageData(img, 0, 0);
+                gSalida.clearRect(0, 0, 28, 28);
+                gSalida.drawImage(trabajo, 0, 0, N, N, 0, 0, 28, 28);
+
+                const d = gSalida.getImageData(0, 0, 28, 28).data;
+                const pixeles = new Array(784);
+                let max = 0;
+                for (let i = 0; i < 784; i++) { pixeles[i] = d[i * 4 + 3]; if (pixeles[i] > max) max = pixeles[i]; }
+                if (max > 0) for (let i = 0; i < 784; i++) pixeles[i] = Math.min(255, Math.round(pixeles[i] / max * 255));
+                return { pixeles, tieneDibujo: max > 25 };
+            }
+
+            // Vista del recuadro en JPEG: pequeña para la cámara en vivo de la pantalla,
+            // más grande para la captura
+            function jpegRecuadro(L, calidad) {
+                try {
+                    const vw = video.videoWidth, vh = video.videoHeight;
+                    if (!vw || !vh) return null;
+                    const c = document.createElement("canvas");
+                    c.width = c.height = L;
+                    dibujarRecuadro(c.getContext("2d"), L);
+                    return c.toDataURL("image/jpeg", calidad);
+                } catch (e) {
+                    return null;
+                }
+            }
+
+            // ---------------- Envío al servidor ----------------
+            async function enviar(capturar) {
+                const r28 = extraer28();
+                tieneDibujo = r28.tieneDibujo;
+                $("recuadro").classList.toggle("con-dibujo", tieneDibujo);
+                const resp = await fetch("/api/camara/frame", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        tipo: "frame_camara",
+                        pixeles: r28.pixeles,
+                        tiene_dibujo: r28.tieneDibujo,
+                        capturar,
+                        etiqueta: null,   // la pone el reto de la pantalla
+                        centrado: false,
+                        id_captura: capturar ? `${Date.now()}-${Math.random().toString(36).slice(2, 8)}` : null,
+                        imagen_original: capturar ? jpegRecuadro(320, 0.8) : null,
+                        vista_previa: jpegRecuadro(240, 0.6)
+                    })
+                });
+                if (!resp.ok) throw new Error(String(resp.status));
+                const r = await resp.json();
+                if ([0, 90, 180, 270].includes(r.giro)) giro = r.giro;
+                if (!capturar) revisarPedido(r.pedido_captura);
+                return r;
+            }
+
+            async function cicloFrames() {
+                if (!enviando && !capturando) {
+                    enviando = true;
+                    try {
+                        await enviar(false);
+                        if (!capturando && $("resultado").hidden) aviso(tieneDibujo ? "Veo un dibujo" : "Apunta a la pizarra");
+                    } catch (e) {
+                        aviso("Sin conexión con la pantalla");
+                    } finally {
+                        enviando = false;
+                    }
+                }
+                setTimeout(cicloFrames, 240);
+            }
+
+            let ocultar = null;
+            function mostrarResultado(r) {
+                const real = r.etiqueta;
+                const aciertos = { CNN: r.modelos.CNN.prediccion === real, MLP: r.modelos.MLP.prediccion === real };
+                $("resultado").innerHTML = ["CNN", "MLP"].map(m =>
+                    `<span class="${aciertos[m] ? "si" : "no"}">${m} ${aciertos[m] ? "acertó" : "falló"}</span>`).join("");
+                $("resultado").hidden = false;
+                aviso("Mira la pantalla");
+                Sonidos.resultado(aciertos);
+                clearTimeout(ocultar);
+                ocultar = setTimeout(() => { $("resultado").hidden = true; }, 3500);
+            }
+
+            // La pantalla pide la foto al terminar el tiempo del reto. El primer valor que llega
+            // solo se anota, para no tomar fotos de pedidos anteriores.
+            function revisarPedido(n) {
+                if (typeof n !== "number") return;
+                if (ultimoPedido === null || n < ultimoPedido) { ultimoPedido = n; return; }
+                if (n > ultimoPedido) {
+                    ultimoPedido = n;
+                    setTimeout(tomarFoto, 0);
+                }
+            }
+
+            async function tomarFoto() {
+                if (capturando) return;
+                capturando = true;
+                const visor = document.querySelector(".visor");
+                visor.classList.remove("foto");
+                void visor.offsetWidth;
+                visor.classList.add("foto");
+                try {
+                    const r = await enviar(true);
+                    if (r.capturado && r.modelos && (r.etiqueta === 0 || r.etiqueta === 1)) mostrarResultado(r);
+                    else if (r.capturado) aviso("Foto tomada: mira la pantalla");
+                    else if (!r.tiene_dibujo) aviso("No vi un dibujo en la pizarra");
+                } catch (e) {
+                    aviso("Sin conexión con la pantalla");
+                } finally {
+                    capturando = false;
+                }
+            }
+
+            $("activar").addEventListener("click", () => {
+                Sonidos.activar();
+                $("activar").hidden = true;
+            });
+
+            iniciarCamara();
+            cicloFrames();
+        })();
+    </script>
+</body>
+
+</html>

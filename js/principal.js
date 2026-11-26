@@ -1,49 +1,20 @@
-// Página principal «¿Qué robot adivina mejor?»: flujo de 4 pasos en una sola página.
+// Página principal «¿Qué red adivina mejor?»: flujo de 3 pasos en una sola página.
 //
-//   1 · Conoce a los robots   (js/robots_animacion.js)
-//   2 · Prueba 1, dibujos     (js/paso_prueba_1.js)
-//   3 · Prueba 2, movimientos (js/paso_prueba_2.js)
-//   4 · Resultados            (js/paso_resultados.js)
+//   1 · El truco      (js/paso_truco.js)
+//   2 · Los retos     (js/paso_retos.js)
+//   3 · Resultados    (js/paso_resultados.js)
 //
-// Este archivo tiene lo compartido: la constante de intentos, los robots, la conexión
-// con la API de Python, los QR y la navegación entre pasos (una vista visible a la vez,
-// sin recargar). Cada paso se registra con Juego.alEntrar / Juego.alSalir.
+// Este archivo tiene lo compartido: la cantidad de retos, las redes, la conexión con la
+// API de Python, el QR y la navegación entre pasos (una vista visible a la vez, sin
+// recargar). Cada paso se registra con Juego.alEntrar / Juego.alSalir.
 
-const INTENTOS_POR_PRUEBA = 5;
+const RETOS_TOTAL = 5;
 
 const Juego = (() => {
-    const ROBOTS = [
-        {
-            clave: "CNN",
-            nombre: "Robo-Lupa",
-            color: "var(--modelo-cnn)",
-            dibujo: `<svg viewBox="0 0 64 64" aria-hidden="true">
-                <path d="M32 6V12" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
-                <circle cx="32" cy="5" r="3" fill="currentColor"/>
-                <rect x="12" y="12" width="40" height="30" rx="9" fill="currentColor"/>
-                <circle cx="24" cy="26" r="5" fill="#fff"/><circle cx="40" cy="26" r="5" fill="#fff"/>
-                <circle cx="25" cy="26" r="2.2" fill="#000"/><circle cx="41" cy="26" r="2.2" fill="#000"/>
-                <path d="M25 35Q32 39 39 35" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-                <rect x="18" y="44" width="28" height="16" rx="5" fill="currentColor"/>
-                <circle cx="52" cy="50" r="7" fill="#fff" stroke="#000" stroke-width="2.5"/>
-                <path d="M46.5 55.5L41 61" stroke="#000" stroke-width="3" stroke-linecap="round"/>
-            </svg>`
-        },
-        {
-            clave: "MLP",
-            nombre: "Robo-Lista",
-            color: "var(--modelo-mlp)",
-            dibujo: `<svg viewBox="0 0 64 64" aria-hidden="true">
-                <path d="M32 6V12" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
-                <circle cx="32" cy="5" r="3" fill="currentColor"/>
-                <rect x="12" y="12" width="40" height="30" rx="9" fill="currentColor"/>
-                <rect x="19" y="22" width="10" height="8" rx="2" fill="#fff"/><rect x="35" y="22" width="10" height="8" rx="2" fill="#fff"/>
-                <path d="M25 35H39" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
-                <rect x="18" y="44" width="28" height="16" rx="5" fill="currentColor"/>
-                <rect x="41" y="40" width="18" height="22" rx="2" fill="#fff" stroke="#000" stroke-width="2"/>
-                <path d="M45 46H55M45 51H55M45 56H51" stroke="#000" stroke-width="2" stroke-linecap="round"/>
-            </svg>`
-        }
+    // Las dos redes, en el orden en que se muestran y suenan (primero la CNN)
+    const REDES = [
+        { clave: "CNN", color: "var(--modelo-cnn)" },
+        { clave: "MLP", color: "var(--modelo-mlp)" }
     ];
 
     const $ = id => document.getElementById(id);
@@ -140,8 +111,7 @@ const Juego = (() => {
     }
 
     function pintarQrs() {
-        pintarQr("qr-1", "sensor_camara.html");
-        pintarQr("qr-2", "sensor_prueba_2.html");
+        pintarQr("qr-1", "telefono_retos.html");
     }
 
     // ---------------------------------------------------------------
@@ -156,7 +126,7 @@ const Juego = (() => {
     function alSalir(paso, fn) { (salidas[paso] = salidas[paso] || []).push(fn); }
 
     function irA(paso, { enfocar = true } = {}) {
-        paso = Math.min(4, Math.max(1, Number(paso) || 1));
+        paso = Math.min(3, Math.max(1, Number(paso) || 1));
         if (paso === pasoActual) return;
         if (pasoActual) (salidas[pasoActual] || []).forEach(fn => fn());
 
@@ -183,14 +153,10 @@ const Juego = (() => {
     }
 
     function iniciar() {
-        document.querySelectorAll(".intentos-total").forEach(el => { el.textContent = INTENTOS_POR_PRUEBA; });
-        document.querySelectorAll(".cara[data-robot]").forEach(el => {
-            el.innerHTML = ROBOTS.find(r => r.clave === el.dataset.robot).dibujo;
-        });
         document.querySelectorAll("[data-ir]").forEach(b => b.addEventListener("click", () => irA(b.dataset.ir)));
         document.querySelectorAll(".paso-boton").forEach(b => b.addEventListener("click", () => irA(b.dataset.paso)));
 
-        const desdeHash = /^#paso-([1-4])$/.exec(window.location.hash);
+        const desdeHash = /^#paso-([1-3])$/.exec(window.location.hash);
         irA(desdeHash ? desdeHash[1] : 1, { enfocar: false });
 
         buscarApi().then(pintarQrs);
@@ -202,5 +168,5 @@ const Juego = (() => {
 
     document.addEventListener("DOMContentLoaded", iniciar);
 
-    return { ROBOTS, $, escapar, api, post, urlApi, irA, alEntrar, alSalir };
+    return { REDES, $, escapar, api, post, urlApi, irA, alEntrar, alSalir };
 })();

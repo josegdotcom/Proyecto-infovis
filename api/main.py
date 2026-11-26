@@ -42,6 +42,26 @@ _estado_camara = {
     "ultima_captura": None,
 }
 
+# Intento abierto en la página principal (index.html, paso 2). El teléfono solo captura.
+# La prueba es libre: la etiqueta (Gato o Perro) la elige la persona en la pantalla
+# después de la foto, así que aquí suele ser None. numero = None si no hay intento abierto.
+_reto_actual = {"numero": None, "etiqueta": None}
+
+# Giro de la cámara de los retos, en grados (0, 90, 180 o 270). El celular va de costado
+# en la pizarra: gira la imagen antes de pasarla a 28x28. Se cambia desde la pantalla.
+_giro_camara = {"grados": 90}
+
+# Captura automática de los retos: la pantalla pide la foto al terminar el tiempo
+# (POST /api/camara/capturar) y el celular la toma cuando ve que «pedidos» aumentó.
+# «fallidas» cuenta las fotos pedidas en que no se vio un dibujo.
+_captura_auto = {"pedidos": 0, "fallidas": 0}
+
+# Ranking de la página principal (paso 3), compartido por todos los visitantes.
+# Se guarda en grabaciones/ (ignorada por git).
+RANKING_ARCHIVO = ROOT_DIR / "grabaciones" / "ranking.json"
+_ranking_lock = threading.Lock()
+MAX_RETOS = 5
+
 # =====================================================
 # PRUEBA 2 - SESIÓN (teléfono <-> pantalla <-> modelos)
 # =====================================================
@@ -213,6 +233,11 @@ def procesar_frame_camara(payload):
     imagen = payload.get("imagen", payload.get("pixeles"))
     capturar = bool(payload.get("capturar", False))
     etiqueta = payload.get("etiqueta")
+    with _estado_camara_lock:
+        reto = _reto_actual["numero"]
+        if etiqueta is None and capturar:
+            # Teléfono de los retos: la etiqueta la pone el reto de la pantalla
+            etiqueta = _reto_actual["etiqueta"]
 
     modelos_res = None
     pixeles_limpios = None
@@ -244,13 +269,21 @@ def procesar_frame_camara(payload):
         _estado_camara["pixeles"] = pixeles_limpios
         _estado_camara["modelos"] = modelos_res
 
-        if capturar and tiene_dibujo and pixeles_limpios and modelos_res:
+        # Con un intento abierto se captura aunque aún no se sepa qué se dibujó
+        capturado = bool(
+            capturar and tiene_dibujo and pixeles_limpios and modelos_res
+            and (etiqueta is not None or reto is not None)
+        )
+        if capturar and not capturado:
+            _captura_auto["fallidas"] += 1
+        if capturado:
             _estado_camara["captura_seq"] += 1
             _estado_camara["ultima_captura"] = {
                 "captura_seq": _estado_camara["captura_seq"],
                 "timestamp": ahora,
                 "pixeles": pixeles_limpios,
                 "etiqueta": None if etiqueta is None else int(etiqueta),
+                "reto": reto,
                 "id_captura": payload.get("id_captura"),
                 "imagen_original": _imagen_original_valida(
                     payload.get("imagen_original")
@@ -267,9 +300,91 @@ def procesar_frame_camara(payload):
             "predicciones": modelos_res,
             "captura_seq": _estado_camara["captura_seq"],
             "solicitud_captura": _estado_camara["captura_seq"],
+            "capturado": capturado,
+            "etiqueta": None if etiqueta is None else int(etiqueta),
+            "reto": reto,
+            "giro": _giro_camara["grados"],
+            "pedido_captura": _captura_auto["pedidos"],
         }
 
     return respuesta
+
+
+def pedir_captura(payload):
+    """La pantalla terminó el tiempo de un reto: el celular debe tomar la foto."""
+    with _estado_camara_lock:
+        _captura_auto["pedidos"] += 1
+        return dict(_captura_auto)
+
+
+def fijar_giro(payload):
+    """La pantalla elige cuántos grados gira el celular la imagen (0, 90, 180 o 270)."""
+    grados = payload.get("grados")
+    if grados not in (0, 90, 180, 270):
+        raise ValueError("'grados' debe ser 0, 90, 180 o 270.")
+    with _estado_camara_lock:
+        _giro_camara["grados"] = grados
+        return dict(_giro_camara)
+
+
+def fijar_reto(payload):
+    """La página principal avisa qué intento está abierto (o {} para ninguno).
+    La etiqueta es opcional: en la prueba libre se conoce después de la foto."""
+    numero = payload.get("numero")
+    etiqueta = payload.get("etiqueta")
+    if numero is not None:
+        if not isinstance(numero, int) or not 1 <= numero <= MAX_RETOS:
+            raise ValueError(f"'numero' debe ser un entero entre 1 y {MAX_RETOS}.")
+        if etiqueta not in (0, 1, None):
+            raise ValueError("'etiqueta' debe ser 0 (Gato), 1 (Perro) o null.")
+    else:
+        etiqueta = None
+    with _estado_camara_lock:
+        _reto_actual["numero"] = numero
+        _reto_actual["etiqueta"] = etiqueta
+        return dict(_reto_actual)
+
+
+def _leer_ranking():
+    try:
+        datos = json.loads(RANKING_ARCHIVO.read_text(encoding="utf-8"))
+        return datos if isinstance(datos, list) else []
+    except (OSError, ValueError):
+        return []
+
+
+def _ordenar_ranking(filas):
+    # Más puntos primero; a igualdad, quien llegó antes
+    return sorted(filas, key=lambda f: (-f["puntos"], f["timestamp"]))
+
+
+def obtener_ranking():
+    with _ranking_lock:
+        return {"ranking": _ordenar_ranking(_leer_ranking())}
+
+
+def guardar_en_ranking(payload):
+    apodo = str(payload.get("apodo", "")).strip()[:18]
+    if not apodo:
+        raise ValueError("Escribe un apodo.")
+    valores = {}
+    for campo in ("puntos", "aciertos_cnn", "aciertos_mlp"):
+        v = payload.get(campo)
+        if not isinstance(v, int) or not 0 <= v <= MAX_RETOS:
+            raise ValueError(f"'{campo}' debe ser un entero entre 0 y {MAX_RETOS}.")
+        valores[campo] = v
+    fila = {
+        "id": f"{int(time.time() * 1000)}-{os.urandom(3).hex()}",
+        "apodo": apodo,
+        "timestamp": time.time(),
+        **valores,
+    }
+    with _ranking_lock:
+        filas = _leer_ranking()
+        filas.append(fila)
+        RANKING_ARCHIVO.parent.mkdir(parents=True, exist_ok=True)
+        RANKING_ARCHIVO.write_text(json.dumps(filas, ensure_ascii=False), encoding="utf-8")
+        return {"id": fila["id"], "ranking": _ordenar_ranking(filas)}
 
 
 class ServidorExclusivo(ThreadingHTTPServer):
@@ -308,6 +423,10 @@ class APIRequestHandler(SimpleHTTPRequestHandler):
         super().log_message(format, *args)
 
     def end_headers(self):
+        if not self.path.startswith("/api/"):
+            # Páginas y scripts: el navegador (también el del celular) revisa cada vez si
+            # cambiaron, para no quedarse con una versión vieja después de actualizar.
+            self.send_header("Cache-Control", "no-cache")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
@@ -345,8 +464,16 @@ class APIRequestHandler(SimpleHTTPRequestHandler):
                     "solicitud_captura": _estado_camara["captura_seq"],
                     "etiqueta_captura": ultima_cap["etiqueta"] if ultima_cap else None,
                     "ultima_captura": ultima_cap,
+                    "reto": dict(_reto_actual),
+                    "giro": _giro_camara["grados"],
+                    "pedido_captura": _captura_auto["pedidos"],
+                    "capturas_fallidas": _captura_auto["fallidas"],
                 }
             self._responder_json(200, datos)
+            return
+
+        if ruta == "/api/ranking":
+            self._responder_json(200, obtener_ranking())
             return
 
         if ruta == "/api/camara/vista":
@@ -408,6 +535,13 @@ class APIRequestHandler(SimpleHTTPRequestHandler):
         rutas_camara = {
             "/api/camara/frame"
         }
+        # Página principal: reto abierto y ranking
+        rutas_principal = {
+            "/api/camara/reto": fijar_reto,
+            "/api/camara/giro": fijar_giro,
+            "/api/camara/capturar": pedir_captura,
+            "/api/ranking": guardar_en_ranking,
+        }
         # Prueba 2: cada ruta llama a un método de la sesión compartida.
         rutas_prueba_2 = {
             "/api/prueba_2/sensor": lambda p: sesion_prueba_2.recibir(p),
@@ -431,6 +565,7 @@ class APIRequestHandler(SimpleHTTPRequestHandler):
             and ruta not in rutas_camara
             and ruta not in rutas_prueba_2
             and ruta not in rutas_test_2
+            and ruta not in rutas_principal
         ):
             self._responder_json(
                 404,
@@ -457,10 +592,11 @@ class APIRequestHandler(SimpleHTTPRequestHandler):
             elif ruta in rutas_camara:
                 resultados = procesar_frame_camara(payload)
 
-            elif ruta in rutas_prueba_2:
+            elif ruta in rutas_prueba_2 or ruta in rutas_principal:
                 if not isinstance(payload, dict):
                     raise ValueError("El cuerpo debe ser un objeto JSON.")
-                resultados = rutas_prueba_2[ruta](payload)
+                manejador = rutas_prueba_2.get(ruta) or rutas_principal[ruta]
+                resultados = manejador(payload)
 
             elif ruta in rutas_test_2:
                 # Evaluación directa (sin sesión): sensores + etiqueta -> predicción.
@@ -653,8 +789,10 @@ def iniciar_servidor(host="0.0.0.0", port=8000):
     )
 
     print(
-        f"Abre http://localhost:{port}/exploracion/prueba_1.html "
-        "en tu navegador"
+        f"Página principal (retos con la cámara del teléfono): http://localhost:{port}"
+    )
+    print(
+        f"Prueba 1 por separado: http://localhost:{port}/exploracion/prueba_1.html"
     )
 
     if _puerto_https_activo:
