@@ -2,13 +2,160 @@
 <html lang="es">
     <head>
         <meta charset="UTF-8">
-        <title>Prueba 2</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Prueba 2 · Actividades con el teléfono</title>
 
         <link rel="icon" type="image/png" href="../assets/icons/logo.png">
         <link rel="stylesheet" href="../css/style.css">
+        <link rel="stylesheet" href="../css/prueba_2.css">
+        <!-- QR generado en el navegador: la dirección local no sale a servicios externos -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     </head>
 
     <body>
-        <h1>No flaco... todavia no</h1>
+        <header class="cabecera">
+            <button onclick="location.href='../index.html'" class="btn btn-volver">
+                ← Volver a la página principal
+            </button>
+            <p class="eyebrow" style="margin-top: 16px;">Prueba interactiva · Sensores del teléfono (561 características)</p>
+            <h1>Prueba 2: ¿Qué estás haciendo?</h1>
+            <p class="mensaje">
+                Usa tu <strong>teléfono como sensor</strong>: su <strong>acelerómetro</strong> y <strong>giroscopio</strong> registran 10 segundos de tu movimiento.
+                Las redes <strong>CNN</strong> y <strong>MLP</strong> reciben esas señales convertidas en las mismas 561 características con que fueron entrenadas
+                y adivinan si estabas caminando, subiendo o bajando escaleras, sentado, de pie o acostado.
+                Haz <strong>al menos 5 intentos</strong> para comparar su rendimiento.
+            </p>
+        </header>
+
+        <main>
+            <!-- 1. Conexión -->
+            <section class="panel" aria-labelledby="titulo-conexion">
+                <div class="panel-cabecera">
+                    <div>
+                        <h2 id="titulo-conexion">1. Conecta tu teléfono</h2>
+                        <p class="ayuda">Escanéalo con el teléfono en la misma red WiFi y toca «Activar sensores». Si aparece una advertencia del certificado local, elige <em>Opciones avanzadas → Continuar</em>.</p>
+                    </div>
+                    <span class="estado-conexion" role="status">
+                        <span id="punto-conexion" class="punto-sensor desconectado"></span>
+                        <span id="texto-conexion">Esperando teléfono…</span>
+                    </span>
+                </div>
+
+                <div class="conexion-p2">
+                    <div class="qr-p2">
+                        <div id="qr-sensor" aria-label="Código QR para abrir el sensor en el teléfono"></div>
+                        <a id="enlace-sensor" href="sensor_prueba_2.html" target="_blank" rel="noopener" class="codigo-url-sensor">Cargando dirección…</a>
+                    </div>
+
+                    <div class="vivo-p2">
+                        <h3>Señal en vivo</h3>
+                        <p class="ayuda">Mueve el teléfono: la línea muestra cuánto se mueve (aceleración sin gravedad) y cuánto gira.</p>
+                        <canvas id="grafico-vivo" width="560" height="140" role="img"
+                            aria-label="Gráfico en vivo del movimiento y giro del teléfono"></canvas>
+                        <div class="leyenda-vivo">
+                            <span><span class="linea-leyenda" style="background: var(--p2-acc)"></span>Movimiento (g)</span>
+                            <span><span class="linea-leyenda" style="background: var(--p2-giro)"></span>Giro (rad/s)</span>
+                            <span id="texto-orientacion" class="orientacion"></span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. Grabación -->
+            <section class="panel" aria-labelledby="titulo-grabacion">
+                <div class="panel-cabecera">
+                    <div>
+                        <h2 id="titulo-grabacion">2. Elige qué harás y graba</h2>
+                        <p class="ayuda">
+                            Coloca el teléfono <strong>vertical en la cintura, con la pantalla hacia afuera</strong> (así se grabaron los datos de entrenamiento).
+                            Tras una cuenta regresiva de 5 s, realiza la actividad durante 10 s. También puedes iniciar desde el teléfono.
+                        </p>
+                    </div>
+                </div>
+
+                <div id="grilla-actividades" class="grilla-actividades-p2" role="group" aria-label="Actividad que vas a realizar"></div>
+
+                <div class="botones-accion">
+                    <button type="button" id="btn-grabar" class="btn btn-primario" disabled>
+                        Grabar actividad (10 s)
+                    </button>
+                    <button type="button" id="btn-cancelar" class="btn" hidden>
+                        Cancelar grabación
+                    </button>
+                </div>
+
+                <div id="progreso-p2" class="progreso-p2" hidden aria-live="polite">
+                    <div class="progreso-p2-texto">
+                        <strong id="progreso-etapa">Prepárate</strong>
+                        <span id="progreso-detalle"></span>
+                    </div>
+                    <div class="progreso-p2-pista"><div id="progreso-barra"></div></div>
+                </div>
+
+                <p id="mensaje-estado" class="estado-prueba" role="status" aria-live="polite"></p>
+            </section>
+
+            <!-- 3. Último intento -->
+            <section id="panel-intento" class="panel" aria-labelledby="titulo-intento" hidden>
+                <div class="panel-cabecera">
+                    <div>
+                        <h2 id="titulo-intento">3. Lo que vieron los modelos</h2>
+                        <p class="ayuda">Los 10 s se dividen en 7 ventanas de 2,56 s (como en el entrenamiento). Cada modelo clasifica cada ventana y gana la actividad con más votos.</p>
+                    </div>
+                </div>
+                <div id="detalle-intento"></div>
+            </section>
+
+            <!-- 4. Historial y métricas -->
+            <section class="panel" aria-labelledby="titulo-historial">
+                <div class="panel-cabecera">
+                    <div>
+                        <h2 id="titulo-historial">4. Intentos y rendimiento</h2>
+                        <p class="ayuda">Cada intento cuenta como una predicción por modelo. Con 5 o más intentos se calcula su rendimiento general.</p>
+                    </div>
+                    <span id="contador-intentos" class="insignia-contador">0 / 5 intentos mínimos</span>
+                </div>
+
+                <div class="tabla-datos">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Actividad real</th>
+                                <th>CNN</th>
+                                <th>MLP</th>
+                                <th>Hora</th>
+                                <th><span class="solo-lectores">Eliminar</span></th>
+                            </tr>
+                        </thead>
+                        <tbody id="cuerpo-intentos">
+                            <tr><td colspan="6" class="texto-vacio">Aún no hay intentos.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="botones-accion" style="margin-top: 16px;">
+                    <button type="button" id="btn-evaluar" class="btn btn-primario" disabled>
+                        Evaluar modelos (0/5)
+                    </button>
+                    <button type="button" id="btn-reiniciar" class="btn" disabled>
+                        Reiniciar intentos
+                    </button>
+                </div>
+
+                <div id="bloque-metricas" hidden>
+                    <h3 style="margin-top: 24px;">Rendimiento general de los modelos</h3>
+                    <div id="resumen-metricas" class="tarjetas-metricas"></div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="fuentes">
+            Datos de entrenamiento:
+            <a href="https://archive.ics.uci.edu/dataset/240/human+activity+recognition+using+smartphones" target="_blank" rel="noopener">Human Activity Recognition Using Smartphones</a>
+            (UCI, 30 personas con un teléfono en la cintura a 50 Hz).
+        </footer>
+
+        <script src="../js/prueba_2.js"></script>
     </body>
 </html>

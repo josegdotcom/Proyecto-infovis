@@ -1,0 +1,106 @@
+/* Página principal «¿Qué robot adivina mejor?», pensada para pantalla de computador.
+   Ocupa exactamente la ventana (sin desplazamiento) y se escala con ella: todas las
+   medidas están en rem y el tamaño base depende del ancho y del alto de la ventana.
+
+   Distribución:
+     encabezado: título            | los dos robots
+     cuerpo:     Prueba 1 (½ alto) | tablero «¿Quién ganó?»
+                 Prueba 2 (½ alto) |
+     pie:        fuentes                                              */
+
+html.pantalla-completa { font-size: min(0.86vw, 1.62vh); }
+
+.solo-lectores { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+.pantalla-completa body {
+    box-sizing: border-box;
+    height: 100vh;
+    margin: 0;
+    padding: 1rem 1.6rem .5rem;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    gap: .9rem;
+    overflow: hidden;
+    font-size: 1rem;
+}
+
+/* Encabezado: título a la izquierda, personajes a la derecha */
+.encabezado-pantalla { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); align-items: center; gap: 1.6rem; }
+.pantalla-completa h1 { margin: 0; font-size: 2.6rem; letter-spacing: -.08rem; line-height: 1.1; }
+.titulo-pantalla .mensaje { max-width: none; margin: .3rem 0 0; font-size: 1.15rem; line-height: 1.35; color: #333; }
+.titulo-pantalla .ir-experiencia { display: inline-block; margin-top: .6rem; font-size: 1rem; font-weight: 600; text-decoration: none; }
+
+.personajes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.personaje { display: flex; align-items: center; gap: .9rem; padding: .6rem 1rem; border: .14rem solid var(--color); border-radius: 1rem; background: color-mix(in srgb, var(--color) 7%, #fff); }
+.personaje .cara { width: 3.4rem; flex: none; }
+.personaje h2 { margin: 0; font-size: 1.45rem; letter-spacing: -.03rem; line-height: 1.15; }
+.personaje h2 small { display: inline-block; margin-left: .35rem; font-size: .85rem; font-weight: 400; color: #555; letter-spacing: 0; }
+.personaje p { margin: .15rem 0 0; font-size: 1rem; line-height: 1.3; }
+.cara { display: inline-block; color: var(--color); line-height: 0; }
+.cara svg { width: 100%; height: auto; }
+
+/* Cuerpo: pruebas (dos filas iguales) + tablero a la derecha */
+.pantalla-completa .cuerpo-pantalla { display: grid; grid-template-columns: minmax(0, 1fr) 23rem; gap: 1rem; min-height: 0; max-width: none; margin: 0; }
+.lista-pruebas { display: grid; grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 1rem; min-height: 0; }
+
+.prueba { display: grid; grid-template-columns: minmax(0, 1fr) 12.5rem; grid-template-rows: auto minmax(0, 1fr); gap: .5rem 1.8rem; min-height: 0; padding: .9rem 1.4rem 1rem; background: var(--superficie); border: 1px solid var(--borde); border-radius: 1rem; }
+.titulo-prueba { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: baseline; gap: .1rem .8rem; margin: 0; font-size: 1.7rem; letter-spacing: -.04rem; line-height: 1.2; }
+.titulo-prueba small { font-size: 1.05rem; font-weight: 400; color: #555; letter-spacing: 0; }
+
+/* Mismas columnas en las dos pruebas: robot | lo que prometió | lo que logró */
+.tabla-robots { display: grid; grid-template-columns: 10rem minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto 1fr 1fr auto; align-items: center; gap: .5rem 1.6rem; min-height: 0; }
+.columna { align-self: end; padding-bottom: .25rem; border-bottom: .13rem solid #000; font-size: 1.2rem; font-weight: 700; line-height: 1.2; }
+.columna:first-child { border-bottom: 0; }
+.columna small { display: block; font-size: .85rem; font-weight: 400; color: #555; }
+
+.celda-robot { display: flex; align-items: center; gap: .6rem; }
+.celda-robot .cara { width: 2.9rem; flex: none; }
+.celda-robot strong { display: block; font-size: 1.2rem; line-height: 1.1; white-space: nowrap; }
+.celda-robot small { font-size: .8rem; color: #555; }
+
+.celda-casillas { display: flex; align-items: center; gap: .8rem; min-width: 0; }
+.casillas { flex: 1; display: grid; grid-template-columns: repeat(10, minmax(0, 3rem)); gap: .3rem; min-width: 0; }
+.casilla { box-sizing: border-box; display: grid; place-items: center; aspect-ratio: 1; border-radius: .45rem; background: #eef1f6; color: #b9c0cf; font-size: 1.6rem; font-weight: 800; line-height: 1; }
+.casilla img, .casilla svg { width: 72%; height: 72%; }
+.casilla img { opacity: .3; }
+.casilla.llena { background: var(--color); color: #fff; }
+.casilla.llena img { opacity: 1; filter: brightness(0) invert(1); }
+.casilla.vacia { background: transparent; border: .13rem dashed #d0d6e2; }
+.casilla.acierto { background: var(--color); color: #fff; }
+.casilla.error { background: #fff; color: #c02a2a; border: .13rem solid #e7a3a3; }
+.casilla.nuevo { animation: aparece .45s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes aparece { from { transform: scale(.3); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.cuenta { flex: none; min-width: 4.4rem; font-size: 1rem; color: #333; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.cuenta b { font-size: 1.7rem; color: #000; }
+
+.frase { grid-column: 1 / -1; margin: .1rem 0 0; padding: .55rem .9rem; border-radius: .6rem; background: #f5f6f9; font-size: 1.1rem; line-height: 1.4; }
+.nombre-robot { color: color-mix(in srgb, var(--color) 70%, #000); }
+
+/* QR */
+.bloque-qr { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .4rem; min-height: 0; text-align: center; }
+.qr { box-sizing: border-box; display: grid; place-items: center; width: 11rem; max-width: 100%; aspect-ratio: 1; padding: .45rem; background: #fff; border: 1px solid var(--borde); border-radius: .7rem; }
+.qr img, .qr canvas { display: block; width: 100% !important; height: auto !important; }
+.estado { display: flex; align-items: center; gap: .5rem; margin: 0; font-size: .88rem; font-weight: 600; line-height: 1.3; text-align: left; }
+.punto-sensor { flex: none; width: .65rem; height: .65rem; }
+.instruccion { margin: 0; font-size: .88rem; line-height: 1.35; color: #333; }
+.btn-reiniciar { padding: .25rem .8rem; font-size: .88rem; }
+.enlace { max-width: 100%; font-size: .7rem; line-height: 1.3; color: #666; overflow-wrap: anywhere; }
+
+/* Tablero final (columna derecha) */
+.tablero { display: flex; flex-direction: column; justify-content: center; gap: 1rem; min-height: 0; padding: 1.2rem 1.3rem; border: .14rem solid #000; border-radius: 1rem; text-align: center; }
+.tablero h2 { margin: 0; font-size: 1.7rem; letter-spacing: -.04rem; line-height: 1.2; }
+.tablero table { width: 100%; border-collapse: collapse; font-size: 1.05rem; }
+.tablero th, .tablero td { padding: .6rem .25rem; border-bottom: 1px solid var(--borde); }
+.tablero thead th { font-size: .95rem; line-height: 1.25; }
+.tablero tbody th { display: flex; align-items: center; gap: .5rem; font-size: 1.1rem; text-align: left; white-space: nowrap; }
+.tablero tbody th .cara { width: 2rem; }
+.tablero td { font-size: 2.2rem; line-height: 1; }
+.tablero td.prometido { filter: grayscale(1); opacity: .45; }
+.tablero .nada { font-size: 1.1rem; color: #aaa; }
+.nota-tablero { margin: 0; font-size: .82rem; color: #555; }
+.mensaje-final { margin: 0; font-size: 1.35rem; font-weight: 700; line-height: 1.35; }
+
+/* Pie */
+.pantalla-completa .fuentes { max-width: none; margin: 0; padding: 0; font-size: .78rem; text-align: center; color: #555; }
+.aviso-servidor { margin-right: .8rem; padding: .15rem .6rem; border-radius: .4rem; background: #fff6d9; color: #000; font-weight: 600; }
+.aviso-servidor code { padding: 0 .3rem; border-radius: .3rem; background: #ffffffc0; }

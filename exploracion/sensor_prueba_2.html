@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        <title>Sensor de movimiento · Prueba 2</title>
+
+        <link rel="icon" type="image/png" href="../assets/icons/logo.png">
+        <link rel="stylesheet" href="../css/style.css">
+        <style>
+            :root {
+                --cnn: #2a78d6;
+                --mlp: #1baf7a;
+            }
+            body.cuerpo-sensor {
+                padding: 12px 16px 32px;
+                max-width: 520px;
+                margin: 0 auto;
+                background: var(--plano);
+                color: var(--texto-primario);
+            }
+            .cabecera-sensor {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+                padding: 8px 0 12px;
+                border-bottom: 1px solid var(--borde);
+                margin-bottom: 12px;
+            }
+            .cabecera-sensor h1 {
+                font-size: 1.15rem;
+                margin: 0;
+            }
+            .badge-conexion {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 4px 10px;
+                border: 1px solid var(--borde);
+                border-radius: 999px;
+                font-size: 0.78rem;
+                white-space: nowrap;
+            }
+            .punto {
+                width: 9px;
+                height: 9px;
+                border-radius: 50%;
+                background: var(--texto-tenue);
+            }
+            .punto.ok { background: var(--bien); }
+            .punto.mal { background: var(--mal); }
+            .tarjeta {
+                padding: 14px;
+                margin-bottom: 12px;
+                border: 1px solid var(--borde);
+                border-radius: 12px;
+                background: var(--superficie);
+            }
+            .tarjeta h2 {
+                font-size: 1rem;
+                margin: 0 0 8px;
+            }
+            .tarjeta p {
+                margin: 0 0 8px;
+                font-size: 0.9rem;
+                color: var(--texto-secundario);
+            }
+            .btn-ancho {
+                width: 100%;
+                justify-content: center;
+                padding: 12px 16px;
+                font-size: 1rem;
+            }
+            .medidores {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+            }
+            .medidor span {
+                display: block;
+                font-size: 0.78rem;
+                color: var(--texto-secundario);
+                margin-bottom: 4px;
+            }
+            .pista {
+                height: 10px;
+                border-radius: 999px;
+                background: var(--grilla);
+                overflow: hidden;
+            }
+            .relleno {
+                height: 100%;
+                width: 0%;
+                border-radius: 999px;
+                background: var(--acento);
+                transition: width 120ms linear;
+            }
+            .aviso {
+                padding: 10px 12px;
+                border-radius: 10px;
+                font-size: 0.85rem;
+                margin-bottom: 12px;
+                border: 1px solid var(--mal);
+                background: rgba(208, 59, 59, 0.08);
+            }
+            .grilla-actividades {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+                margin-bottom: 12px;
+            }
+            .btn-actividad {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 10px;
+                border: 1px solid var(--borde);
+                border-radius: 10px;
+                background: var(--plano);
+                color: var(--texto-primario);
+                font-size: 0.9rem;
+                text-align: left;
+                cursor: pointer;
+            }
+            .btn-actividad .icono {
+                font-size: 1.3rem;
+            }
+            .btn-actividad[aria-pressed="true"] {
+                border-color: var(--acento);
+                box-shadow: inset 0 0 0 2px var(--acento);
+                font-weight: 600;
+            }
+            .resultado-modelo {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+                padding: 8px 0;
+                border-top: 1px solid var(--borde);
+            }
+            .resultado-modelo:first-of-type {
+                border-top: none;
+            }
+            .nombre-modelo {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                font-weight: 600;
+            }
+            .muestra-color {
+                width: 10px;
+                height: 10px;
+                border-radius: 2px;
+            }
+            .veredicto {
+                text-align: right;
+                font-size: 0.95rem;
+            }
+            .veredicto small {
+                display: block;
+                color: var(--texto-tenue);
+                font-size: 0.75rem;
+            }
+            .marca-ok { color: var(--bien); font-weight: 700; }
+            .marca-mal { color: var(--mal); font-weight: 700; }
+
+            /* Pantallas completas: bienvenida y grabación */
+            .capa {
+                position: fixed;
+                inset: 0;
+                z-index: 1000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 16px;
+                background: rgba(0, 0, 0, 0.6);
+            }
+            .capa[hidden] { display: none; }
+            .capa-tarjeta {
+                width: 100%;
+                max-width: 400px;
+                padding: 26px 20px 20px;
+                border-radius: 16px;
+                background: var(--superficie);
+                color: var(--texto-primario);
+                text-align: center;
+                box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+            }
+            .capa-tarjeta h2 {
+                font-size: 1.35rem;
+                line-height: 1.25;
+                margin: 0 0 10px;
+            }
+            .capa-tarjeta p {
+                margin: 0 0 18px;
+                color: var(--texto-secundario);
+                font-size: 0.92rem;
+            }
+            .capa-grabacion {
+                background: var(--plano);
+            }
+            .capa-grabacion .capa-tarjeta {
+                background: transparent;
+                box-shadow: none;
+            }
+            .numero-grande {
+                font-size: 5.5rem;
+                font-weight: 700;
+                line-height: 1;
+                margin: 8px 0 12px;
+                font-variant-numeric: tabular-nums;
+            }
+            .actividad-grande {
+                font-size: 1.4rem;
+                font-weight: 600;
+                margin-bottom: 18px;
+            }
+            .progreso-grabacion {
+                height: 14px;
+                border-radius: 999px;
+                background: var(--grilla);
+                overflow: hidden;
+                margin: 0 0 18px;
+            }
+            .progreso-grabacion div {
+                height: 100%;
+                width: 0%;
+                background: var(--bien);
+                transition: width 250ms linear;
+            }
+        </style>
+    </head>
+
+    <body class="cuerpo-sensor">
+        <!-- 1. Bienvenida: el toque activa sensores, voz, pitidos y pantalla encendida -->
+        <div id="capa-bienvenida" class="capa" role="dialog" aria-modal="true" aria-labelledby="bienvenida-titulo">
+            <div class="capa-tarjeta">
+                <div style="font-size: 3rem; line-height: 1; margin-bottom: 10px;" aria-hidden="true">🚶 🪑 🛌</div>
+                <h2 id="bienvenida-titulo">Tu teléfono será el sensor</h2>
+                <p>Vamos a medir cómo te mueves con el acelerómetro y el giroscopio, y dos redes neuronales intentarán adivinar qué estabas haciendo.</p>
+                <button type="button" id="btn-activar" class="btn btn-primario btn-ancho">
+                    🔊 Activar sensores
+                </button>
+                <p id="error-activacion" class="estado-prueba" data-tipo="error" style="margin: 12px 0 0;" hidden></p>
+            </div>
+        </div>
+
+        <!-- 2. Pantalla de grabación (cubre todo para evitar toques accidentales en el bolsillo) -->
+        <div id="capa-grabacion" class="capa capa-grabacion" hidden aria-live="assertive">
+            <div class="capa-tarjeta">
+                <p id="grabacion-etapa" style="margin: 0; font-weight: 600;">Prepárate</p>
+                <div id="grabacion-numero" class="numero-grande">5</div>
+                <div id="grabacion-actividad" class="actividad-grande"></div>
+                <div class="progreso-grabacion" aria-hidden="true"><div id="grabacion-barra"></div></div>
+                <p id="grabacion-ayuda">Pon el teléfono vertical en tu cintura, con la pantalla hacia afuera.</p>
+                <button type="button" id="btn-cancelar" class="btn">Cancelar</button>
+            </div>
+        </div>
+
+        <header class="cabecera-sensor">
+            <div>
+                <p class="eyebrow">Physical Viz Toolkit · Prueba 2</p>
+                <h1>📱 Sensor de movimiento</h1>
+            </div>
+            <span class="badge-conexion" role="status">
+                <span id="punto-conexion" class="punto"></span>
+                <span id="texto-conexion">Sin conectar</span>
+            </span>
+        </header>
+
+        <div id="aviso-sensores" class="aviso" hidden></div>
+
+        <section class="tarjeta" aria-labelledby="titulo-colocacion">
+            <h2 id="titulo-colocacion">📍 Cómo llevar el teléfono</h2>
+            <p>Los modelos aprendieron con un teléfono <strong>en la cintura</strong>. Para que te reconozcan:</p>
+            <p>Teléfono <strong>vertical</strong> (cámara arriba), <strong>pantalla hacia afuera</strong>, sujeto con la pretina del pantalón o con la mano contra el abdomen. Para <em>Acostado</em>, boca arriba con el teléfono sobre el abdomen.</p>
+            <div class="medidores" aria-label="Lectura en vivo de los sensores">
+                <div class="medidor">
+                    <span>Movimiento (acelerómetro)</span>
+                    <div class="pista"><div id="medidor-acc" class="relleno"></div></div>
+                </div>
+                <div class="medidor">
+                    <span>Giro (giroscopio)</span>
+                    <div class="pista"><div id="medidor-gyro" class="relleno"></div></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="tarjeta" aria-labelledby="titulo-actividad">
+            <h2 id="titulo-actividad">🎯 ¿Qué vas a hacer?</h2>
+            <div id="grilla-actividades" class="grilla-actividades" role="group" aria-label="Actividad que vas a realizar"></div>
+            <button type="button" id="btn-grabar" class="btn btn-primario btn-ancho" disabled>
+                Grabar 10 segundos
+            </button>
+            <p id="estado-grabar" class="estado-prueba" style="margin: 8px 0 0;" role="status"></p>
+        </section>
+
+        <section id="tarjeta-resultado" class="tarjeta" aria-labelledby="titulo-resultado" hidden>
+            <h2 id="titulo-resultado">🧠 Lo que creen los modelos</h2>
+            <p id="resultado-real"></p>
+            <div id="resultado-modelos"></div>
+            <p id="resultado-intentos" style="margin: 8px 0 0; font-size: 0.8rem;"></p>
+        </section>
+
+        <script>
+            (function () {
+                const ICONOS = { 1: "🚶", 2: "⬆️", 3: "⬇️", 4: "🪑", 5: "🧍", 6: "🛌" };
+                // Verbo para la voz: "¡Ahora! Camina", etc.
+                const ORDEN = {
+                    1: "Camina con normalidad",
+                    2: "Sube las escaleras",
+                    3: "Baja las escaleras",
+                    4: "Quédate sentado",
+                    5: "Quédate de pie, quieto",
+                    6: "Quédate acostado boca arriba"
+                };
+                const COLOR = { CNN: "var(--cnn)", MLP: "var(--mlp)" };
+                const INTERVALO_ENVIO_MS = 250;
+                const INTERVALO_ESTADO_MS = 300;
+
+                const $ = (id) => document.getElementById(id);
+                const capaBienvenida = $("capa-bienvenida");
+                const capaGrabacion = $("capa-grabacion");
+
+                let actividades = { 1: "Caminar", 2: "Subir escaleras", 3: "Bajar escaleras", 4: "Sentado", 5: "De pie", 6: "Acostado" };
+                let actividadElegida = null;
+                let sensoresActivos = false;
+                let ultima = null;
+                let bufferEnvio = [];
+                let calibracion = { signo: 1, eje: null, plataforma: navigator.userAgent.slice(0, 80) };
+                let muestrasCalibracion = [];
+                let tieneGiroscopio = null;
+                let fase = "espera";
+                let idIntentoGrabando = null;
+                let idIntentoVisto = 0;
+                let ultimoResultadoId = null;
+                let ultimoErrorVisto = null;
+                let ultimoSegundoPitado = null;
+                let wakeLock = null;
+                let audio = null;
+                let confirmandoCancelar = false;
+
+                // ---------------- Voz y pitidos ----------------
+                function decir(texto) {
+                    if (!("speechSynthesis" in window)) return;
+                    window.speechSynthesis.cancel();
+                    const u = new SpeechSynthesisUtterance(texto);
+                    u.lang = "es-ES";
+                    const voz = window.speechSynthesis.getVoices().find((v) => v.lang && v.lang.toLowerCase().startsWith("es"));
+                    if (voz) u.voice = voz;
+                    window.speechSynthesis.speak(u);
+                }
+
+                function pitido(frecuencia = 880, duracion = 0.12) {
+                    if (!audio) return;
+                    try {
+                        const osc = audio.createOscillator();
+                        const gan = audio.createGain();
+                        osc.frequency.value = frecuencia;
+                        gan.gain.setValueAtTime(0.25, audio.currentTime);
+                        gan.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + duracion);
+                        osc.connect(gan).connect(audio.destination);
+                        osc.start();
+                        osc.stop(audio.currentTime + duracion);
+                    } catch (e) { /* sin audio */ }
+                    if (navigator.vibrate) navigator.vibrate(Math.round(duracion * 1000));
+                }
+
+                // ---------------- Pantalla siempre encendida ----------------
+                async function mantenerPantalla() {
+                    if (!("wakeLock" in navigator)) return false;
+                    try {
+                        wakeLock = await navigator.wakeLock.request("screen");
+                        return true;
+                    } catch (e) {
+                        return false;
+                    }
+                }
+                document.addEventListener("visibilitychange", () => {
+                    if (document.visibilityState === "visible" && sensoresActivos) mantenerPantalla();
+                });
+
+                // ---------------- Activación (requiere un toque) ----------------
+                $("btn-activar").addEventListener("click", async () => {
+                    const error = $("error-activacion");
+                    error.hidden = true;
+
+                    if (!window.isSecureContext) {
+                        error.textContent = "Abre esta página con https:// (el QR de la pantalla ya lo hace) para poder usar los sensores.";
+                        error.hidden = false;
+                        return;
+                    }
+                    if (typeof DeviceMotionEvent === "undefined") {
+                        error.textContent = "Este navegador no entrega datos de movimiento.";
+                        error.hidden = false;
+                        return;
+                    }
+                    if (typeof DeviceMotionEvent.requestPermission === "function") {
+                        try {
+                            const permiso = await DeviceMotionEvent.requestPermission();
+                            if (permiso !== "granted") throw new Error("denegado");
+                        } catch (e) {
+                            error.textContent = "Necesitamos permiso para usar los sensores de movimiento. Vuelve a tocar el botón y acepta.";
+                            error.hidden = false;
+                            return;
+                        }
+                    }
+
+                    try {
+                        const Ctx = window.AudioContext || window.webkitAudioContext;
+                        if (Ctx) { audio = new Ctx(); await audio.resume(); }
+                    } catch (e) { audio = null; }
+
+                    window.addEventListener("devicemotion", recibirMovimiento, { passive: true });
+                    sensoresActivos = true;
+                    const pantalla = await mantenerPantalla();
+                    capaBienvenida.hidden = true;
+                    decir("Sensores activados. Elige qué vas a hacer y toca grabar.");
+                    pitido(660, 0.08);
+
+                    setTimeout(() => {
+                        if (!ultima) {
+                            mostrarAviso("No llegan datos de movimiento. Revisa que el navegador tenga permiso de sensores de movimiento.");
+                        } else if (!pantalla) {
+                            mostrarAviso("Este navegador no puede mantener la pantalla encendida: no dejes que se bloquee mientras grabas.");
+                        }
+                    }, 1500);
+                    actualizarBotonGrabar();
+                });
+
+                function mostrarAviso(texto) {
+                    const aviso = $("aviso-sensores");
+                    aviso.textContent = texto;
+                    aviso.hidden = !texto;
+                }
+
+                // ---------------- Lectura de sensores ----------------
+                function recibirMovimiento(evento) {
+                    const a = evento.accelerationIncludingGravity;
+                    if (!a || a.x === null) return;
+                    const r = evento.rotationRate;
+                    const hayGiro = Boolean(r && r.alpha !== null && r.beta !== null && r.gamma !== null);
+                    if (tieneGiroscopio === null) {
+                        tieneGiroscopio = hayGiro;
+                        if (!hayGiro) mostrarAviso("Tu teléfono no tiene giroscopio: los modelos verán solo el acelerómetro y fallarán más.");
+                    }
+
+                    // Calibrar el signo: con el teléfono en la mano (vertical o sobre la mesa)
+                    // la gravedad debe ser positiva en el eje dominante (W3C). Algunos navegadores
+                    // de iOS la entregan invertida.
+                    if (calibracion.eje === null) {
+                        muestrasCalibracion.push([a.x, a.y, a.z]);
+                        if (muestrasCalibracion.length >= 30) {
+                            const media = [0, 1, 2].map((k) => muestrasCalibracion.reduce((s, m) => s + m[k], 0) / muestrasCalibracion.length);
+                            const eje = media.map(Math.abs).indexOf(Math.max(...media.map(Math.abs)));
+                            calibracion.eje = ["x", "y", "z"][eje];
+                            // Solo y (vertical) y z (sobre la mesa) tienen una orientación "normal" conocida.
+                            if (eje !== 0 && media[eje] < -4) calibracion.signo = -1;
+                        }
+                    }
+
+                    const s = calibracion.signo;
+                    // Ejes W3C: beta gira en torno a x, gamma en torno a y, alpha en torno a z.
+                    const muestra = {
+                        t: evento.timeStamp || performance.now(),
+                        ax: s * a.x,
+                        ay: s * a.y,
+                        az: s * a.z,
+                        gx: hayGiro ? r.beta : 0,
+                        gy: hayGiro ? r.gamma : 0,
+                        gz: hayGiro ? r.alpha : 0
+                    };
+                    ultima = muestra;
+                    if (idIntentoGrabando !== null) bufferEnvio.push(muestra);
+                    pintarMedidores(muestra);
+                }
+
+                let aceleracionSuave = 0;
+                let giroSuave = 0;
+                function pintarMedidores(m) {
+                    const dinamica = Math.abs(Math.hypot(m.ax, m.ay, m.az) - 9.81);
+                    const giro = Math.hypot(m.gx, m.gy, m.gz);
+                    aceleracionSuave = 0.8 * aceleracionSuave + 0.2 * dinamica;
+                    giroSuave = 0.8 * giroSuave + 0.2 * giro;
+                    $("medidor-acc").style.width = `${Math.min(100, aceleracionSuave * 20)}%`;
+                    $("medidor-gyro").style.width = `${Math.min(100, giroSuave / 2)}%`;
+                }
+
+                // ---------------- Envío al servidor ----------------
+                async function enviar() {
+                    if (!sensoresActivos || !ultima) return;
+                    const grabando = idIntentoGrabando !== null;
+                    const muestras = grabando ? bufferEnvio.splice(0, bufferEnvio.length) : [];
+                    try {
+                        await fetch("/api/prueba_2/sensor", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                tipo: grabando ? "muestras" : "latido",
+                                id_intento: idIntentoGrabando,
+                                muestras,
+                                ultima,
+                                calibracion
+                            })
+                        });
+                    } catch (e) {
+                        // Reintentar las muestras perdidas en el próximo envío.
+                        if (grabando && muestras.length) bufferEnvio = muestras.concat(bufferEnvio);
+                    }
+                }
+                setInterval(enviar, INTERVALO_ENVIO_MS);
+
+                // ---------------- Actividades ----------------
+                function pintarActividades() {
+                    const grilla = $("grilla-actividades");
+                    grilla.innerHTML = "";
+                    Object.entries(actividades).forEach(([id, nombre]) => {
+                        const b = document.createElement("button");
+                        b.type = "button";
+                        b.className = "btn-actividad";
+                        b.setAttribute("aria-pressed", String(Number(id) === actividadElegida));
+                        b.innerHTML = `<span class="icono" aria-hidden="true">${ICONOS[id] || "•"}</span>${nombre}`;
+                        b.addEventListener("click", () => {
+                            actividadElegida = Number(id);
+                            pintarActividades();
+                            actualizarBotonGrabar();
+                        });
+                        grilla.appendChild(b);
+                    });
+                }
+                pintarActividades();
+
+                function actualizarBotonGrabar() {
+                    const ocupado = fase !== "espera";
+                    $("btn-grabar").disabled = !sensoresActivos || actividadElegida === null || ocupado;
+                    $("estado-grabar").textContent = !sensoresActivos
+                        ? "Activa los sensores para empezar."
+                        : actividadElegida === null
+                            ? "Elige una actividad (también puedes hacerlo desde la pantalla)."
+                            : ocupado ? "Grabación en curso…" : "";
+                    $("estado-grabar").dataset.tipo = "info";
+                }
+
+                $("btn-grabar").addEventListener("click", async () => {
+                    try {
+                        const r = await fetch("/api/prueba_2/iniciar", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ actividad: actividadElegida, cuenta_regresiva: 5 })
+                        });
+                        const datos = await r.json();
+                        if (!r.ok) throw new Error(datos.error || "No se pudo iniciar.");
+                    } catch (e) {
+                        $("estado-grabar").textContent = e.message;
+                        $("estado-grabar").dataset.tipo = "error";
+                    }
+                });
+
+                $("btn-cancelar").addEventListener("click", async () => {
+                    // Doble toque para que un roce en el bolsillo no cancele la grabación.
+                    if (!confirmandoCancelar) {
+                        confirmandoCancelar = true;
+                        $("btn-cancelar").textContent = "Toca otra vez para cancelar";
+                        setTimeout(() => {
+                            confirmandoCancelar = false;
+                            $("btn-cancelar").textContent = "Cancelar";
+                        }, 2500);
+                        return;
+                    }
+                    confirmandoCancelar = false;
+                    $("btn-cancelar").textContent = "Cancelar";
+                    try { await fetch("/api/prueba_2/cancelar", { method: "POST" }); } catch (e) { /* sin red */ }
+                });
+
+                // ---------------- Estado compartido con la pantalla ----------------
+                async function consultarEstado() {
+                    let e;
+                    try {
+                        const r = await fetch("/api/prueba_2/estado", { cache: "no-store" });
+                        e = await r.json();
+                    } catch (err) {
+                        $("punto-conexion").className = "punto mal";
+                        $("texto-conexion").textContent = "Sin servidor";
+                        return;
+                    }
+
+                    $("punto-conexion").className = e.conectado ? "punto ok" : "punto";
+                    $("texto-conexion").textContent = e.conectado ? "Conectado" : sensoresActivos ? "Conectando…" : "Sin activar";
+                    if (e.actividades) actividades = e.actividades;
+
+                    // La pantalla también puede elegir e iniciar: reflejarlo aquí.
+                    if (e.fase !== "espera" && e.actividad && e.actividad !== actividadElegida) {
+                        actividadElegida = e.actividad;
+                        pintarActividades();
+                    }
+
+                    const anterior = fase;
+                    fase = e.fase;
+                    actualizarCapaGrabacion(e, anterior);
+
+                    if (e.resultado && e.resultado.id !== ultimoResultadoId) {
+                        const esNuevo = ultimoResultadoId !== null || anterior !== "espera";
+                        ultimoResultadoId = e.resultado.id;
+                        mostrarResultado(e.resultado, e.intentos.length, e.minimo_intentos, esNuevo);
+                    }
+                    if (e.error && e.error !== ultimoErrorVisto) {
+                        ultimoErrorVisto = e.error;
+                        if (anterior !== "espera") {
+                            $("estado-grabar").textContent = e.error;
+                            $("estado-grabar").dataset.tipo = "error";
+                            decir(e.error.startsWith("Grabación cancelada") ? "Grabación cancelada." : "Hubo un problema con la grabación.");
+                        }
+                    }
+                    actualizarBotonGrabar();
+                }
+                setInterval(consultarEstado, INTERVALO_ESTADO_MS);
+                consultarEstado();
+
+                function actualizarCapaGrabacion(e, anterior) {
+                    const nombre = e.nombre_actividad || "";
+                    if (e.fase === "cuenta_regresiva") {
+                        capaGrabacion.hidden = false;
+                        $("grabacion-etapa").textContent = "Prepárate · empieza en";
+                        const seg = Math.ceil(e.segundos_para_iniciar);
+                        $("grabacion-numero").textContent = seg;
+                        $("grabacion-actividad").textContent = `${ICONOS[e.actividad] || ""} ${nombre}`;
+                        $("grabacion-barra").style.width = "0%";
+                        $("grabacion-ayuda").textContent = "Pon el teléfono vertical en tu cintura, con la pantalla hacia afuera.";
+                        if (anterior !== "cuenta_regresiva" || e.id_intento !== idIntentoVisto) {
+                            idIntentoVisto = e.id_intento;
+                            ultimoSegundoPitado = null;
+                            decir(`Prepárate para: ${nombre}. Guarda el teléfono en tu cintura.`);
+                        }
+                        if (seg <= 3 && seg >= 1 && seg !== ultimoSegundoPitado) {
+                            ultimoSegundoPitado = seg;
+                            pitido(660, 0.1);
+                        }
+                        idIntentoGrabando = null;
+                    } else if (e.fase === "grabando") {
+                        capaGrabacion.hidden = false;
+                        if (idIntentoGrabando !== e.id_intento) {
+                            idIntentoGrabando = e.id_intento;
+                            bufferEnvio = [];
+                            pitido(990, 0.35);
+                            decir(`¡Ahora! ${ORDEN[e.actividad] || nombre}.`);
+                        }
+                        const restante = Math.max(0, Math.ceil(e.duracion_s * (1 - e.progreso)));
+                        $("grabacion-etapa").textContent = "Grabando · quedan";
+                        $("grabacion-numero").textContent = restante;
+                        $("grabacion-actividad").textContent = `${ICONOS[e.actividad] || ""} ${nombre}`;
+                        $("grabacion-barra").style.width = `${Math.round(e.progreso * 100)}%`;
+                        $("grabacion-ayuda").textContent = "Mantén la actividad hasta oír el pitido final.";
+                    } else if (e.fase === "procesando") {
+                        capaGrabacion.hidden = false;
+                        if (idIntentoGrabando !== null) {
+                            idIntentoGrabando = null;
+                            pitido(523, 0.18);
+                            setTimeout(() => pitido(784, 0.25), 200);
+                        }
+                        $("grabacion-etapa").textContent = "¡Listo!";
+                        $("grabacion-numero").textContent = "🧠";
+                        $("grabacion-barra").style.width = "100%";
+                        $("grabacion-ayuda").textContent = "Las redes están analizando tu movimiento…";
+                    } else {
+                        idIntentoGrabando = null;
+                        capaGrabacion.hidden = true;
+                    }
+                }
+
+                function mostrarResultado(r, totalIntentos, minimo, hablar) {
+                    $("tarjeta-resultado").hidden = false;
+                    $("resultado-real").innerHTML = `Hiciste: <strong>${ICONOS[r.actividad_real] || ""} ${r.nombre_real}</strong>`;
+                    $("resultado-modelos").innerHTML = ["MLP", "CNN"].map((m) => {
+                        const d = r.modelos[m];
+                        if (!d) return "";
+                        const marca = d.correcto ? '<span class="marca-ok">✓</span>' : '<span class="marca-mal">✗</span>';
+                        return `
+                            <div class="resultado-modelo">
+                                <span class="nombre-modelo"><span class="muestra-color" style="background:${COLOR[m]}"></span>${m}</span>
+                                <span class="veredicto">${marca} ${ICONOS[d.prediccion] || ""} ${d.actividad}
+                                    <small>${d.votos} de ${r.ventanas} ventanas</small></span>
+                            </div>`;
+                    }).join("");
+                    const faltan = Math.max(0, minimo - totalIntentos);
+                    $("resultado-intentos").textContent = faltan > 0
+                        ? `Intento ${totalIntentos}. Haz ${faltan} más para comparar el rendimiento de ambos modelos.`
+                        : `Intento ${totalIntentos}. Ya puedes evaluar ambos modelos en la pantalla.`;
+
+                    if (hablar) {
+                        const mlp = r.modelos.MLP;
+                        const cnn = r.modelos.CNN;
+                        decir(`Listo. La red MLP cree que: ${mlp.actividad}. La red CNN cree que: ${cnn.actividad}.`);
+                    }
+                }
+            })();
+        </script>
+    </body>
+</html>

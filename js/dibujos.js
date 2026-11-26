@@ -3,6 +3,10 @@ const ETIQUETAS = {
     0: "Gato",
     1: "Perro"
 };
+const ICONOS_ANIMAL = {
+    0: "../assets/images/gato.svg",
+    1: "../assets/images/perro.svg"
+};
 const COLORES_MODELO = {
     CNN: "#2a78d6",
     MLP: "#1baf7a"
@@ -10,7 +14,9 @@ const COLORES_MODELO = {
 
 const canvas = document.getElementById("canvas-dibujo");
 const ctx = canvas.getContext("2d");
+const canvasVista28 = document.getElementById("canvas-vista-28");
 
+// Botones principales de prueba
 const btnLimpiar = document.getElementById("btn-limpiar");
 const btnGuardar = document.getElementById("btn-guardar");
 const btnPredecir = document.getElementById("btn-predecir");
@@ -18,6 +24,8 @@ const btnVaciar = document.getElementById("btn-vaciar");
 const btnNuevaPrueba = document.getElementById("btn-nueva-prueba");
 const botonesEtiqueta = document.querySelectorAll(".btn-etiqueta");
 
+// Contadores y paneles
+const insigniaFuenteActiva = document.getElementById("insignia-fuente-activa");
 const contadorGuardados = document.getElementById("contador-guardados");
 const mensajeEstado = document.getElementById("mensaje-estado");
 const listaGuardados = document.getElementById("lista-guardados");
@@ -26,13 +34,951 @@ const resumenMetricas = document.getElementById("resumen-metricas");
 const tablaMetricasCuerpo = document.getElementById("tabla-metricas-cuerpo");
 const grillaPredicciones = document.getElementById("grilla-predicciones");
 
+// Pestañas y contenedores de modo
+const tabModoCamara = document.getElementById("tab-modo-camara");
+const tabModoLienzo = document.getElementById("tab-modo-lienzo");
+const contenedorModoCamara = document.getElementById("contenedor-modo-camara");
+const contenedorModoLienzo = document.getElementById("contenedor-modo-lienzo");
+const tarjetaConexionQr = document.getElementById("tarjeta-conexion-qr");
+
+// Elementos de cámara y sensor remoto
+const puntoConexionRemota = document.getElementById("punto-conexion-remota");
+const estadoConexionRemota = document.getElementById("estado-conexion-remota");
+const enlaceSensorHttps = document.getElementById("enlace-sensor-https");
+const btnCopiarUrlSensor = document.getElementById("btn-copiar-url-sensor");
+const btnAbrirProtobject = document.getElementById("btn-abrir-protobject");
+const imgQrSensor = document.getElementById("img-qr-sensor");
+
+const btnToggleQr = document.getElementById("btn-toggle-qr");
+const btnCamaraLocal = document.getElementById("btn-camara-local");
+const btnCambiarCamaraLocal = document.getElementById("btn-cambiar-camara-local");
+const btnCongelarLocal = document.getElementById("btn-congelar-local");
+const btnSubirFotoLocal = document.getElementById("btn-subir-foto-local");
+const inputFotoLocal = document.getElementById("input-foto-local");
+
+const videoLocal = document.getElementById("video-local");
+const imgFotoLocal = document.getElementById("img-foto-local");
+const overlayRecuadroLocal = document.getElementById("overlay-recuadro-local");
+const placeholderSensorRemoto = document.getElementById("placeholder-sensor-remoto");
+const tituloPlaceholderSensor = document.getElementById("titulo-placeholder-sensor");
+const subtituloPlaceholderSensor = document.getElementById("subtitulo-placeholder-sensor");
+const estadoDeteccionTrazo = document.getElementById("estado-deteccion-trazo");
+
+const sliderUmbralLocal = document.getElementById("slider-umbral-local");
+const valorUmbralLocal = document.getElementById("valor-umbral-local");
+const btnCalibrarLocal = document.getElementById("btn-calibrar-local");
+
+// Elementos de Interpretación en Tiempo Real
+const btnAudioTiempoReal = document.getElementById("btn-audio-tiempo-real");
+const bannerVeredictoVivo = document.getElementById("banner-veredicto-vivo");
+const iconoVeredictoVivo = document.getElementById("icono-veredicto-vivo");
+const tituloVeredictoVivo = document.getElementById("titulo-veredicto-vivo");
+const detalleVeredictoVivo = document.getElementById("detalle-veredicto-vivo");
+
+const confianzaVivoCnn = document.getElementById("confianza-vivo-cnn");
+const imgAnimalCnn = document.getElementById("img-animal-cnn");
+const etiquetaVivoCnn = document.getElementById("etiqueta-vivo-cnn");
+const probGatoCnn = document.getElementById("prob-gato-cnn");
+const probPerroCnn = document.getElementById("prob-perro-cnn");
+const barraPerroCnn = document.getElementById("barra-perro-cnn");
+
+const confianzaVivoMlp = document.getElementById("confianza-vivo-mlp");
+const imgAnimalMlp = document.getElementById("img-animal-mlp");
+const etiquetaVivoMlp = document.getElementById("etiqueta-vivo-mlp");
+const probGatoMlp = document.getElementById("prob-gato-mlp");
+const probPerroMlp = document.getElementById("prob-perro-mlp");
+const barraPerroMlp = document.getElementById("barra-perro-mlp");
+
+// Estado general
+let modoEntrada = "camara"; // "camara" | "lienzo"
+let fuenteCamara = "remota"; // "remota" | "local" | "foto"
 let dibujando = false;
 let tieneTrazos = false;
 let etiquetaSeleccionada = null;
 const muestrasGuardadas = [];
 
+// Estado de tiempo real
+let pixelesActuales = new Array(784).fill(0);
+let hayDibujoActual = false;
+let ultimasPrediccionesVivas = null;
+let ultimoTimestampRemoto = 0;
+let ultimoIdCapturaRemota = null; // null = aún no sincronizado con el servidor
+// IDs de capturas ya guardadas: el teléfono envía cada captura por Protobject
+// y por la API local; así se guarda una sola vez aunque lleguen por ambos.
+const capturasRecibidas = new Set();
+
+function registrarCapturaNueva(idCaptura) {
+    if (idCaptura === undefined || idCaptura === null) return true;
+    if (capturasRecibidas.has(idCaptura)) return false;
+    capturasRecibidas.add(idCaptura);
+    return true;
+}
+let streamLocal = null;
+let usandoCamaraFrontalLocal = false;
+let camaraLocalCongelada = false;
+let mapaPapelLocal = null;
+let peticionEnCurso = false;
+let timerPrediccionLienzo = null;
+
+// Audio / Voz en tiempo real
+let audioTiempoRealActivo = false;
+let ultimoAnimalAnunciado = "";
+let ultimoTiempoAnuncio = 0;
+
+// Canvases auxiliares para preprocesamiento de cámara (112x112 -> 28x28)
+const workCanvas = document.createElement("canvas");
+workCanvas.width = 112;
+workCanvas.height = 112;
+const workCtx = workCanvas.getContext("2d", { willReadFrequently: true });
+
+const outCanvas = document.createElement("canvas");
+outCanvas.width = 28;
+outCanvas.height = 28;
+const outCtx = outCanvas.getContext("2d", { willReadFrequently: true });
+
 // ---------------------------------------------------------------
-// Configuración de dibujo en el canvas (280 x 280)
+// 1. Pestañas de modo: Cámara en Tiempo Real vs. Dibujar en Lienzo
+// ---------------------------------------------------------------
+
+function cambiarModoEntrada(nuevoModo) {
+    modoEntrada = nuevoModo;
+    const esCamara = nuevoModo === "camara";
+
+    tabModoCamara.classList.toggle("activo", esCamara);
+    tabModoCamara.setAttribute("aria-selected", esCamara ? "true" : "false");
+    tabModoLienzo.classList.toggle("activo", !esCamara);
+    tabModoLienzo.setAttribute("aria-selected", !esCamara ? "true" : "false");
+
+    contenedorModoCamara.hidden = !esCamara;
+    tarjetaConexionQr.hidden = !esCamara;
+    contenedorModoLienzo.hidden = esCamara;
+
+    if (esCamara) {
+        insigniaFuenteActiva.textContent =
+            fuenteCamara === "local"
+                ? "🎥 Cámara Local Activa"
+                : fuenteCamara === "foto"
+                ? "📷 Foto Activa"
+                : "📱 Sensor de Cámara Activo";
+    } else {
+        insigniaFuenteActiva.textContent = "✏️ Modo Lienzo Activo";
+        actualizarDesdeLienzo();
+    }
+}
+
+tabModoCamara.addEventListener("click", () => cambiarModoEntrada("camara"));
+tabModoLienzo.addEventListener("click", () => cambiarModoEntrada("lienzo"));
+
+btnToggleQr.addEventListener("click", () => {
+    tarjetaConexionQr.hidden = !tarjetaConexionQr.hidden;
+});
+
+// ---------------------------------------------------------------
+// 2. Configuración de QR y enlace para conectar el teléfono
+// ---------------------------------------------------------------
+
+function esOrigenLocal(hostname) {
+    return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1" || hostname === "[::1]";
+}
+
+async function inicializarConexionSensorMovil() {
+    // location.search conserva el ?ptjuid=... que Protobject necesita para emparejar
+    // el teléfono con esta pantalla (ver exploracion/config.js).
+    const urlMismoOrigen = new URL("sensor_camara.html", window.location.href);
+    urlMismoOrigen.search = window.location.search;
+    let urlSensor = urlMismoOrigen.href;
+
+    // Si la pantalla está en localhost, el teléfono no puede abrir esa dirección:
+    // se le entrega la IP de la red local por HTTPS (requerido para usar la cámara).
+    // En ese caso la conexión va por el puente de Python, no por WebRTC.
+    if (esOrigenLocal(window.location.hostname)) {
+        try {
+            const resp = await fetch("/api/info");
+            if (resp.ok) {
+                const info = await resp.json();
+                if (info.ip_local) {
+                    const protocolo = info.puerto_https ? "https" : "http";
+                    const puerto = info.puerto_https || info.puerto_http || window.location.port;
+                    const urlLan = new URL(`${protocolo}://${info.ip_local}:${puerto}/exploracion/sensor_camara.html`);
+                    urlLan.search = window.location.search;
+                    urlSensor = urlLan.href;
+                }
+            }
+        } catch (e) {
+            // Sin backend local: se mantiene la URL del mismo origen.
+        }
+    }
+
+    enlaceSensorHttps.href = urlSensor;
+    enlaceSensorHttps.textContent = urlSensor;
+    imgQrSensor.src = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&margin=6&data=${encodeURIComponent(urlSensor)}`;
+
+    btnCopiarUrlSensor.addEventListener("click", async () => {
+        try {
+            await navigator.clipboard.writeText(urlSensor);
+            mostrarMensaje("Enlace del sensor copiado al portapapeles.", "exito");
+        } catch (err) {
+            mostrarMensaje(`Abre en tu teléfono: ${urlSensor}`, "info");
+        }
+    });
+
+    // Protobject no expone un método "connect": la página principal escucha sola
+    // y agrega un botón "+" que muestra su propio QR. Este botón lo abre.
+    btnAbrirProtobject.addEventListener("click", (evento) => {
+        const botonProtobject = document.getElementById("ProtobjectPlusButton");
+        if (botonProtobject) {
+            evento.stopPropagation();
+            botonProtobject.click();
+            if (esOrigenLocal(window.location.hostname)) {
+                mostrarMensaje(
+                    "El QR de Protobject apunta a localhost y el teléfono no puede abrirlo. Usa el QR de esta tarjeta, o abre esta página con la IP de la red local.",
+                    "info"
+                );
+            }
+        } else {
+            mostrarMensaje(
+                "Protobject no se cargó (¿sin internet?). El teléfono igual se conecta por el puente local usando el QR de esta tarjeta.",
+                "info"
+            );
+        }
+    });
+}
+
+inicializarConexionSensorMovil();
+
+// ---------------------------------------------------------------
+// 3. Preprocesamiento de imagen (Cámara / Foto / Lienzo -> 28 x 28)
+// ---------------------------------------------------------------
+
+function pintarMiniatura28x28(destinoCanvas, pixeles) {
+    destinoCanvas.width = 28;
+    destinoCanvas.height = 28;
+    const c = destinoCanvas.getContext("2d");
+    const imgData = c.createImageData(28, 28);
+
+    for (let i = 0; i < 784; i++) {
+        const v = 255 - (pixeles[i] || 0);
+        imgData.data[i * 4] = v;
+        imgData.data[i * 4 + 1] = v;
+        imgData.data[i * 4 + 2] = v;
+        imgData.data[i * 4 + 3] = 255;
+    }
+
+    c.putImageData(imgData, 0, 0);
+}
+
+// Extrae y centra el dibujo del lienzo 280x280 en una grilla 28x28 estilo QuickDraw
+function extraerPixeles28x28() {
+    const N = 112;
+    workCtx.clearRect(0, 0, N, N);
+    workCtx.drawImage(canvas, 0, 0, N, N);
+    const { data } = workCtx.getImageData(0, 0, N, N);
+
+    let minX = N, minY = N, maxX = -1, maxY = -1;
+    for (let y = 0; y < N; y++) {
+        for (let x = 0; x < N; x++) {
+            const alpha = data[(y * N + x) * 4 + 3];
+            if (alpha > 20) {
+                if (x < minX) minX = x;
+                if (x > maxX) maxX = x;
+                if (y < minY) minY = y;
+                if (y > maxY) maxY = y;
+            }
+        }
+    }
+
+    if (maxX < minX || maxY < minY) {
+        return new Array(784).fill(0);
+    }
+
+    const bw = maxX - minX + 1;
+    const bh = maxY - minY + 1;
+    const ladoCaja = Math.max(bw, bh);
+    const escala = 22 / ladoCaja;
+    const dw = Math.max(1, bw * escala);
+    const dh = Math.max(1, bh * escala);
+    const dx = (28 - dw) / 2;
+    const dy = (28 - dh) / 2;
+
+    outCtx.clearRect(0, 0, 28, 28);
+    outCtx.drawImage(workCanvas, minX, minY, bw, bh, dx, dy, dw, dh);
+
+    const outData = outCtx.getImageData(0, 0, 28, 28).data;
+    const pixeles = new Array(784);
+    let maxValor = 0;
+
+    for (let i = 0; i < 784; i++) {
+        const intensidad = outData[i * 4 + 3];
+        pixeles[i] = intensidad;
+        if (intensidad > maxValor) {
+            maxValor = intensidad;
+        }
+    }
+
+    if (maxValor > 0) {
+        for (let i = 0; i < 784; i++) {
+            pixeles[i] = Math.min(255, Math.round((pixeles[i] / maxValor) * 255));
+        }
+    }
+
+    return pixeles;
+}
+
+// Umbral adaptativo local desde cámara o foto en papel -> 28x28 centrado
+// Fracción central del cuadro de la cámara que se analiza (el recuadro guía).
+const RECORTE_CAMARA = 0.74;
+// Lado en píxeles de la imagen original que se guarda para el visor ampliado.
+const LADO_IMAGEN_ORIGINAL = 320;
+
+// Devuelve un JPEG (data URL) del dibujo tal como se ve, para mostrarlo en grande.
+// Usa el mismo recorte que el modelo, así el visor muestra exactamente lo analizado.
+function capturarImagenOriginal() {
+    try {
+        const L = LADO_IMAGEN_ORIGINAL;
+        const lienzo = document.createElement("canvas");
+        lienzo.width = L;
+        lienzo.height = L;
+        const g = lienzo.getContext("2d");
+        g.fillStyle = "#ffffff";
+        g.fillRect(0, 0, L, L);
+
+        if (modoEntrada === "lienzo") {
+            g.drawImage(canvas, 0, 0, L, L);
+        } else if (fuenteCamara === "local" || fuenteCamara === "foto") {
+            const esFoto = fuenteCamara === "foto";
+            const fuente = esFoto ? imgFotoLocal : videoLocal;
+            const vw = esFoto ? imgFotoLocal.naturalWidth : videoLocal.videoWidth;
+            const vh = esFoto ? imgFotoLocal.naturalHeight : videoLocal.videoHeight;
+            if (!vw || !vh) return null;
+            const lado = Math.min(vw, vh) * RECORTE_CAMARA;
+            g.drawImage(fuente, (vw - lado) / 2, (vh - lado) / 2, lado, lado, 0, 0, L, L);
+        } else {
+            return null; // La cámara del teléfono envía su propia imagen original.
+        }
+
+        return lienzo.toDataURL("image/jpeg", 0.85);
+    } catch (e) {
+        return null;
+    }
+}
+
+function extraer28x28DesdeCamaraLocal(calibrarPapel = false) {
+    const esFoto = fuenteCamara === "foto";
+    const fuente = esFoto ? imgFotoLocal : videoLocal;
+    const vw = esFoto ? imgFotoLocal.naturalWidth : videoLocal.videoWidth;
+    const vh = esFoto ? imgFotoLocal.naturalHeight : videoLocal.videoHeight;
+
+    if (!vw || !vh) {
+        return { pixeles: new Array(784).fill(0), tieneDibujo: false };
+    }
+
+    const lado = Math.min(vw, vh) * RECORTE_CAMARA;
+    const sx = (vw - lado) / 2;
+    const sy = (vh - lado) / 2;
+
+    const N = 112;
+    workCtx.drawImage(fuente, sx, sy, lado, lado, 0, 0, N, N);
+    const { data } = workCtx.getImageData(0, 0, N, N);
+
+    const gris = new Float32Array(N * N);
+    for (let i = 0; i < N * N; i++) {
+        gris[i] = 0.299 * data[i * 4] + 0.587 * data[i * 4 + 1] + 0.114 * data[i * 4 + 2];
+    }
+
+    if (calibrarPapel) {
+        mapaPapelLocal = new Float32Array(gris);
+    }
+
+    const integral = new Float64Array((N + 1) * (N + 1));
+    for (let y = 0; y < N; y++) {
+        let sumaFila = 0;
+        for (let x = 0; x < N; x++) {
+            const val = mapaPapelLocal
+                ? Math.min(255, Math.max(0, 255 - (mapaPapelLocal[y * N + x] - gris[y * N + x])))
+                : gris[y * N + x];
+            sumaFila += val;
+            integral[(y + 1) * (N + 1) + (x + 1)] = integral[y * (N + 1) + (x + 1)] + sumaFila;
+        }
+    }
+
+    const umbral = Number(sliderUmbralLocal.value) || 18;
+    const radio = 8;
+    const margen = 5;
+    const mascara = new Uint8Array(N * N);
+
+    for (let y = margen; y < N - margen; y++) {
+        const y0 = Math.max(0, y - radio);
+        const y1 = Math.min(N - 1, y + radio);
+        for (let x = margen; x < N - margen; x++) {
+            const x0 = Math.max(0, x - radio);
+            const x1 = Math.min(N - 1, x + radio);
+            const area = (x1 - x0 + 1) * (y1 - y0 + 1);
+            const suma =
+                integral[(y1 + 1) * (N + 1) + (x1 + 1)] -
+                integral[y0 * (N + 1) + (x1 + 1)] -
+                integral[(y1 + 1) * (N + 1) + x0] +
+                integral[y0 * (N + 1) + x0];
+            const mediaLocal = suma / area;
+            const actual = mapaPapelLocal
+                ? Math.min(255, Math.max(0, 255 - (mapaPapelLocal[y * N + x] - gris[y * N + x])))
+                : gris[y * N + x];
+            const diff = mediaLocal - actual;
+            if (diff > umbral) {
+                mascara[y * N + x] = Math.min(255, Math.round((diff - umbral) * 4.2));
+            }
+        }
+    }
+
+    const limpia = new Uint8Array(N * N);
+    let minX = N, minY = N, maxX = -1, maxY = -1;
+    let activos = 0;
+
+    for (let y = 1; y < N - 1; y++) {
+        for (let x = 1; x < N - 1; x++) {
+            const idx = y * N + x;
+            let vecinos = 0;
+            let maxVecino = mascara[idx];
+            for (let dy = -1; dy <= 1; dy++) {
+                for (let dx = -1; dx <= 1; dx++) {
+                    const v = mascara[(y + dy) * N + (x + dx)];
+                    if (v > 0) vecinos++;
+                    if (v > maxVecino) maxVecino = v;
+                }
+            }
+            if ((mascara[idx] > 0 && vecinos >= 2) || vecinos >= 4) {
+                limpia[idx] = mascara[idx] > 0 ? mascara[idx] : Math.round(maxVecino * 0.75);
+                activos++;
+                if (x < minX) minX = x;
+                if (x > maxX) maxX = x;
+                if (y < minY) minY = y;
+                if (y > maxY) maxY = y;
+            }
+        }
+    }
+
+    const fraccion = activos / (N * N);
+    if (activos < 22 || fraccion > 0.48 || maxX <= minX || maxY <= minY) {
+        return { pixeles: new Array(784).fill(0), tieneDibujo: false };
+    }
+
+    const tempImg = workCtx.createImageData(N, N);
+    for (let i = 0; i < N * N; i++) {
+        tempImg.data[i * 4] = 255;
+        tempImg.data[i * 4 + 1] = 255;
+        tempImg.data[i * 4 + 2] = 255;
+        tempImg.data[i * 4 + 3] = limpia[i];
+    }
+    workCtx.putImageData(tempImg, 0, 0);
+
+    const bw = maxX - minX + 1;
+    const bh = maxY - minY + 1;
+    const ladoCaja = Math.max(bw, bh);
+    const escala = 22 / ladoCaja;
+    const dw = Math.max(1, bw * escala);
+    const dh = Math.max(1, bh * escala);
+    const dx = (28 - dw) / 2;
+    const dy = (28 - dh) / 2;
+
+    outCtx.clearRect(0, 0, 28, 28);
+    outCtx.drawImage(workCanvas, minX, minY, bw, bh, dx, dy, dw, dh);
+
+    const outData = outCtx.getImageData(0, 0, 28, 28).data;
+    const pixeles = new Array(784);
+    let maxP = 0;
+    for (let i = 0; i < 784; i++) {
+        const v = outData[i * 4 + 3];
+        pixeles[i] = v;
+        if (v > maxP) maxP = v;
+    }
+    if (maxP > 0) {
+        for (let i = 0; i < 784; i++) {
+            pixeles[i] = Math.min(255, Math.round((pixeles[i] / maxP) * 255));
+        }
+    }
+
+    return { pixeles, tieneDibujo: maxP > 25 };
+}
+
+// ---------------------------------------------------------------
+// 4. Predicción en Tiempo Real y Sonificación / Voz
+// ---------------------------------------------------------------
+
+btnAudioTiempoReal.addEventListener("click", async () => {
+    audioTiempoRealActivo = !audioTiempoRealActivo;
+    btnAudioTiempoReal.setAttribute("aria-pressed", audioTiempoRealActivo ? "true" : "false");
+    btnAudioTiempoReal.textContent = audioTiempoRealActivo
+        ? "🔊 Audio / Voz: Activo"
+        : "🔇 Audio / Voz: Off";
+
+    if (audioTiempoRealActivo) {
+        if (window.ModelosAudio) {
+            await window.ModelosAudio.desbloquear();
+            window.ModelosAudio.sonarSeleccion("CNN");
+        }
+        if ("speechSynthesis" in window) {
+            const u = new SpeechSynthesisUtterance("Interpretación por voz activada");
+            u.lang = "es-ES";
+            window.speechSynthesis.speak(u);
+        }
+    }
+});
+
+function emitirFeedbackAudioVoz(predicciones) {
+    if (!audioTiempoRealActivo || !predicciones) return;
+
+    const cnn = predicciones.CNN;
+    const mlp = predicciones.MLP;
+    if (!cnn || !mlp) return;
+
+    const ahora = Date.now();
+    if (ahora - ultimoTiempoAnuncio < 2200) return;
+
+    const coinciden = cnn.prediccion === mlp.prediccion;
+    const mejor = cnn.confianza >= mlp.confianza ? cnn : mlp;
+    const textoVoz = coinciden
+        ? `Es un ${cnn.etiqueta}`
+        : `CNN ve ${cnn.etiqueta} y MLP ve ${mlp.etiqueta}`;
+
+    if (textoVoz === ultimoAnimalAnunciado && ahora - ultimoTiempoAnuncio < 4500) return;
+
+    ultimoAnimalAnunciado = textoVoz;
+    ultimoTiempoAnuncio = ahora;
+
+    if (window.ModelosAudio) {
+        window.ModelosAudio.sonarHover(
+            cnn.confianza >= mlp.confianza ? "CNN" : "MLP",
+            mejor.confianza
+        );
+    }
+
+    if ("speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(textoVoz);
+        u.lang = "es-ES";
+        u.rate = 1.05;
+        window.speechSynthesis.speak(u);
+    }
+}
+
+function actualizarPanelTiempoReal(predicciones, tieneDibujo) {
+    ultimasPrediccionesVivas = tieneDibujo ? predicciones : null;
+
+    if (!tieneDibujo || !predicciones) {
+        estadoDeteccionTrazo.textContent = "Sin trazos detectados";
+        estadoDeteccionTrazo.className = "estado-trazo";
+
+        bannerVeredictoVivo.className = "banner-veredicto esperando";
+        iconoVeredictoVivo.textContent = "🔍";
+        tituloVeredictoVivo.textContent = "Esperando un dibujo de gato o perro...";
+        detalleVeredictoVivo.textContent =
+            "Enfoca un dibujo oscuro sobre papel blanco o traza en el lienzo para ver la predicción instantánea.";
+
+        confianzaVivoCnn.textContent = "—";
+        imgAnimalCnn.hidden = true;
+        etiquetaVivoCnn.textContent = "Esperando dibujo…";
+        probGatoCnn.textContent = "50%";
+        probPerroCnn.textContent = "50%";
+        barraPerroCnn.style.width = "50%";
+
+        confianzaVivoMlp.textContent = "—";
+        imgAnimalMlp.hidden = true;
+        etiquetaVivoMlp.textContent = "Esperando dibujo…";
+        probGatoMlp.textContent = "50%";
+        probPerroMlp.textContent = "50%";
+        barraPerroMlp.style.width = "50%";
+        return;
+    }
+
+    estadoDeteccionTrazo.textContent = "✓ Dibujo detectado (28×28)";
+    estadoDeteccionTrazo.className = "estado-trazo activo";
+
+    const cnn = predicciones.CNN;
+    const mlp = predicciones.MLP;
+
+    if (cnn) {
+        const pctConf = (cnn.confianza * 100).toFixed(1).replace(".", ",");
+        const pctPerro = Math.round(cnn.prob_perro * 100);
+        const pctGato = 100 - pctPerro;
+
+        confianzaVivoCnn.textContent = `${pctConf}% seguridad`;
+        imgAnimalCnn.src = ICONOS_ANIMAL[cnn.prediccion] || ICONOS_ANIMAL[0];
+        imgAnimalCnn.hidden = false;
+        etiquetaVivoCnn.textContent = cnn.etiqueta;
+        probGatoCnn.textContent = `${pctGato}%`;
+        probPerroCnn.textContent = `${pctPerro}%`;
+        barraPerroCnn.style.width = `${pctPerro}%`;
+    }
+
+    if (mlp) {
+        const pctConf = (mlp.confianza * 100).toFixed(1).replace(".", ",");
+        const pctPerro = Math.round(mlp.prob_perro * 100);
+        const pctGato = 100 - pctPerro;
+
+        confianzaVivoMlp.textContent = `${pctConf}% seguridad`;
+        imgAnimalMlp.src = ICONOS_ANIMAL[mlp.prediccion] || ICONOS_ANIMAL[0];
+        imgAnimalMlp.hidden = false;
+        etiquetaVivoMlp.textContent = mlp.etiqueta;
+        probGatoMlp.textContent = `${pctGato}%`;
+        probPerroMlp.textContent = `${pctPerro}%`;
+        barraPerroMlp.style.width = `${pctPerro}%`;
+    }
+
+    if (cnn && mlp) {
+        if (cnn.prediccion === mlp.prediccion) {
+            const esPerro = cnn.prediccion === 1;
+            const promedioConf = (((cnn.confianza + mlp.confianza) / 2) * 100)
+                .toFixed(1)
+                .replace(".", ",");
+            bannerVeredictoVivo.className = "banner-veredicto consenso";
+            iconoVeredictoVivo.textContent = esPerro ? "🐶" : "🐱";
+            tituloVeredictoVivo.textContent = `¡Ambos modelos ven un ${cnn.etiqueta.toUpperCase()}!`;
+            detalleVeredictoVivo.textContent = `Consenso entre CNN y MLP con ${promedioConf}% de confianza promedio.`;
+        } else {
+            bannerVeredictoVivo.className = "banner-veredicto discrepancia";
+            iconoVeredictoVivo.textContent = "🤔";
+            tituloVeredictoVivo.textContent = `Modelos divididos: CNN ve ${cnn.etiqueta} · MLP ve ${mlp.etiqueta}`;
+            detalleVeredictoVivo.textContent =
+                "La CNN analiza bordes espaciales (orejas/hocico), mientras que el MLP evalúa la posición global de los píxeles.";
+        }
+        emitirFeedbackAudioVoz(predicciones);
+    }
+}
+
+async function solicitarPrediccionIndividual(pixeles) {
+    const urls = [
+        "/api/test_1/predecir",
+        "http://localhost:8000/api/test_1/predecir",
+        "http://127.0.0.1:8000/api/test_1/predecir"
+    ];
+
+    for (const url of urls) {
+        try {
+            const resp = await fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ imagen: pixeles })
+            });
+            if (resp.ok) {
+                return await resp.json();
+            }
+        } catch (e) {
+            // Intentar siguiente URL
+        }
+    }
+    return null;
+}
+
+// ---------------------------------------------------------------
+// 5. Cámara local y subida de foto en la pantalla principal
+// ---------------------------------------------------------------
+
+sliderUmbralLocal.addEventListener("input", () => {
+    valorUmbralLocal.textContent = sliderUmbralLocal.value;
+    if (fuenteCamara === "foto") {
+        procesarFrameLocal();
+    }
+});
+
+btnCalibrarLocal.addEventListener("click", () => {
+    if (fuenteCamara === "local" || fuenteCamara === "foto") {
+        extraer28x28DesdeCamaraLocal(true);
+        mostrarMensaje("Fondo de papel calibrado correctamente.", "exito");
+    } else {
+        mostrarMensaje("Activa primero la cámara de este dispositivo o usa el botón de calibrar en tu teléfono.", "info");
+    }
+});
+
+async function activarCamaraLocal() {
+    if (streamLocal) {
+        streamLocal.getTracks().forEach((t) => t.stop());
+    }
+
+    try {
+        streamLocal = await navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: {
+                facingMode: { ideal: usandoCamaraFrontalLocal ? "user" : "environment" },
+                width: { ideal: 480 },
+                height: { ideal: 480 }
+            }
+        });
+        videoLocal.srcObject = streamLocal;
+        await videoLocal.play();
+
+        fuenteCamara = "local";
+        camaraLocalCongelada = false;
+        videoLocal.hidden = false;
+        imgFotoLocal.hidden = true;
+        overlayRecuadroLocal.hidden = false;
+        placeholderSensorRemoto.hidden = true;
+
+        btnCambiarCamaraLocal.hidden = false;
+        btnCongelarLocal.hidden = false;
+        btnCongelarLocal.textContent = "⏸️ Congelar";
+        btnCamaraLocal.textContent = "⏹️ Detener cámara local";
+        insigniaFuenteActiva.textContent = "🎥 Cámara Local Activa";
+        mostrarMensaje("Cámara activada. Muestra un dibujo de gato o perro frente al recuadro.", "exito");
+    } catch (err) {
+        console.warn("No se pudo iniciar cámara local:", err);
+        mostrarMensaje(
+            "No se pudo acceder a la cámara local. Puedes conectar tu teléfono con el QR o subir una foto.",
+            "error"
+        );
+    }
+}
+
+function detenerCamaraLocal() {
+    if (streamLocal) {
+        streamLocal.getTracks().forEach((t) => t.stop());
+        streamLocal = null;
+    }
+    fuenteCamara = "remota";
+    videoLocal.hidden = true;
+    imgFotoLocal.hidden = true;
+    overlayRecuadroLocal.hidden = true;
+    placeholderSensorRemoto.hidden = false;
+    btnCambiarCamaraLocal.hidden = true;
+    btnCongelarLocal.hidden = true;
+    btnCamaraLocal.textContent = "🎥 Usar cámara de este dispositivo";
+    insigniaFuenteActiva.textContent = "📱 Sensor de Cámara Activo";
+}
+
+btnCamaraLocal.addEventListener("click", () => {
+    if (fuenteCamara === "local") {
+        detenerCamaraLocal();
+    } else {
+        activarCamaraLocal();
+    }
+});
+
+btnCambiarCamaraLocal.addEventListener("click", () => {
+    usandoCamaraFrontalLocal = !usandoCamaraFrontalLocal;
+    mapaPapelLocal = null;
+    activarCamaraLocal();
+});
+
+btnCongelarLocal.addEventListener("click", () => {
+    camaraLocalCongelada = !camaraLocalCongelada;
+    if (camaraLocalCongelada) {
+        videoLocal.pause();
+        btnCongelarLocal.textContent = "▶️ Reanudar";
+    } else {
+        videoLocal.play();
+        btnCongelarLocal.textContent = "⏸️ Congelar";
+    }
+});
+
+btnSubirFotoLocal.addEventListener("click", () => {
+    inputFotoLocal.click();
+});
+
+inputFotoLocal.addEventListener("change", (e) => {
+    const archivo = e.target.files && e.target.files[0];
+    if (!archivo) return;
+
+    if (streamLocal) {
+        streamLocal.getTracks().forEach((t) => t.stop());
+        streamLocal = null;
+    }
+
+    const url = URL.createObjectURL(archivo);
+    imgFotoLocal.onload = () => {
+        fuenteCamara = "foto";
+        videoLocal.hidden = true;
+        imgFotoLocal.hidden = false;
+        overlayRecuadroLocal.hidden = false;
+        placeholderSensorRemoto.hidden = true;
+        btnCambiarCamaraLocal.hidden = true;
+        btnCongelarLocal.hidden = true;
+        btnCamaraLocal.textContent = "🎥 Usar cámara de este dispositivo";
+        insigniaFuenteActiva.textContent = "📷 Foto Cargada";
+        procesarFrameLocal();
+        mostrarMensaje("Foto cargada y analizada en tiempo real.", "exito");
+    };
+    imgFotoLocal.src = url;
+});
+
+async function procesarFrameLocal() {
+    if (modoEntrada !== "camara" || (fuenteCamara !== "local" && fuenteCamara !== "foto")) return;
+    if (fuenteCamara === "local" && camaraLocalCongelada) return;
+    if (peticionEnCurso) return;
+
+    const { pixeles, tieneDibujo } = extraer28x28DesdeCamaraLocal(false);
+    pixelesActuales = pixeles;
+    hayDibujoActual = tieneDibujo;
+    pintarMiniatura28x28(canvasVista28, pixeles);
+
+    if (!tieneDibujo) {
+        actualizarPanelTiempoReal(null, false);
+        return;
+    }
+
+    peticionEnCurso = true;
+    try {
+        const res = await solicitarPrediccionIndividual(pixeles);
+        if (res && res.predicciones) {
+            actualizarPanelTiempoReal(res.predicciones, true);
+        }
+    } finally {
+        peticionEnCurso = false;
+    }
+}
+
+// ---------------------------------------------------------------
+// 6. Recepción en tiempo real desde el teléfono (Protobject + API)
+// ---------------------------------------------------------------
+
+function marcarTelefonoConectado(activo) {
+    puntoConexionRemota.className = activo ? "punto-sensor conectado" : "punto-sensor desconectado";
+    estadoConexionRemota.textContent = activo
+        ? "📱 Teléfono conectado transmitiendo en tiempo real"
+        : "Conecta tu teléfono como sensor de cámara";
+
+    if (activo && fuenteCamara === "remota") {
+        tituloPlaceholderSensor.textContent = "📡 Recibiendo cámara del teléfono en vivo";
+        subtituloPlaceholderSensor.textContent =
+            "Observa la matriz 28 × 28 a la derecha y el veredicto instantáneo de CNN y MLP mientras mueves tu dibujo.";
+    }
+}
+
+function guardarMuestraEnLista(pixeles, etiqueta, origenTexto = "Imagen", imagenOriginal = null) {
+    muestrasGuardadas.push({
+        pixeles: [...pixeles],
+        etiqueta,
+        origen: origenTexto,
+        imagenOriginal: typeof imagenOriginal === "string" && imagenOriginal.startsWith("data:image/")
+            ? imagenOriginal
+            : null,
+        prediccionesVivas: ultimasPrediccionesVivas ? JSON.parse(JSON.stringify(ultimasPrediccionesVivas)) : null
+    });
+    actualizarInterfazGuardados();
+
+    const total = muestrasGuardadas.length;
+    const faltan = Math.max(0, MINIMO_IMAGENES - total);
+    if (faltan > 0) {
+        mostrarMensaje(
+            `${origenTexto} #${total} guardada (${ETIQUETAS[etiqueta]}). Te faltan ${faltan} más como mínimo.`,
+            "exito"
+        );
+    } else {
+        mostrarMensaje(
+            `${origenTexto} #${total} guardada (${ETIQUETAS[etiqueta]}). ¡Ya puedes presionar «Evaluar lote con modelos»!`,
+            "exito"
+        );
+    }
+}
+
+// 6.1 Recepción directa vía Protobject WebRTC (cuando se usa en GitHub Pages o red local)
+if (typeof Protobject !== "undefined" && Protobject.Core && Protobject.Core.onReceived) {
+    Protobject.Core.onReceived(async (mensaje) => {
+        if (!mensaje || mensaje.tipo !== "frame_camara" || !Array.isArray(mensaje.pixeles)) return;
+        if (modoEntrada !== "camara" || fuenteCamara !== "remota") return;
+
+        ultimoTimestampRemoto = Date.now() / 1000;
+        marcarTelefonoConectado(true);
+
+        pixelesActuales = mensaje.pixeles;
+        hayDibujoActual = Boolean(mensaje.tiene_dibujo);
+        pintarMiniatura28x28(canvasVista28, pixelesActuales);
+
+        if (hayDibujoActual && !peticionEnCurso) {
+            peticionEnCurso = true;
+            try {
+                const res = await solicitarPrediccionIndividual(pixelesActuales);
+                if (res && res.predicciones) {
+                    actualizarPanelTiempoReal(res.predicciones, true);
+                    if (Protobject.Core.send) {
+                        Protobject.Core.send({
+                            tipo: "veredicto_modelos",
+                            predicciones: res.predicciones,
+                            tiene_dibujo: true
+                        }).to("sensor_camara.html");
+                    }
+                }
+            } finally {
+                peticionEnCurso = false;
+            }
+        } else if (!hayDibujoActual) {
+            actualizarPanelTiempoReal(null, false);
+        }
+
+        if (
+            mensaje.capturar &&
+            hayDibujoActual &&
+            (mensaje.etiqueta === 0 || mensaje.etiqueta === 1) &&
+            registrarCapturaNueva(mensaje.id_captura)
+        ) {
+            guardarMuestraEnLista(
+                pixelesActuales,
+                Number(mensaje.etiqueta),
+                "Captura desde teléfono",
+                mensaje.imagen_original
+            );
+        }
+    });
+}
+
+// 6.2 Sincronización con el puente local en Python (/api/camara/estado)
+async function sincronizarEstadoCamaraRemota() {
+    if (modoEntrada !== "camara" || fuenteCamara !== "remota") return;
+
+    try {
+        const resp = await fetch("/api/camara/estado");
+        if (!resp.ok) return;
+        const estado = await resp.json();
+
+        const ahora = Date.now() / 1000;
+        const conectadoReciente = estado.timestamp > 0 && (ahora - estado.timestamp) < 6;
+        marcarTelefonoConectado(conectadoReciente);
+
+        if (estado.timestamp > ultimoTimestampRemoto) {
+            ultimoTimestampRemoto = estado.timestamp;
+            pixelesActuales = estado.pixeles || new Array(784).fill(0);
+            hayDibujoActual = Boolean(estado.tiene_dibujo);
+            pintarMiniatura28x28(canvasVista28, pixelesActuales);
+            actualizarPanelTiempoReal(estado.predicciones, hayDibujoActual);
+        }
+
+        // Primera sincronización: ignorar capturas hechas antes de abrir esta página.
+        if (ultimoIdCapturaRemota === null) {
+            ultimoIdCapturaRemota = estado.captura_seq || 0;
+            return;
+        }
+
+        const captura = estado.ultima_captura;
+        if (
+            captura &&
+            estado.captura_seq > ultimoIdCapturaRemota &&
+            (captura.etiqueta === 0 || captura.etiqueta === 1)
+        ) {
+            ultimoIdCapturaRemota = estado.captura_seq;
+            // Se usan los píxeles de la captura (no los del último frame en vivo).
+            if (registrarCapturaNueva(captura.id_captura)) {
+                guardarMuestraEnLista(
+                    captura.pixeles,
+                    Number(captura.etiqueta),
+                    "Captura desde teléfono",
+                    captura.imagen_original
+                );
+            }
+        }
+    } catch (e) {
+        // Sin servidor local activo
+    }
+}
+
+setInterval(() => {
+    if (modoEntrada === "camara") {
+        if (fuenteCamara === "local") {
+            procesarFrameLocal();
+        } else if (fuenteCamara === "remota") {
+            sincronizarEstadoCamaraRemota();
+        }
+    }
+}, 240);
+
+// ---------------------------------------------------------------
+// 7. Configuración de dibujo en el lienzo (280 x 280) + Tiempo Real
 // ---------------------------------------------------------------
 
 function configurarPincel() {
@@ -62,6 +1008,35 @@ function obtenerPosicion(evento) {
     };
 }
 
+function actualizarDesdeLienzo() {
+    if (!tieneTrazos) {
+        pixelesActuales = new Array(784).fill(0);
+        hayDibujoActual = false;
+        pintarMiniatura28x28(canvasVista28, pixelesActuales);
+        actualizarPanelTiempoReal(null, false);
+        return;
+    }
+
+    const pixeles = extraerPixeles28x28();
+    const maxP = Math.max(...pixeles);
+    pixelesActuales = pixeles;
+    hayDibujoActual = maxP > 0;
+    pintarMiniatura28x28(canvasVista28, pixeles);
+
+    if (!hayDibujoActual) {
+        actualizarPanelTiempoReal(null, false);
+        return;
+    }
+
+    if (timerPrediccionLienzo) clearTimeout(timerPrediccionLienzo);
+    timerPrediccionLienzo = setTimeout(async () => {
+        const res = await solicitarPrediccionIndividual(pixeles);
+        if (res && res.predicciones && modoEntrada === "lienzo") {
+            actualizarPanelTiempoReal(res.predicciones, true);
+        }
+    }, 150);
+}
+
 function iniciarTrazo(evento) {
     dibujando = true;
     tieneTrazos = true;
@@ -72,6 +1047,7 @@ function iniciarTrazo(evento) {
     ctx.moveTo(x, y);
     ctx.lineTo(x, y);
     ctx.stroke();
+    actualizarDesdeLienzo();
 }
 
 function moverTrazo(evento) {
@@ -80,10 +1056,13 @@ function moverTrazo(evento) {
     const { x, y } = obtenerPosicion(evento);
     ctx.lineTo(x, y);
     ctx.stroke();
+    actualizarDesdeLienzo();
 }
 
 function finalizarTrazo() {
+    if (!dibujando) return;
     dibujando = false;
+    actualizarDesdeLienzo();
 }
 
 canvas.addEventListener("mousedown", iniciarTrazo);
@@ -106,15 +1085,22 @@ canvas.addEventListener("touchend", finalizarTrazo);
 function limpiarCanvas() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     tieneTrazos = false;
+    pixelesActuales = new Array(784).fill(0);
+    hayDibujoActual = false;
+    pintarMiniatura28x28(canvasVista28, pixelesActuales);
+    actualizarPanelTiempoReal(null, false);
 }
 
 btnLimpiar.addEventListener("click", () => {
     limpiarCanvas();
-    mostrarMensaje("Lienzo limpio.", "info");
+    if (modoEntrada === "camara" && fuenteCamara === "foto") {
+        detenerCamaraLocal();
+    }
+    mostrarMensaje("Vista reiniciada.", "info");
 });
 
 // ---------------------------------------------------------------
-// Selección de etiqueta y guardado de imágenes (28 x 28 = 784 px)
+// 8. Selección de etiqueta y guardado de imágenes (28 x 28 = 784 px)
 // ---------------------------------------------------------------
 
 botonesEtiqueta.forEach((boton) => {
@@ -131,76 +1117,129 @@ botonesEtiqueta.forEach((boton) => {
     });
 });
 
-function extraerPixeles28x28() {
-    const tempCanvas = document.createElement("canvas");
-    tempCanvas.width = 28;
-    tempCanvas.height = 28;
-    const tempCtx = tempCanvas.getContext("2d");
-
-    tempCtx.drawImage(canvas, 0, 0, 28, 28);
-    const { data } = tempCtx.getImageData(0, 0, 28, 28);
-
-    const pixeles = new Array(784);
-    let maxValor = 0;
-
-    for (let i = 0; i < 784; i++) {
-        const intensidad = data[i * 4 + 3];
-        pixeles[i] = intensidad;
-        if (intensidad > maxValor) {
-            maxValor = intensidad;
-        }
-    }
-
-    if (maxValor > 0) {
-        for (let i = 0; i < 784; i++) {
-            pixeles[i] = Math.min(255, Math.round((pixeles[i] / maxValor) * 255));
-        }
-    }
-
-    return pixeles;
-}
-
-function pintarMiniatura28x28(destinoCanvas, pixeles) {
-    destinoCanvas.width = 28;
-    destinoCanvas.height = 28;
-    const c = destinoCanvas.getContext("2d");
-    const imgData = c.createImageData(28, 28);
-
-    for (let i = 0; i < 784; i++) {
-        const v = 255 - pixeles[i];
-        imgData.data[i * 4] = v;
-        imgData.data[i * 4 + 1] = v;
-        imgData.data[i * 4 + 2] = v;
-        imgData.data[i * 4 + 3] = 255;
-    }
-
-    c.putImageData(imgData, 0, 0);
-}
-
 function mostrarMensaje(texto, tipo = "info") {
     mensajeEstado.textContent = texto;
     mensajeEstado.dataset.tipo = tipo;
 }
 
+// ---------------------------------------------------------------
+// Visor ampliado de un dibujo guardado
+// ---------------------------------------------------------------
+
+const visorDibujo = document.getElementById("visor-dibujo");
+const visorTitulo = document.getElementById("visor-titulo");
+const visorFiguraOriginal = document.getElementById("visor-figura-original");
+const visorImgOriginal = document.getElementById("visor-img-original");
+const visorCanvas28 = document.getElementById("visor-canvas-28");
+const visorPredicciones = document.getElementById("visor-predicciones");
+const visorPosicion = document.getElementById("visor-posicion");
+const btnVisorAnterior = document.getElementById("btn-visor-anterior");
+const btnVisorSiguiente = document.getElementById("btn-visor-siguiente");
+const btnCerrarVisor = document.getElementById("btn-cerrar-visor");
+let indiceVisor = -1;
+
+function textoPrediccionesVivas(predicciones) {
+    if (!predicciones) return "";
+    const partes = ["CNN", "MLP"]
+        .filter((modelo) => predicciones[modelo])
+        .map((modelo) => {
+            const p = predicciones[modelo];
+            const pct = Math.round((p.confianza || 0) * 100);
+            return `${modelo}: ${p.etiqueta} (${pct}%)`;
+        });
+    return partes.length ? `Al guardarlo, en vivo: ${partes.join(" · ")}` : "";
+}
+
+function mostrarDibujoEnVisor(indice) {
+    const muestra = muestrasGuardadas[indice];
+    if (!muestra) return;
+    indiceVisor = indice;
+
+    const total = muestrasGuardadas.length;
+    visorTitulo.textContent = `Dibujo #${indice + 1} · ${ETIQUETAS[muestra.etiqueta]}`;
+    visorPosicion.textContent = `${indice + 1} de ${total}${muestra.origen ? ` · ${muestra.origen}` : ""}`;
+
+    if (muestra.imagenOriginal) {
+        visorImgOriginal.src = muestra.imagenOriginal;
+        visorImgOriginal.alt = `Dibujo #${indice + 1} original, etiquetado como ${ETIQUETAS[muestra.etiqueta]}`;
+        visorFiguraOriginal.hidden = false;
+    } else {
+        visorImgOriginal.removeAttribute("src");
+        visorFiguraOriginal.hidden = true;
+    }
+
+    pintarMiniatura28x28(visorCanvas28, muestra.pixeles);
+    visorPredicciones.textContent = textoPrediccionesVivas(muestra.prediccionesVivas);
+
+    btnVisorAnterior.disabled = indice === 0;
+    btnVisorSiguiente.disabled = indice === total - 1;
+}
+
+function abrirVisorDibujo(indice) {
+    mostrarDibujoEnVisor(indice);
+    if (!visorDibujo.open) {
+        if (typeof visorDibujo.showModal === "function") {
+            visorDibujo.showModal();
+        } else {
+            visorDibujo.setAttribute("open", ""); // Navegadores sin <dialog>
+        }
+    }
+}
+
+function cerrarVisorDibujo() {
+    if (typeof visorDibujo.close === "function") {
+        visorDibujo.close();
+    } else {
+        visorDibujo.removeAttribute("open");
+    }
+}
+
+btnCerrarVisor.addEventListener("click", cerrarVisorDibujo);
+btnVisorAnterior.addEventListener("click", () => mostrarDibujoEnVisor(indiceVisor - 1));
+btnVisorSiguiente.addEventListener("click", () => mostrarDibujoEnVisor(indiceVisor + 1));
+
+// Clic fuera de la tarjeta (sobre el fondo oscuro) cierra el visor.
+visorDibujo.addEventListener("click", (evento) => {
+    if (evento.target === visorDibujo) cerrarVisorDibujo();
+});
+
+// Flechas para recorrer los dibujos (Esc ya lo maneja <dialog>).
+visorDibujo.addEventListener("keydown", (evento) => {
+    if (evento.key === "ArrowLeft" && indiceVisor > 0) {
+        mostrarDibujoEnVisor(indiceVisor - 1);
+    } else if (evento.key === "ArrowRight" && indiceVisor < muestrasGuardadas.length - 1) {
+        mostrarDibujoEnVisor(indiceVisor + 1);
+    }
+});
+
 function actualizarInterfazGuardados() {
+    // Si la lista cambia con el visor abierto (p. ej. llega una captura), mantenerlo coherente.
+    if (visorDibujo && visorDibujo.open) {
+        if (muestrasGuardadas.length === 0) {
+            cerrarVisorDibujo();
+        } else {
+            mostrarDibujoEnVisor(Math.min(indiceVisor, muestrasGuardadas.length - 1));
+        }
+    }
+
     const total = muestrasGuardadas.length;
     const listo = total >= MINIMO_IMAGENES;
 
     contadorGuardados.textContent = listo
-        ? `${total} imágenes guardadas (listo para predecir)`
+        ? `${total} imágenes guardadas (listo para evaluar)`
         : `${total} / ${MINIMO_IMAGENES} imágenes mínimas`;
     contadorGuardados.classList.toggle("completo", listo);
 
     btnPredecir.disabled = !listo;
     btnPredecir.textContent = listo
-        ? `Predecir con modelos (${total} imágenes)`
-        : `Predecir con modelos (${total}/${MINIMO_IMAGENES})`;
+        ? `Evaluar lote con modelos (${total} imágenes)`
+        : `Evaluar lote con modelos (${total}/${MINIMO_IMAGENES})`;
 
     btnVaciar.disabled = total === 0;
 
     if (total === 0) {
         listaGuardados.innerHTML =
-            '<p class="texto-vacio">Aún no has guardado ningún dibujo. Guarda al menos 5 para habilitar la predicción.</p>';
+            '<p class="texto-vacio">Aún no has guardado ningún dibujo. Puedes capturarlos con la cámara o dibujarlos en el lienzo (mínimo 5 para la evaluación completa).</p>';
         return;
     }
 
@@ -210,8 +1249,23 @@ function actualizarInterfazGuardados() {
         const tarjeta = document.createElement("div");
         tarjeta.className = "item-guardado";
 
-        const miniatura = document.createElement("canvas");
-        pintarMiniatura28x28(miniatura, muestra.pixeles);
+        // La miniatura es un botón: al hacer clic abre el dibujo en grande.
+        const miniatura = document.createElement("button");
+        miniatura.type = "button";
+        miniatura.className = "btn-ver-dibujo";
+        miniatura.title = `Ver dibujo #${indice + 1} en grande`;
+        miniatura.setAttribute("aria-label", `Ver dibujo #${indice + 1} (${ETIQUETAS[muestra.etiqueta]}) en grande`);
+        if (muestra.imagenOriginal) {
+            const img = document.createElement("img");
+            img.src = muestra.imagenOriginal;
+            img.alt = "";
+            miniatura.appendChild(img);
+        } else {
+            const lienzoMini = document.createElement("canvas");
+            pintarMiniatura28x28(lienzoMini, muestra.pixeles);
+            miniatura.appendChild(lienzoMini);
+        }
+        miniatura.addEventListener("click", () => abrirVisorDibujo(indice));
 
         const info = document.createElement("div");
         info.className = "item-guardado-info";
@@ -240,44 +1294,34 @@ function actualizarInterfazGuardados() {
 }
 
 btnGuardar.addEventListener("click", () => {
-    if (!tieneTrazos) {
-        mostrarMensaje("Dibuja algo en el recuadro antes de guardar la imagen.", "error");
+    const pixelesAGuardar =
+        modoEntrada === "lienzo" ? extraerPixeles28x28() : pixelesActuales;
+    const maxPixel = Math.max(...pixelesAGuardar);
+
+    if (maxPixel === 0) {
+        mostrarMensaje(
+            modoEntrada === "camara"
+                ? "No se detecta un dibujo en la cámara todavía. Enfoca un dibujo oscuro sobre papel claro antes de guardar."
+                : "Dibuja algo en el recuadro antes de guardar la imagen.",
+            "error"
+        );
         return;
     }
 
     if (etiquetaSeleccionada === null) {
-        mostrarMensaje("Selecciona qué dibujaste (Gato o Perro) antes de guardar.", "error");
+        mostrarMensaje("Selecciona qué animal es realmente (Gato o Perro) antes de guardar.", "error");
         return;
     }
 
-    const pixeles = extraerPixeles28x28();
-    const maxPixel = Math.max(...pixeles);
+    guardarMuestraEnLista(
+        pixelesAGuardar,
+        etiquetaSeleccionada,
+        modoEntrada === "camara" ? "Captura de cámara" : "Imagen",
+        capturarImagenOriginal()
+    );
 
-    if (maxPixel === 0) {
-        mostrarMensaje("El dibujo está vacío. Realiza un trazo más visible.", "error");
-        return;
-    }
-
-    muestrasGuardadas.push({
-        pixeles,
-        etiqueta: etiquetaSeleccionada
-    });
-
-    limpiarCanvas();
-    actualizarInterfazGuardados();
-
-    const total = muestrasGuardadas.length;
-    const faltan = Math.max(0, MINIMO_IMAGENES - total);
-    if (faltan > 0) {
-        mostrarMensaje(
-            `Imagen #${total} guardada (${ETIQUETAS[etiquetaSeleccionada]}). Te faltan ${faltan} más como mínimo.`,
-            "exito"
-        );
-    } else {
-        mostrarMensaje(
-            `Imagen #${total} guardada (${ETIQUETAS[etiquetaSeleccionada]}). ¡Ya puedes presionar «Predecir con modelos» o seguir agregando dibujos!`,
-            "exito"
-        );
+    if (modoEntrada === "lienzo") {
+        limpiarCanvas();
     }
 });
 
@@ -293,12 +1337,12 @@ btnNuevaPrueba.addEventListener("click", () => {
     limpiarCanvas();
     panelResultados.hidden = true;
     actualizarInterfazGuardados();
-    mostrarMensaje("Lista reiniciada. Dibuja al menos 5 imágenes para una nueva prueba.", "info");
+    mostrarMensaje("Lista reiniciada. Captura o dibuja al menos 5 imágenes para una nueva prueba.", "info");
     window.scrollTo({ top: 0, behavior: "smooth" });
 });
 
 // ---------------------------------------------------------------
-// Conexión con la API local de Python y visualización de resultados
+// 9. Evaluación por lote en la API de Python y métricas globales
 // ---------------------------------------------------------------
 
 async function enviarAPythonAPI(imagenes, etiquetas) {
@@ -462,7 +1506,7 @@ function renderizarResultados(resultados) {
 
 btnPredecir.addEventListener("click", async () => {
     if (muestrasGuardadas.length < MINIMO_IMAGENES) {
-        mostrarMensaje(`Debes guardar al menos ${MINIMO_IMAGENES} imágenes antes de predecir.`, "error");
+        mostrarMensaje(`Debes guardar al menos ${MINIMO_IMAGENES} imágenes antes de evaluar.`, "error");
         return;
     }
 
@@ -476,7 +1520,7 @@ btnPredecir.addEventListener("click", async () => {
     try {
         const resultados = await enviarAPythonAPI(imagenes, etiquetas);
         renderizarResultados(resultados);
-        mostrarMensaje("Predicción completada con éxito.", "exito");
+        mostrarMensaje("Evaluación por lote completada con éxito.", "exito");
     } catch (error) {
         console.error("Error al predecir:", error);
         mostrarMensaje(
@@ -488,3 +1532,6 @@ btnPredecir.addEventListener("click", async () => {
         btnPredecir.disabled = muestrasGuardadas.length < MINIMO_IMAGENES;
     }
 });
+
+// Inicializar vista previa 28x28 en blanco al cargar
+pintarMiniatura28x28(canvasVista28, pixelesActuales);
